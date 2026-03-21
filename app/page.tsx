@@ -876,7 +876,7 @@ function QuickView({ product, open, onClose, onAdd }: {
                   border: "none", borderRadius: 10, padding: "14px",
                   cursor: "pointer", fontSize: 14, fontWeight: 800,
                   transition: "background .3s" }}>
-                {added ? "Added!" : `Add to Cart — $${(product.price * qty).toFixed(2)}`}
+                {added ? "Added!" : `Add to Cart — £${(product.price * qty).toFixed(2)}`}
               </button>
               <div style={{ fontSize: 11, color: "#bbb", textAlign: "center" }}>
                 Free shipping · 30-day returns · Secure checkout
