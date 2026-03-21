@@ -821,8 +821,8 @@ function QuickView({ product, open, onClose, onAdd }: {
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>${product.price}</span>
-                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>${product.compare}</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>£{product.price}</span>
+                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>£{product.compare}</span>
                 <span style={{ fontSize: 11, background: "#dcfce7", color: "#16a34a",
                   padding: "3px 8px", borderRadius: 5, fontWeight: 700 }}>Save {save}%</span>
               </div>
@@ -1011,7 +1011,7 @@ function Card({ product, onView, onAdd }: {
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>${product.price}</span>
+            <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>£{product.price}</span>
             <span style={{ fontSize: 12, color: "#ccc", textDecoration: "line-through", marginLeft: 6 }}>
               ${product.compare}
             </span>
@@ -1279,7 +1279,7 @@ export default function Home() {
                   <span style={{ fontSize: 22 }}>{p.emoji}</span>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>${p.price}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>£{p.price}</div>
                   </div>
                 </div>
               ))}
@@ -1349,7 +1349,7 @@ export default function Home() {
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
                 <div style={{ fontSize: 46 }}>{p.emoji}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#111", textAlign: "center", lineHeight: 1.3 }}>{p.name}</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>${p.price}</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>£{p.price}</div>
               </div>
             ))}
           </div>
