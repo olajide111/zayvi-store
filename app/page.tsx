@@ -534,7 +534,7 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   shipping: {
     title: "Shipping Information",
-    body: "We ship worldwide. All orders include a tracking number sent by email.\n\nDelivery Times:\n• United Kingdom: 7-14 days\n• United States: 8-14 days\n• Europe: 10-16 days\n• Australia / Canada: 10-18 days\n• Rest of World: 12-21 days\n\nFree shipping on orders over $75.\nStandard shipping: $6.99",
+    body: "We ship worldwide. All orders include a tracking number sent by email.\n\nDelivery Times:\n• United Kingdom: 7-14 days\n• United States: 8-14 days\n• Europe: 10-16 days\n• Australia / Canada: 10-18 days\n• Rest of World: 12-21 days\n\nFree shipping on orders over £75.\nStandard shipping: £6.99",
   },
   contact: {
     title: "Contact Us",
@@ -542,11 +542,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "Frequently Asked Questions",
-    body: "How long does delivery take?\nMost orders arrive in 7-14 days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once dispatched.\n\nWhat if my item arrives damaged?\nEmail us with a photo and we will send a replacement or full refund immediately.\n\nHow do I return an item?\nSee our Returns Policy. We offer 30-day returns on all items.\n\nDo you offer free shipping?\nYes — free worldwide shipping on all orders over $75.\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.",
+    body: "How long does delivery take?\nMost orders arrive in 7-14 days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once dispatched.\n\nWhat if my item arrives damaged?\nEmail us with a photo and we will send a replacement or full refund immediately.\n\nHow do I return an item?\nSee our Returns Policy. We offer 30-day returns on all items.\n\nDo you offer free shipping?\nYes — free worldwide shipping on all orders over £75.\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.",
   },
   about: {
     title: "About Us",
-    body: "ZAYVI is an AI-powered ecommerce store that discovers trending products from around the world and delivers them to your door.\n\nOur machine learning system scans thousands of products daily, scoring each one on demand, margin, competition and trend velocity. Only the best make it to our store.\n\nWe offer free worldwide shipping on orders over $75 and a 30-day returns guarantee on everything.\n\nThank you for shopping with us.",
+    body: "ZAYVI is an AI-powered ecommerce store that discovers trending products from around the world and delivers them to your door.\n\nOur machine learning system scans thousands of products daily, scoring each one on demand, margin, competition and trend velocity. Only the best make it to our store.\n\nWe offer free worldwide shipping on orders over £75 and a 30-day returns guarantee on everything.\n\nThank you for shopping with us.",
   },
 };
 
@@ -729,7 +729,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontSize: 13, color: "#888" }}>Shipping</span>
               <span style={{ fontSize: 13, color: sub >= 75 ? "#16a34a" : "#555" }}>
-                {sub >= 75 ? "FREE" : "$6.99"}
+                {sub >= 75 ? "FREE" : "£6.99"}
               </span>
             </div>
             <button
@@ -1092,7 +1092,7 @@ export default function Home() {
       sort === "top-rated"  ? b.rating - a.rating :
       sort === "best"       ? b.sold - a.sold : 0);
 
-  const marquee = "✦ Free worldwide shipping over $75   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
+  const marquee = "✦ Free worldwide shipping over £75   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
 
   const footerCols = [
     { title: "Shop", items: [
@@ -1411,7 +1411,7 @@ export default function Home() {
         <div style={{ maxWidth: 1100, margin: "0 auto",
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
           {[["🔒","Secure Payments","Stripe, Apple Pay and Google Pay."],
-            ["🚚","Free Worldwide Shipping","On all orders over $75."],
+            ["🚚","Free Worldwide Shipping","On all orders over £75."],
             ["↩️","30-Day Returns","Full refund, zero questions."],
             ["⭐","4.8 Star Average","15,000+ verified reviews."]
           ].map(([icon,title,desc]) => (
