@@ -762,13 +762,19 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
               Checkout · £{sub.toFixed(2)}
             </button>
             <button
-              onClick={() => {
-                const total = sub.toFixed(2);
-                const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-                window.open(
-                  `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=ayoolaolajide949@gmail.com&amount=${total}&currency_code=GBP&item_name=ZAYVI+Order&return=https://zayvi.store/success&cancel_return=https://zayvi.store`,
-                  '_blank'
-                );
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/paypal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: cart }),
+                  });
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                  else alert("PayPal error. Please try again.");
+                } catch {
+                  alert("PayPal error. Please try again.");
+                }
               }}
               style={{ width: "100%", background: "#FFC439", color: "#003087",
                 border: "none", borderRadius: 10, padding: "14px", cursor: "pointer",
