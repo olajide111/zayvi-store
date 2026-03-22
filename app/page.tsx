@@ -746,6 +746,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                 FREE
               </span>
             </div>
+            {/* Stripe button hidden until VMSS resolved
             <button
               onClick={async () => {
                 const res = await fetch('/api/checkout', {
@@ -761,6 +762,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                 fontSize: 15, fontWeight: 800, marginBottom: 10 }}>
               Checkout · £{sub.toFixed(2)}
             </button>
+            */}
             <button
               onClick={async () => {
                 try {
@@ -783,7 +785,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
               <span style={{ fontSize: 18 }}>🅿️</span> Pay with PayPal · £{sub.toFixed(2)}
             </button>
             <div style={{ textAlign: "center", fontSize: 11, color: "#bbb" }}>
-              Stripe · PayPal · Apple Pay · Google Pay
+              PayPal · Debit Card · Credit Card · Secure Checkout
             </div>
           </div>
         )}
