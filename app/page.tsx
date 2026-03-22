@@ -526,27 +526,47 @@ const BADGE_MAP: Record<string, [string, string]> = {
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
     title: "Privacy Policy",
-    body: "Last updated: March 2025\n\nWe collect your name, email and shipping address to fulfil your order. We use Stripe for payments and never store your card details.\n\nWe may send marketing emails if you opt in. You can unsubscribe at any time. We do not sell your data to third parties.\n\nFor questions: hello@vyvostore.shop",
+    body: "Last updated: March 2025\n\nZAYVI is committed to protecting your privacy. This policy explains how we collect, use and protect your personal information.\n\nWhat we collect:\n• Name, email and shipping address to fulfil your order\n• Payment information processed securely by Stripe — we never store your card details\n• Browsing data to improve your shopping experience\n\nHow we use your data:\n• To process and deliver your orders\n• To send order confirmations and tracking updates\n• To send marketing emails if you opt in — you can unsubscribe at any time\n• To improve our website and product selection\n\nYour rights:\n• You can request a copy of your data at any time\n• You can ask us to delete your data\n• You can opt out of marketing at any time\n\nWe do not sell your data to third parties.\n\nFor questions: hello@zayvi.store",
   },
   returns: {
     title: "Returns Policy",
-    body: "We offer a 30-day return window on all products.\n\nHow to return:\n1. Email hello@vyvostore.shop within 30 days of delivery\n2. Include your order number and reason for return\n3. We will send return instructions\n4. Refund processed within 5 business days\n\nItems must be unused and in original packaging.",
+    body: "We want you to love every purchase. If you are not completely satisfied we make returns simple.\n\nReturn window: 30 days from delivery\n\nHow to return:\n1. Email hello@zayvi.store within 30 days of delivery\n2. Include your order number and reason for return\n3. We will send you return instructions within 24 hours\n4. Once we receive your return, refund is processed within 5 business days\n\nConditions:\n• Items must be unused and in original packaging\n• Personalised items cannot be returned unless faulty\n• Sale items are eligible for exchange or store credit\n\nDamaged items:\nIf your item arrives damaged, email us a photo within 7 days. We will send a replacement or full refund immediately — no need to return the item.\n\nRefund method:\nRefunds are returned to your original payment method.\n\nContact: hello@zayvi.store",
   },
   shipping: {
     title: "Shipping Information",
-    body: "We ship worldwide. All orders include a tracking number sent by email.\n\nDelivery Times:\n• United Kingdom: 7-14 days\n• United States: 8-14 days\n• Europe: 10-16 days\n• Australia / Canada: 10-18 days\n• Rest of World: 12-21 days\n\nFree shipping on orders over $75.\nStandard shipping: $6.99",
+    body: "We ship worldwide from trusted suppliers. All orders include a tracking number sent by email once dispatched.\n\nDelivery Times:\n• United Kingdom: 7-14 business days\n• United States: 8-14 business days\n• Europe: 10-16 business days\n• Australia and Canada: 10-18 business days\n• Rest of World: 12-21 business days\n\nShipping Costs:\n• FREE worldwide shipping on every order — no minimum spend\n\nOrder Tracking:\nYou will receive a tracking link by email once your order is dispatched. You can use this to track your order in real time.\n\nImportant:\n• Orders are processed within 1-3 business days\n• Delivery times are estimates and may vary during busy periods\n• International orders may be subject to local customs duties\n\nQuestions about your order? Email hello@zayvi.store with your order number.",
+  },
+  tracking: {
+    title: "Track Your Order",
+    body: "Track your ZAYVI order in 3 easy steps:\n\n1. Check your email\nOnce your order is dispatched you will receive a shipping confirmation email with your tracking number and a direct link to track your package.\n\n2. Use your tracking link\nClick the tracking link in your email to see real-time updates on your order location and estimated delivery date.\n\n3. Still need help?\nIf you have not received a tracking email within 5 business days of ordering, contact us at hello@zayvi.store with your order number and we will look into it immediately.\n\nPlease note:\n• Tracking information can take 24-48 hours to update after dispatch\n• International orders may show limited tracking updates depending on destination country\n\nContact: hello@zayvi.store",
   },
   contact: {
     title: "Contact Us",
-    body: "We are here to help.\n\nEmail: hello@vyvostore.shop\nResponse time: within 24 hours on business days\n\nFor order tracking include your order number in the subject line.\n\nBusiness hours: Monday to Friday, 9am to 6pm GMT",
+    body: "We are here to help and aim to respond to every message within 24 hours.\n\nEmail: hello@zayvi.store\nBusiness hours: Monday to Friday, 9am to 6pm GMT\n\nFor the fastest response please include:\n• Your order number (if applicable)\n• A clear description of your question or issue\n• Photos if your item arrived damaged\n\nWhat we can help with:\n• Order status and tracking\n• Returns and refunds\n• Product questions\n• General enquiries\n\nWe do not have a phone line at this time but our email support team is fast and friendly. We promise to get back to you within 24 hours on business days.",
   },
   faqs: {
     title: "Frequently Asked Questions",
-    body: "How long does delivery take?\nMost orders arrive in 7-14 days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once dispatched.\n\nWhat if my item arrives damaged?\nEmail us with a photo and we will send a replacement or full refund immediately.\n\nHow do I return an item?\nSee our Returns Policy. We offer 30-day returns on all items.\n\nDo you offer free shipping?\nYes — free worldwide shipping on all orders over $75.\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.",
+    body: "ORDERS AND DELIVERY\n\nHow long does delivery take?\nMost orders arrive in 7-14 business days for UK customers. International orders take 10-21 business days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once your order is dispatched. Allow 24-48 hours for tracking to update.\n\nCan I change or cancel my order?\nContact us at hello@zayvi.store as soon as possible. We can make changes before dispatch but cannot cancel orders that have already shipped.\n\nRETURNS AND REFUNDS\n\nWhat is your returns policy?\nWe offer 30-day returns on all items. Email hello@zayvi.store with your order number to start a return.\n\nWhat if my item arrives damaged?\nEmail us a photo within 7 days and we will send a replacement or full refund immediately.\n\nHow long do refunds take?\nRefunds are processed within 5 business days of receiving your return.\n\nPAYMENTS\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.\n\nIs it safe to pay on ZAYVI?\nYes. All payments are processed by Stripe, one of the world's most trusted payment providers. We never store your card details.\n\nDo you offer free shipping?\nYes — FREE worldwide shipping on every single order. No minimum spend required.",
   },
   about: {
-    title: "About Us",
-    body: "VYVO is an AI-powered ecommerce store that discovers trending products from around the world and delivers them to your door.\n\nOur machine learning system scans thousands of products daily, scoring each one on demand, margin, competition and trend velocity. Only the best make it to our store.\n\nWe offer free worldwide shipping on orders over $75 and a 30-day returns guarantee on everything.\n\nThank you for shopping with us.",
+    title: "About ZAYVI",
+    body: "ZAYVI is an AI-powered ecommerce store built to discover and deliver the world's most exciting trending products directly to your door.\n\nOur story:\nWe started ZAYVI with a simple idea — use technology to find the products people actually want before they even know they want them. Our system scans thousands of products every day, scoring each one on demand, trend velocity, quality and value. Only the very best make it to our store.\n\nWhat makes us different:\n• AI-powered product discovery — we find trending products before they go mainstream\n• Rigorous quality screening — every product is reviewed before listing\n• Worldwide delivery — we ship to over 50 countries\n• 30-day returns — shop with complete confidence\n• Real customer reviews — honest feedback from real buyers\n\nOur promise:\nEvery product on ZAYVI is selected because we believe it offers genuine value. If you are ever unhappy with a purchase we will make it right.\n\nFree worldwide shipping on orders over £75.\n30-day hassle-free returns on everything.\n\nThank you for shopping with us.\n\nThe ZAYVI Team\nhello@zayvi.store",
+  },
+  giftcards: {
+    title: "Gift Cards",
+    body: "Give the gift of choice with a ZAYVI gift card.\n\nComing Soon:\nWe are currently setting up our gift card system. Digital gift cards will be available very soon.\n\nIn the meantime:\nIf you would like to purchase a gift for someone, you can place an order and ship directly to their address.\n\nFor gift card enquiries contact: hello@zayvi.store\n\nSign up to our newsletter to be notified when gift cards launch.",
+  },
+  affiliate: {
+    title: "Affiliate Programme",
+    body: "Earn money by sharing ZAYVI products with your audience.\n\nHow it works:\n1. Apply to join our affiliate programme\n2. Get your unique referral link\n3. Share products on social media, YouTube, TikTok or your blog\n4. Earn commission on every sale you generate\n\nCommission rates:\n• Standard: 8% per sale\n• Top affiliates: up to 15% per sale\n• Payments made monthly via PayPal or bank transfer\n\nWho can apply:\n• Content creators and influencers\n• Bloggers and website owners\n• Social media accounts with engaged followings\n• Anyone passionate about great products\n\nTo apply:\nEmail hello@zayvi.store with:\n• Your name\n• Your social media handles or website\n• Your audience size and niche\n\nWe review all applications within 3 business days.",
+  },
+  careers: {
+    title: "Careers",
+    body: "Join the ZAYVI team.\n\nWe are a fast-growing AI-powered ecommerce company always looking for talented people to join us.\n\nCurrent opportunities:\nWe do not have any open roles at this time but we are always interested in hearing from exceptional people.\n\nAreas we hire in:\n• Technology and engineering\n• Product and design\n• Marketing and content\n• Customer experience\n• Operations and logistics\n\nOur culture:\n• Remote-first team\n• Fast-moving and entrepreneurial\n• Data-driven decision making\n• Passionate about great products\n\nTo register your interest:\nSend your CV and a short note about yourself to hello@zayvi.store with the subject line CAREERS.\n\nWe will keep your details on file and reach out when a suitable role opens.",
+  },
+  press: {
+    title: "Press",
+    body: "ZAYVI in the media.\n\nAbout ZAYVI:\nZAYVI is an AI-powered ecommerce store that uses machine learning to discover and curate trending products from around the world. We ship to over 50 countries and offer free worldwide shipping on orders over £75.\n\nFounded: 2025\nHeadquarters: United Kingdom\nWebsite: zayvi.store\n\nKey facts:\n• AI-powered product discovery system\n• 36+ carefully curated products across 8 categories\n• Worldwide shipping to 50+ countries\n• 30-day hassle-free returns\n• Stripe-secured payments\n\nFor press enquiries, interviews, partnerships or media assets:\n\nEmail: hello@zayvi.store\nSubject line: PRESS\n\nWe aim to respond to all media enquiries within 24 hours.",
   },
 };
 
@@ -626,7 +646,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
 }) {
   const sub  = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt  = cart.reduce((a, i) => a + i.qty, 0);
-  const left = Math.max(0, 75 - sub);
+  const left = 0;
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0,
@@ -653,18 +673,12 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
         </div>
         <div style={{ padding: "12px 24px", background: "#fafafa",
           borderBottom: "1px solid #f0f0f0" }}>
-          {left > 0
-            ? <div style={{ fontSize: 12, color: "#555" }}>
-                Add <b style={{ color: "#111" }}>${left.toFixed(2)}</b> more for{" "}
-                <b style={{ color: "#111" }}>FREE shipping</b>
-              </div>
-            : <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
-                You unlocked FREE shipping!
-              </div>
-          }
-          <div style={{ height: 4, background: "#e5e5e5", borderRadius: 2, marginTop: 8 }}>
-            <div style={{ width: `${Math.min(100, (sub / 75) * 100)}%`, height: "100%",
-              background: "#16a34a", borderRadius: 2, transition: "width .4s" }} />
+          <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
+              🎉 FREE worldwide shipping on every order!
+            </div>
+          <div style={{ height: 4, background: "#dcfce7", borderRadius: 2, marginTop: 8 }}>
+            <div style={{ width: "100%", height: "100%",
+              background: "#16a34a", borderRadius: 2 }} />
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
@@ -706,7 +720,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>
-                        ${(item.price * item.qty).toFixed(2)}
+                        £{(item.price * item.qty).toFixed(2)}
                       </div>
                       <button onClick={() => onRemove(item.id, item.selectedColor)}
                         style={{ fontSize: 10, color: "#ccc", background: "none",
@@ -724,12 +738,12 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
           <div style={{ padding: "16px 24px", borderTop: "1px solid #f0f0f0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ fontSize: 13, color: "#888" }}>Subtotal</span>
-              <span style={{ fontSize: 13, color: "#555" }}>${sub.toFixed(2)}</span>
+              <span style={{ fontSize: 13, color: "#555" }}>£{sub.toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontSize: 13, color: "#888" }}>Shipping</span>
-              <span style={{ fontSize: 13, color: sub >= 75 ? "#16a34a" : "#555" }}>
-                {sub >= 75 ? "FREE" : "$6.99"}
+              <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 700 }}>
+                FREE
               </span>
             </div>
             <button
@@ -745,7 +759,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
               style={{ width: "100%", background: "#111", color: "#fff",
                 border: "none", borderRadius: 10, padding: "14px", cursor: "pointer",
                 fontSize: 15, fontWeight: 800, marginBottom: 10 }}>
-              Checkout · ${(sub + (sub >= 75 ? 0 : 6.99)).toFixed(2)}
+              Checkout · £{sub.toFixed(2)}
             </button>
             <div style={{ textAlign: "center", fontSize: 11, color: "#bbb" }}>
               Stripe · Apple Pay · Google Pay
@@ -827,8 +841,8 @@ function QuickView({ product, open, onClose, onAdd }: {
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>${product.price}</span>
-                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>${product.compare}</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>£{product.price}</span>
+                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>£{product.compare}</span>
                 <span style={{ fontSize: 11, background: "#dcfce7", color: "#16a34a",
                   padding: "3px 8px", borderRadius: 5, fontWeight: 700 }}>Save {save}%</span>
               </div>
@@ -882,7 +896,7 @@ function QuickView({ product, open, onClose, onAdd }: {
                   border: "none", borderRadius: 10, padding: "14px",
                   cursor: "pointer", fontSize: 14, fontWeight: 800,
                   transition: "background .3s" }}>
-                {added ? "Added!" : `Add to Cart — $${(product.price * qty).toFixed(2)}`}
+                {added ? "Added!" : `Add to Cart — £${(product.price * qty).toFixed(2)}`}
               </button>
               <div style={{ fontSize: 11, color: "#bbb", textAlign: "center" }}>
                 Free shipping · 30-day returns · Secure checkout
@@ -1022,9 +1036,9 @@ function Card({ product, onView, onAdd }: {
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>${product.price}</span>
+            <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>£{product.price}</span>
             <span style={{ fontSize: 12, color: "#ccc", textDecoration: "line-through", marginLeft: 6 }}>
-              ${product.compare}
+              £{product.compare}
             </span>
           </div>
           <button
@@ -1103,7 +1117,7 @@ export default function Home() {
       sort === "top-rated"  ? b.rating - a.rating :
       sort === "best"       ? b.sold - a.sold : 0);
 
-  const marquee = "✦ Free worldwide shipping over $75   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
+  const marquee = "✦ FREE worldwide shipping on every order   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
 
   const footerCols = [
     { title: "Shop", items: [
@@ -1111,10 +1125,10 @@ export default function Home() {
       { label: "Best Sellers", fn: () => { setSort("best"); setCat("All"); scrollToGrid(); } },
       { label: "New Arrivals", fn: () => { setSort("featured"); setCat("All"); scrollToGrid(); } },
       { label: "Sale",         fn: () => { setSort("price-asc"); setCat("All"); scrollToGrid(); } },
-      { label: "Gift Cards",   fn: () => {} },
+      { label: "Gift Cards",   fn: () => setPage("giftcards") },
     ]},
     { title: "Help", items: [
-      { label: "Track Order",  fn: () => setPage("contact") },
+      { label: "Track Order",  fn: () => setPage("tracking") },
       { label: "Returns",      fn: () => setPage("returns") },
       { label: "Shipping",     fn: () => setPage("shipping") },
       { label: "Contact",      fn: () => setPage("contact") },
@@ -1122,9 +1136,9 @@ export default function Home() {
     ]},
     { title: "Company", items: [
       { label: "About",        fn: () => setPage("about") },
-      { label: "Careers",      fn: () => {} },
-      { label: "Press",        fn: () => {} },
-      { label: "Affiliate",    fn: () => {} },
+      { label: "Careers",      fn: () => setPage("careers") },
+      { label: "Press",        fn: () => setPage("press") },
+      { label: "Affiliate",    fn: () => setPage("affiliate") },
       { label: "Privacy",      fn: () => setPage("privacy") },
     ]},
   ];
@@ -1203,7 +1217,7 @@ export default function Home() {
                     {[
                       { label: "Best Sellers", fn: () => { setSort("best"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
                       { label: "New Arrivals", fn: () => { setSort("featured"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
-                      { label: "Under $25",    fn: () => { setSort("price-asc"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
+                      { label: "Under £25",    fn: () => { setSort("price-asc"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
                       { label: "Top Rated",    fn: () => { setSort("top-rated"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
                     ].map(item => (
                       <button key={item.label} onClick={item.fn}
@@ -1287,10 +1301,14 @@ export default function Home() {
                 <div key={p.id} onClick={() => { setSearchOn(false); setQv(p); }}
                   style={{ background: "#fff", borderRadius: 12, padding: 12, cursor: "pointer",
                     boxShadow: "0 2px 8px rgba(0,0,0,.07)", display: "flex", gap: 10, alignItems: "center" }}>
-                  <span style={{ fontSize: 22 }}>{p.emoji}</span>
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>
+                    {(p as any).image
+                      ? <img src={(p as any).image} alt={p.name} style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
+                      : p.emoji}
+                  </span>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>${p.price}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>£{p.price}</div>
                   </div>
                 </div>
               ))}
@@ -1358,9 +1376,15 @@ export default function Home() {
                   alignItems: "center", gap: 8, transition: "transform .2s, box-shadow .2s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1.03)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 28px rgba(0,0,0,.09)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                <div style={{ fontSize: 46 }}>{p.emoji}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#111", textAlign: "center", lineHeight: 1.3 }}>{p.name}</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>${p.price}</div>
+                {(p as any).image
+                  ? <img src={(p as any).image} alt={p.name}
+                      style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: "16px 16px 0 0" }} />
+                  : <div style={{ fontSize: 46, padding: 18 }}>{p.emoji}</div>
+                }
+                <div style={{ padding: "4px 12px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#111", lineHeight: 1.3 }}>{p.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#111", marginTop: 4 }}>£{p.price}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -1422,7 +1446,7 @@ export default function Home() {
         <div style={{ maxWidth: 1100, margin: "0 auto",
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
           {[["🔒","Secure Payments","Stripe, Apple Pay and Google Pay."],
-            ["🚚","Free Worldwide Shipping","On all orders over $75."],
+            ["🚚","Free Worldwide Shipping","Free on every order. No minimum."],
             ["↩️","30-Day Returns","Full refund, zero questions."],
             ["⭐","4.8 Star Average","15,000+ verified reviews."]
           ].map(([icon,title,desc]) => (
