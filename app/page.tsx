@@ -7,7 +7,7 @@ const STORE_COLOR = "#16a34a";
 
 const PRODUCTS = [
   {
-    id: 1, name: "Magnetic Flip Wallet Case", price: 24.99, compare: 39.99,
+    id: 1, name: "Magnetic Flip Wallet Case", image: "https://ae01.alicdn.com/kf/S3841165a6a7044faaf244b7a8ade141cD.jpg", price: 24.99, compare: 39.99,
     category: "Accessories", badge: "Best Seller", rating: 4.8, reviewCount: 3241,
     sold: 3241, stock: 89, emoji: "💳",
     desc: "Magnetic charging flip wallet case. Holds 3 cards. Compatible with Samsung Galaxy A and S series.",
@@ -21,7 +21,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 2, name: "Portable USB Blender Bottle", price: 34.99, compare: 54.99,
+    id: 2, name: "Portable USB Blender Bottle", image: "https://ae01.alicdn.com/kf/S060ad94664b44de0bf39b199b2dfc192l.jpg", price: 34.99, compare: 54.99,
     category: "Fitness", badge: "Trending", rating: 4.7, reviewCount: 5892,
     sold: 5892, stock: 134, emoji: "🥤",
     desc: "400ml USB rechargeable blender. 6 colours. Makes smoothies, shakes and juices anywhere.",
@@ -35,7 +35,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 3, name: "High Density COB LED Strip", price: 19.99, compare: 32.99,
+    id: 3, name: "High Density COB LED Strip", image: "https://ae01.alicdn.com/kf/Sdc2a88e0bd7445c5b9cb0ae7074b21f6N.jpg", price: 19.99, compare: 32.99,
     category: "Home", badge: "Viral", rating: 4.9, reviewCount: 8104,
     sold: 8104, stock: 210, emoji: "💡",
     desc: "Ultra high density 336-528 LED strip. Warm to cool white. Dimmable. 12V and 24V.",
@@ -49,7 +49,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 4, name: "Adjustable Posture Corrector", price: 29.99, compare: 49.99,
+    id: 4, name: "Adjustable Posture Corrector", image: "https://ae01.alicdn.com/kf/S582882d977604d93b158aa0f5748d847P.jpg", price: 29.99, compare: 49.99,
     category: "Health", badge: "Top Rated", rating: 4.8, reviewCount: 4320,
     sold: 4320, stock: 76, emoji: "🦴",
     desc: "VBOSi adjustable back support brace. For men and women. Relieves back and shoulder pain.",
@@ -63,7 +63,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 5, name: "Smart Cat Water Fountain", price: 44.99, compare: 69.99,
+    id: 5, name: "Smart Cat Water Fountain", image: "https://ae01.alicdn.com/kf/S6c799e5956bb4f96a0e53199022c8925W.jpg", price: 44.99, compare: 69.99,
     category: "Pets", badge: "New Drop", rating: 4.9, reviewCount: 2876,
     sold: 2876, stock: 43, emoji: "🐱",
     desc: "ROJECO wireless automatic pet fountain. 2600mAh battery. Infrared sensor. For cats and dogs.",
@@ -77,7 +77,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 6, name: "Luxury Large Tote Bag", price: 49.99, compare: 79.99,
+    id: 6, name: "Luxury Large Tote Bag", image: "https://ae01.alicdn.com/kf/S2e8f9865374f4636a21ebc81e0fa9b08N.jpg", price: 49.99, compare: 79.99,
     category: "Accessories", badge: "Trending", rating: 4.8, reviewCount: 2341,
     sold: 2341, stock: 67, emoji: "👜",
     desc: "2025 large capacity luxury tote. Mommy bag, shoulder bag and commuter bag in one.",
@@ -91,7 +91,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 7, name: "BioloMix Stand Mixer 1200W", price: 89.99, compare: 139.99,
+    id: 7, name: "BioloMix Stand Mixer 1200W", image: "https://ae01.alicdn.com/kf/S88a514b7c9fb4fcb8b5502ea92d4e7eaN.jpg", price: 89.99, compare: 139.99,
     category: "Home", badge: "Best Seller", rating: 4.9, reviewCount: 4102,
     sold: 4102, stock: 38, emoji: "🍰",
     desc: "1200W professional stand mixer. 6L bowl. 6 speeds. Quiet DC motor. Cream, whisk and dough attachments.",
@@ -105,7 +105,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 8, name: "Cordless Drill Kit 45Nm", price: 54.99, compare: 84.99,
+    id: 8, name: "Cordless Drill Kit 45Nm", image: "https://ae01.alicdn.com/kf/S0797fa3e8a6d41efb051222b1abc2c41L.jpg", price: 54.99, compare: 84.99,
     category: "Home", badge: "New Drop", rating: 4.7, reviewCount: 1893,
     sold: 1893, stock: 55, emoji: "🔧",
     desc: "45Nm cordless drill and screwdriver kit. LED work light. Perfect for home and garden DIY.",
@@ -119,7 +119,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 9, name: "Smart WiFi6 HD Projector", price: 119.99, compare: 189.99,
+    id: 9, name: "Smart WiFi6 HD Projector", image: "https://ae01.alicdn.com/kf/A22fe268bafb24be5a53457e06f39b33e6.png", price: 119.99, compare: 189.99,
     category: "Home", badge: "Hot", rating: 4.8, reviewCount: 3204,
     sold: 3204, stock: 29, emoji: "🎬",
     desc: "WiFi6 smart projector. Wireless phone sync. HD home cinema. iOS and Android. Perfect for camping and parties.",
@@ -133,7 +133,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 10, name: "NIBOSI Luxury Men Watch", price: 39.99, compare: 64.99,
+    id: 10, name: "NIBOSI Luxury Men Watch", image: "https://ae01.alicdn.com/kf/S7f47122866f945ad8b9db1af8ffd133b8.jpg", price: 39.99, compare: 64.99,
     category: "Accessories", badge: "Top Rated", rating: 4.8, reviewCount: 6721,
     sold: 6721, stock: 94, emoji: "⌚",
     desc: "NIBOSI luxury waterproof digital quartz watch. Luminous dial. Silicone strap. Date display.",
@@ -147,7 +147,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 11, name: "Platform Slide Sandals", price: 27.99, compare: 44.99,
+    id: 11, name: "Platform Slide Sandals", image: "https://ae01.alicdn.com/kf/Seae4e029658e42fb866840a0146081ccN.jpg", price: 27.99, compare: 44.99,
     category: "Accessories", badge: "Viral", rating: 4.7, reviewCount: 5430,
     sold: 5430, stock: 112, emoji: "👡",
     desc: "2025 fashion platform sandals. Thick sole. Solid colour. Perfect for beach, party and everyday wear.",
@@ -161,7 +161,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 12, name: "Samsung 25W Super Fast Charger", price: 19.99, compare: 32.99,
+    id: 12, name: "Samsung 25W Super Fast Charger", image: "https://ae01.alicdn.com/kf/S2ff051d0ac9243b8848bdbcf31ad933cL.jpg", price: 19.99, compare: 32.99,
     category: "Accessories", badge: "Best Seller", rating: 4.9, reviewCount: 9841,
     sold: 9841, stock: 200, emoji: "⚡",
     desc: "Samsung 25W super fast charger. USB Type-C. Compatible with Galaxy S24, S23, S22, A54, A34, Z Flip and Fold.",
@@ -175,7 +175,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 13, name: "PDT LED Face Mask 7 Colors", price: 49.99, compare: 89.99,
+    id: 13, name: "PDT LED Face Mask 7 Colors", image: "https://ae01.alicdn.com/kf/S3ef6a0b87f744da38fb453cf4d48a0eaW.jpg", price: 49.99, compare: 89.99,
     category: "Beauty", badge: "Best Seller", rating: 4.8, reviewCount: 6234,
     sold: 6234, stock: 54, emoji: "✨",
     desc: "287 LED photon light therapy face mask. 7 colors. Skin rejuvenation, anti-aging and acne treatment.",
@@ -189,7 +189,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 14, name: "Face Vacuum Blackhead Remover", price: 29.99, compare: 49.99,
+    id: 14, name: "Face Vacuum Blackhead Remover", image: "https://ae01.alicdn.com/kf/S64f4f062a72b412a859ecb243068bc16C.jpg", price: 29.99, compare: 49.99,
     category: "Beauty", badge: "Trending", rating: 4.7, reviewCount: 8901,
     sold: 8901, stock: 143, emoji: "💆",
     desc: "Electric face vacuum blackhead remover. Dead skin cleansing. 4 suction heads. USB rechargeable.",
@@ -203,7 +203,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 15, name: "24K Gold Hydrating Skincare Set", price: 39.99, compare: 64.99,
+    id: 15, name: "24K Gold Hydrating Skincare Set", image: "https://ae01.alicdn.com/kf/S9e05198ba62d42e69d4e5b63c2e666caA.jpg", price: 39.99, compare: 64.99,
     category: "Beauty", badge: "New Drop", rating: 4.8, reviewCount: 3102,
     sold: 3102, stock: 87, emoji: "🌹",
     desc: "QUIYUM 5 piece deep hydration kit. 24K gold and rose petal. Wrinkle smoothing and skin tightening.",
@@ -217,7 +217,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 16, name: "Professional Makeup Brush Set", price: 24.99, compare: 39.99,
+    id: 16, name: "Professional Makeup Brush Set", image: "https://ae01.alicdn.com/kf/S322337184d9c45a1b510bbe7d2a57f2cd.jpg", price: 24.99, compare: 39.99,
     category: "Beauty", badge: "Top Rated", rating: 4.9, reviewCount: 11230,
     sold: 11230, stock: 200, emoji: "💄",
     desc: "Professional soft fluffy makeup brush set. Foundation, powder, eyeshadow, kabuki and blending brushes.",
@@ -231,7 +231,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 17, name: "78 Color Glitter Eyeshadow Palette", price: 22.99, compare: 36.99,
+    id: 17, name: "78 Color Glitter Eyeshadow Palette", image: "https://ae01.alicdn.com/kf/Sf767bf44e4c24996ba23459779df751bI.jpg", price: 22.99, compare: 36.99,
     category: "Beauty", badge: "Viral", rating: 4.8, reviewCount: 9876,
     sold: 9876, stock: 167, emoji: "🎨",
     desc: "78 color glitter and matte eyeshadow palette. Waterproof, long lasting pressed powder.",
@@ -245,7 +245,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 18, name: "24K Gold Jelly Face Mask", price: 19.99, compare: 32.99,
+    id: 18, name: "24K Gold Jelly Face Mask", image: "https://ae01.alicdn.com/kf/S49c9dbb7c6674f38b6d05c0ac00f81f6i.jpg", price: 19.99, compare: 32.99,
     category: "Beauty", badge: "Hot", rating: 4.7, reviewCount: 4521,
     sold: 4521, stock: 198, emoji: "🌟",
     desc: "350g hydrating 24K gold soft jelly mask powder. Rose petal crystal formula. Salon spa quality.",
@@ -259,7 +259,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 19, name: "Anti-Theft Luggage Strap", price: 12.99, compare: 19.99,
+    id: 19, name: "Anti-Theft Luggage Strap", image: "https://ae01.alicdn.com/kf/S77e1729c1b254223bcffb59398505b2bY.jpg", price: 12.99, compare: 19.99,
     category: "Travel", badge: "", rating: 4.8, reviewCount: 7432,
     sold: 7432, stock: 300, emoji: "🧳",
     desc: "Anti-theft cross strap luggage buckle. Adjustable bundling belt. Keeps suitcases secure during travel.",
@@ -273,7 +273,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 20, name: "360 Travel Neck Pillow", price: 22.99, compare: 34.99,
+    id: 20, name: "360 Travel Neck Pillow", image: "https://ae01.alicdn.com/kf/Sdd903683c01244499a50cc1e23db6342Y.jpg", price: 22.99, compare: 34.99,
     category: "Travel", badge: "Best Seller", rating: 4.8, reviewCount: 5621,
     sold: 5621, stock: 89, emoji: "✈️",
     desc: "COQ 360 degree neck support travel pillow. For flights, office naps and car journeys.",
@@ -287,7 +287,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 21, name: "TESSAN 140W Travel Adapter", price: 34.99, compare: 54.99,
+    id: 21, name: "TESSAN 140W Travel Adapter", image: "https://ae01.alicdn.com/kf/S02f14e9d85564070ac38ab3baae861cdQ.jpg", price: 34.99, compare: 54.99,
     category: "Travel", badge: "Trending", rating: 4.9, reviewCount: 4320,
     sold: 4320, stock: 112, emoji: "🔌",
     desc: "TESSAN 140W GaN international travel adapter. EU, UK, USA and Australia. 3 USB-C and 1 USB-A.",
@@ -301,7 +301,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 22, name: "JISULIFE Portable Neck Fan", price: 29.99, compare: 44.99,
+    id: 22, name: "JISULIFE Portable Neck Fan", image: "https://ae01.alicdn.com/kf/S3784cfc3f17c4efe839d325ba78a4697K.jpg", price: 29.99, compare: 44.99,
     category: "Travel", badge: "Viral", rating: 4.8, reviewCount: 12340,
     sold: 12340, stock: 156, emoji: "💨",
     desc: "JISULIFE 4500mAh wearable neck fan. 100 wind speeds. LED display. Ultra lightweight.",
@@ -315,7 +315,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 23, name: "4-in-1 Travel Bottle Set", price: 15.99, compare: 24.99,
+    id: 23, name: "4-in-1 Travel Bottle Set", image: "https://ae01.alicdn.com/kf/Sdf2e7d75789d4451823290e8d2d03515y.jpg", price: 15.99, compare: 24.99,
     category: "Travel", badge: "", rating: 4.7, reviewCount: 6780,
     sold: 6780, stock: 243, emoji: "🧴",
     desc: "4-in-1 leak proof travel dispenser set. For perfume, shampoo, conditioner and lotion. TSA approved.",
@@ -329,7 +329,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 24, name: "Ergonomic Cervical Pillow", price: 34.99, compare: 54.99,
+    id: 24, name: "Ergonomic Cervical Pillow", image: "https://ae01.alicdn.com/kf/S7c23bdd38c8d4a2d9b6767b2b3c88950m.jpg", price: 34.99, compare: 54.99,
     category: "Health", badge: "Top Rated", rating: 4.8, reviewCount: 5430,
     sold: 5430, stock: 76, emoji: "😴",
     desc: "Ergonomic cervical traction pillow. Supports all sleeping positions. Anti-snoring and body relaxation.",
@@ -343,7 +343,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 25, name: "3D Electric Fireplace Humidifier", price: 59.99, compare: 94.99,
+    id: 25, name: "3D Electric Fireplace Humidifier", image: "https://ae01.alicdn.com/kf/Sc2f922a47c7e4dccb667b79f4e31f9beP.jpg", price: 59.99, compare: 94.99,
     category: "Home", badge: "Viral", rating: 4.9, reviewCount: 7832,
     sold: 7832, stock: 48, emoji: "🔥",
     desc: "3D water vapor atomized electric fireplace. Realistic steam flame effect. Room humidifier and decoration.",
@@ -357,7 +357,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 26, name: "3D Foam Wall Sticker Panels", price: 17.99, compare: 28.99,
+    id: 26, name: "3D Foam Wall Sticker Panels", image: "https://ae01.alicdn.com/kf/S16b92c7f8503481bbaddda13342776c5z.jpg", price: 17.99, compare: 28.99,
     category: "Home", badge: "Trending", rating: 4.7, reviewCount: 9123,
     sold: 9123, stock: 312, emoji: "🏠",
     desc: "Self-adhesive 3D foam wall panels. Peel and stick. Suitable for living room, bedroom and ceiling.",
@@ -371,7 +371,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 27, name: "Stretch Sofa Cover", price: 27.99, compare: 44.99,
+    id: 27, name: "Stretch Sofa Cover", image: "https://ae01.alicdn.com/kf/S5641536aea66425388dd4ab329bb5c951.jpg", price: 27.99, compare: 44.99,
     category: "Home", badge: "", rating: 4.7, reviewCount: 8234,
     sold: 8234, stock: 189, emoji: "🛋️",
     desc: "Jacquard stretch recliner sofa cover. Non-slip elastic slipcover. Protects sofas and armchairs.",
@@ -385,7 +385,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 28, name: "Microfibre Bedding Set", price: 34.99, compare: 54.99,
+    id: 28, name: "Microfibre Bedding Set", image: "https://ae01.alicdn.com/kf/A171e9f326432494fa10d62933f4ef90f0.jpg", price: 34.99, compare: 54.99,
     category: "Home", badge: "Best Seller", rating: 4.9, reviewCount: 14320,
     sold: 14320, stock: 234, emoji: "🛏️",
     desc: "4 piece soft brushed microfibre bedding set with fitted sheet. UK Single, Double, King and Super King.",
@@ -399,7 +399,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 29, name: "Marathon Carbon Running Shoes", price: 64.99, compare: 99.99,
+    id: 29, name: "Marathon Carbon Running Shoes", image: "https://ae01.alicdn.com/kf/Seca37513ac994225ba26995802a6eba6n.jpg", price: 64.99, compare: 99.99,
     category: "Fitness", badge: "New Drop", rating: 4.8, reviewCount: 3241,
     sold: 3241, stock: 67, emoji: "👟",
     desc: "Carbon board marathon running shoes. Breathable lightweight. Non-slip. For men and women.",
@@ -413,7 +413,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 30, name: "6 Pack Resistance Bands", price: 18.99, compare: 29.99,
+    id: 30, name: "6 Pack Resistance Bands", image: "https://ae01.alicdn.com/kf/S39de7922fbc64441aee4d502a58da3f6f.jpg", price: 18.99, compare: 29.99,
     category: "Fitness", badge: "Best Seller", rating: 4.9, reviewCount: 18920,
     sold: 18920, stock: 400, emoji: "💪",
     desc: "6 piece crossfit resistance band set. 6 resistance levels. Home gym, yoga and strength training.",
@@ -427,7 +427,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 31, name: "Ab Wheel Roller", price: 22.99, compare: 34.99,
+    id: 31, name: "Ab Wheel Roller", image: "https://ae01.alicdn.com/kf/S93a6b11bd22147bba337615fba13761ej.jpg", price: 22.99, compare: 34.99,
     category: "Fitness", badge: "Trending", rating: 4.8, reviewCount: 7654,
     sold: 7654, stock: 143, emoji: "🏋️",
     desc: "6 elbow design ab wheel with automatic rebound. Anti-slip. Core and abdominal workout equipment.",
@@ -441,7 +441,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 32, name: "Knee Brace Compression Sleeve", price: 16.99, compare: 26.99,
+    id: 32, name: "Knee Brace Compression Sleeve", image: "https://ae01.alicdn.com/kf/S3f7687ca17be4958a1c3678060132123y.jpg", price: 16.99, compare: 26.99,
     category: "Health", badge: "", rating: 4.8, reviewCount: 12450,
     sold: 12450, stock: 300, emoji: "🦵",
     desc: "Knee brace support compression sleeve. For gym, running and sports. Joint pain relief.",
@@ -455,7 +455,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 33, name: "Seamless Yoga Sports Bra", price: 21.99, compare: 34.99,
+    id: 33, name: "Seamless Yoga Sports Bra", image: "https://ae01.alicdn.com/kf/S4751968f50fe435e845f52d53ac9d2aeZ.jpg", price: 21.99, compare: 34.99,
     category: "Fitness", badge: "Hot", rating: 4.8, reviewCount: 9870,
     sold: 9870, stock: 178, emoji: "🧘",
     desc: "HISTELLO seamless sports bra vest. Quick-dry. High elastic. For yoga, running and gym.",
@@ -469,7 +469,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 34, name: "Men Compression Running Shirt", price: 24.99, compare: 39.99,
+    id: 34, name: "Men Compression Running Shirt", image: "https://ae01.alicdn.com/kf/S8284dd7403c04090a104effd3e103f2ak.jpg", price: 24.99, compare: 39.99,
     category: "Fitness", badge: "", rating: 4.7, reviewCount: 6543,
     sold: 6543, stock: 134, emoji: "🏃",
     desc: "Men long sleeve compression t-shirt. Quick-dry. Gym, jogging and athletic training top.",
@@ -483,7 +483,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 35, name: "Boxing Reflex Speed Ball", price: 14.99, compare: 22.99,
+    id: 35, name: "Boxing Reflex Speed Ball", image: "https://ae01.alicdn.com/kf/Sed41b9ee9fb94675a868a8f60030c97fM.jpg", price: 14.99, compare: 22.99,
     category: "Fitness", badge: "Viral", rating: 4.7, reviewCount: 15230,
     sold: 15230, stock: 267, emoji: "🥊",
     desc: "Head-mounted boxing reflex speed ball. Improves reaction time, speed and coordination.",
@@ -497,7 +497,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 36, name: "Non-Electric Dual Nozzle Bidet", price: 29.99, compare: 49.99,
+    id: 36, name: "Non-Electric Dual Nozzle Bidet", image: "https://ae01.alicdn.com/kf/S5641536aea66425388dd4ab329bb5c951.jpg", price: 29.99, compare: 49.99,
     category: "Home", badge: "Top Rated", rating: 4.8, reviewCount: 11230,
     sold: 11230, stock: 98, emoji: "🚿",
     desc: "SAMODRA non-electric self-cleaning bidet. Dual nozzle frontal and rear wash. Easy toilet attachment.",
@@ -534,7 +534,7 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   shipping: {
     title: "Shipping Information",
-    body: "We ship worldwide. All orders include a tracking number sent by email.\n\nDelivery Times:\n• United Kingdom: 7-14 days\n• United States: 8-14 days\n• Europe: 10-16 days\n• Australia / Canada: 10-18 days\n• Rest of World: 12-21 days\n\nFree shipping on orders over £75.\nStandard shipping: £6.99",
+    body: "We ship worldwide. All orders include a tracking number sent by email.\n\nDelivery Times:\n• United Kingdom: 7-14 days\n• United States: 8-14 days\n• Europe: 10-16 days\n• Australia / Canada: 10-18 days\n• Rest of World: 12-21 days\n\nFree shipping on orders over $75.\nStandard shipping: $6.99",
   },
   contact: {
     title: "Contact Us",
@@ -542,11 +542,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "Frequently Asked Questions",
-    body: "How long does delivery take?\nMost orders arrive in 7-14 days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once dispatched.\n\nWhat if my item arrives damaged?\nEmail us with a photo and we will send a replacement or full refund immediately.\n\nHow do I return an item?\nSee our Returns Policy. We offer 30-day returns on all items.\n\nDo you offer free shipping?\nYes — free worldwide shipping on all orders over £75.\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.",
+    body: "How long does delivery take?\nMost orders arrive in 7-14 days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once dispatched.\n\nWhat if my item arrives damaged?\nEmail us with a photo and we will send a replacement or full refund immediately.\n\nHow do I return an item?\nSee our Returns Policy. We offer 30-day returns on all items.\n\nDo you offer free shipping?\nYes — free worldwide shipping on all orders over $75.\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.",
   },
   about: {
     title: "About Us",
-    body: "ZAYVI is an AI-powered ecommerce store that discovers trending products from around the world and delivers them to your door.\n\nOur machine learning system scans thousands of products daily, scoring each one on demand, margin, competition and trend velocity. Only the best make it to our store.\n\nWe offer free worldwide shipping on orders over £75 and a 30-day returns guarantee on everything.\n\nThank you for shopping with us.",
+    body: "VYVO is an AI-powered ecommerce store that discovers trending products from around the world and delivers them to your door.\n\nOur machine learning system scans thousands of products daily, scoring each one on demand, margin, competition and trend velocity. Only the best make it to our store.\n\nWe offer free worldwide shipping on orders over $75 and a 30-day returns guarantee on everything.\n\nThank you for shopping with us.",
   },
 };
 
@@ -729,7 +729,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontSize: 13, color: "#888" }}>Shipping</span>
               <span style={{ fontSize: 13, color: sub >= 75 ? "#16a34a" : "#555" }}>
-                {sub >= 75 ? "FREE" : "£6.99"}
+                {sub >= 75 ? "FREE" : "$6.99"}
               </span>
             </div>
             <button
@@ -796,7 +796,13 @@ function QuickView({ product, open, onClose, onAdd }: {
               padding: 32, display: "flex", flexDirection: "column",
               gap: 16, minHeight: 500 }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 110 }}>{product.emoji}</div>
+                justifyContent: "center", fontSize: 110 }}>
+                {(product as any).image
+                  ? <img src={(product as any).image} alt={product.name}
+                      style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 12 }} />
+                  : product.emoji
+                }
+              </div>
               {product.stock < 30 && (
                 <div style={{ textAlign: "center", fontSize: 11, color: "#dc2626",
                   background: "#fef2f2", padding: "6px 12px", borderRadius: 6 }}>
@@ -821,8 +827,8 @@ function QuickView({ product, open, onClose, onAdd }: {
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>£{product.price}</span>
-                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>£{product.compare}</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>${product.price}</span>
+                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>${product.compare}</span>
                 <span style={{ fontSize: 11, background: "#dcfce7", color: "#16a34a",
                   padding: "3px 8px", borderRadius: 5, fontWeight: 700 }}>Save {save}%</span>
               </div>
@@ -876,7 +882,7 @@ function QuickView({ product, open, onClose, onAdd }: {
                   border: "none", borderRadius: 10, padding: "14px",
                   cursor: "pointer", fontSize: 14, fontWeight: 800,
                   transition: "background .3s" }}>
-                {added ? "Added!" : `Add to Cart — £${(product.price * qty).toFixed(2)}`}
+                {added ? "Added!" : `Add to Cart — $${(product.price * qty).toFixed(2)}`}
               </button>
               <div style={{ fontSize: 11, color: "#bbb", textAlign: "center" }}>
                 Free shipping · 30-day returns · Secure checkout
@@ -951,8 +957,13 @@ function Card({ product, onView, onAdd }: {
       <div onClick={() => onView(product)}
         style={{ background: "#f9f9f9", height: 210, display: "flex",
           alignItems: "center", justifyContent: "center", position: "relative" }}>
-        <div style={{ fontSize: 84, transform: hov ? "scale(1.08)" : "scale(1)",
-          transition: "transform .3s" }}>{product.emoji}</div>
+        {(product as any).image
+          ? <img src={(product as any).image} alt={product.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover",
+                transform: hov ? "scale(1.08)" : "scale(1)", transition: "transform .3s" }} />
+          : <div style={{ fontSize: 84, transform: hov ? "scale(1.08)" : "scale(1)",
+              transition: "transform .3s" }}>{product.emoji}</div>
+        }
         {product.badge && (
           <div style={{ position: "absolute", top: 12, left: 12 }}>
             <BadgePill label={product.badge} />
@@ -1011,7 +1022,7 @@ function Card({ product, onView, onAdd }: {
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>£{product.price}</span>
+            <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>${product.price}</span>
             <span style={{ fontSize: 12, color: "#ccc", textDecoration: "line-through", marginLeft: 6 }}>
               ${product.compare}
             </span>
@@ -1092,7 +1103,7 @@ export default function Home() {
       sort === "top-rated"  ? b.rating - a.rating :
       sort === "best"       ? b.sold - a.sold : 0);
 
-  const marquee = "✦ Free worldwide shipping over £75   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
+  const marquee = "✦ Free worldwide shipping over $75   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
 
   const footerCols = [
     { title: "Shop", items: [
@@ -1279,7 +1290,7 @@ export default function Home() {
                   <span style={{ fontSize: 22 }}>{p.emoji}</span>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>£{p.price}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>${p.price}</div>
                   </div>
                 </div>
               ))}
@@ -1349,7 +1360,7 @@ export default function Home() {
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
                 <div style={{ fontSize: 46 }}>{p.emoji}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#111", textAlign: "center", lineHeight: 1.3 }}>{p.name}</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>£{p.price}</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>${p.price}</div>
               </div>
             ))}
           </div>
@@ -1411,7 +1422,7 @@ export default function Home() {
         <div style={{ maxWidth: 1100, margin: "0 auto",
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
           {[["🔒","Secure Payments","Stripe, Apple Pay and Google Pay."],
-            ["🚚","Free Worldwide Shipping","On all orders over £75."],
+            ["🚚","Free Worldwide Shipping","On all orders over $75."],
             ["↩️","30-Day Returns","Full refund, zero questions."],
             ["⭐","4.8 Star Average","15,000+ verified reviews."]
           ].map(([icon,title,desc]) => (
