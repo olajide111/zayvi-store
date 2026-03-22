@@ -761,8 +761,23 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                 fontSize: 15, fontWeight: 800, marginBottom: 10 }}>
               Checkout · £{sub.toFixed(2)}
             </button>
+            <button
+              onClick={() => {
+                const total = sub.toFixed(2);
+                const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+                window.open(
+                  `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=ayoolaolajide949@gmail.com&amount=${total}&currency_code=GBP&item_name=ZAYVI+Order&return=https://zayvi.store/success&cancel_return=https://zayvi.store`,
+                  '_blank'
+                );
+              }}
+              style={{ width: "100%", background: "#FFC439", color: "#003087",
+                border: "none", borderRadius: 10, padding: "14px", cursor: "pointer",
+                fontSize: 15, fontWeight: 800, marginBottom: 10,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🅿️</span> Pay with PayPal · £{sub.toFixed(2)}
+            </button>
             <div style={{ textAlign: "center", fontSize: 11, color: "#bbb" }}>
-              Stripe · Apple Pay · Google Pay
+              Stripe · PayPal · Apple Pay · Google Pay
             </div>
           </div>
         )}
@@ -1526,7 +1541,7 @@ export default function Home() {
             alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div style={{ fontSize: 12, color: "#333" }}>2025 {STORE_NAME}. Zero subscriptions.</div>
             <div style={{ display: "flex", gap: 6 }}>
-              {["Visa","Mastercard","Apple Pay","Google Pay","Stripe"].map(p => (
+              {["Visa","Mastercard","PayPal","Apple Pay","Google Pay","Stripe"].map(p => (
                 <span key={p} style={{ fontSize: 10, color: "#444", background: "#111",
                   border: "1px solid #222", padding: "4px 10px", borderRadius: 4 }}>{p}</span>
               ))}
