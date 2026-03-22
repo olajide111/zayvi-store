@@ -371,7 +371,7 @@ const PRODUCTS = [
     ],
   },
   {
-    id: 27, name: "Stretch Sofa Cover", image: "https://ae01.alicdn.com/kf/S5641536aea66425388dd4ab329bb5c951.jpg", price: 27.99, compare: 44.99,
+    id: 27, name: "Stretch Sofa Cover", image: "https://ae-pic-a1.aliexpress-media.com/kf/S00f9c3475d7649449a3b172cb040d62eS.jpg", price: 27.99, compare: 44.99,
     category: "Home", badge: "", rating: 4.7, reviewCount: 8234,
     sold: 8234, stock: 189, emoji: "🛋️",
     desc: "Jacquard stretch recliner sofa cover. Non-slip elastic slipcover. Protects sofas and armchairs.",
