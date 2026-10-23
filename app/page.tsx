@@ -7,526 +7,337 @@ const STORE_COLOR = "#16a34a";
 
 const PRODUCTS = [
   {
-    id: 1, name: "Magnetic Flip Wallet Case", image: "https://ae01.alicdn.com/kf/S3841165a6a7044faaf244b7a8ade141cD.jpg", price: 24.99, compare: 39.99,
-    category: "Accessories", badge: "Best Seller", rating: 4.8, reviewCount: 3241,
-    sold: 3241, stock: 89, emoji: "💳",
+    id: 1, name: "Magnetic Flip Wallet Case", image: "https://ae01.alicdn.com/kf/S3841165a6a7044faaf244b7a8ade141cD.jpg", price: 24.99,
+    category: "Accessories", emoji: "💳",
     desc: "Magnetic charging flip wallet case. Holds 3 cards. Compatible with Samsung Galaxy A and S series.",
-    longDesc: "Premium leather flip wallet case with built-in magnetic charging support. Fits Samsung Galaxy A06, A16, A55, A35, A25, A15, S25, S24, S23, S22 Ultra and Plus models. Slim profile with 3 card slots and full phone protection.",
-    features: ["Magnetic Charging Compatible", "3 Card Slots", "Premium Leather", "Full Body Protection", "Multi-Model Fit"],
+    longDesc: "Flip wallet case with magnetic charging support. Fits Samsung Galaxy A06, A16, A55, A35, A25, A15, S25, S24, S23, S22 Ultra and Plus models. Slim profile with 3 card slots and full phone protection.",
+    features: ["Magnetic Charging Compatible", "3 Card Slots", "Flip Cover", "Full Body Cover", "Multi-Model Fit"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Brown", hex: "#8B4513" }, { name: "Navy", hex: "#1a1a3e" }],
     sizes: [],
-    reviews: [
-      { name: "Marcus T.", rating: 5, text: "Perfect fit for my S24. Cards slide in smoothly and magnetic charging still works.", date: "Mar 2025" },
-      { name: "Aisha B.", rating: 5, text: "Looks so premium. Everyone asks where I got it.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 2, name: "Portable USB Blender Bottle", image: "https://ae01.alicdn.com/kf/S060ad94664b44de0bf39b199b2dfc192l.jpg", price: 34.99, compare: 54.99,
-    category: "Fitness", badge: "Trending", rating: 4.7, reviewCount: 5892,
-    sold: 5892, stock: 134, emoji: "🥤",
+    id: 2, name: "Portable USB Blender Bottle", image: "https://ae01.alicdn.com/kf/S060ad94664b44de0bf39b199b2dfc192l.jpg", price: 34.99,
+    category: "Fitness", emoji: "🥤",
     desc: "400ml USB rechargeable blender. 6 colours. Makes smoothies, shakes and juices anywhere.",
     longDesc: "Blend protein shakes, smoothies and fruit juices anywhere in seconds. 400ml BPA-free capacity with powerful USB rechargeable motor. 6 stainless steel blades blend ice and frozen fruit with ease. Perfect for gym, office, travel and outdoor use.",
     features: ["USB Rechargeable", "400ml BPA-Free", "6 Stainless Blades", "Portable Travel Size", "Easy Clean Design"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Pink", hex: "#e8a0b0" }, { name: "Blue", hex: "#1a3a6e" }, { name: "Green", hex: "#1a5a2a" }, { name: "White", hex: "#f5f5f5" }, { name: "Purple", hex: "#4a1a7e" }],
     sizes: [],
-    reviews: [
-      { name: "James O.", rating: 5, text: "Takes it to the gym every day. Charges fast and blends everything perfectly.", date: "Mar 2025" },
-      { name: "Fatima K.", rating: 5, text: "Made my morning smoothie routine so much easier.", date: "Mar 2025" },
-    ],
   },
   {
-    id: 3, name: "High Density COB LED Strip", image: "https://ae01.alicdn.com/kf/Sdc2a88e0bd7445c5b9cb0ae7074b21f6N.jpg", price: 19.99, compare: 32.99,
-    category: "Home", badge: "Viral", rating: 4.9, reviewCount: 8104,
-    sold: 8104, stock: 210, emoji: "💡",
+    id: 3, name: "High Density COB LED Strip", image: "https://ae01.alicdn.com/kf/Sdc2a88e0bd7445c5b9cb0ae7074b21f6N.jpg", price: 19.99,
+    category: "Home", emoji: "💡",
     desc: "Ultra high density 336-528 LED strip. Warm to cool white. Dimmable. 12V and 24V.",
     longDesc: "Professional grade FCOB COB LED strip with ultra high density 336 to 528 LEDs per metre. RA90 colour rendering for true natural light. Fully dimmable with smooth continuous light. Available in warm white, natural white and cool white. Works on 12V and 24V systems.",
     features: ["336-528 LEDs Per Metre", "RA90 Colour Rendering", "Fully Dimmable", "12V and 24V", "No Hotspots"],
     colors: [{ name: "Warm White", hex: "#FFD580" }, { name: "Natural White", hex: "#F5F0E0" }, { name: "Cool White", hex: "#E8F4FF" }],
     sizes: ["1 Metre", "2 Metres", "5 Metres"],
-    reviews: [
-      { name: "Daniel W.", rating: 5, text: "Installed under my kitchen cabinets. The light quality is incredible.", date: "Mar 2025" },
-      { name: "Sophie R.", rating: 5, text: "Transformed my bedroom. So much better than cheap LED strips.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 4, name: "Adjustable Posture Corrector", image: "https://ae01.alicdn.com/kf/S582882d977604d93b158aa0f5748d847P.jpg", price: 29.99, compare: 49.99,
-    category: "Health", badge: "Top Rated", rating: 4.8, reviewCount: 4320,
-    sold: 4320, stock: 76, emoji: "🦴",
-    desc: "VBOSi adjustable back support brace. For men and women. Relieves back and shoulder pain.",
-    longDesc: "Professionally designed adjustable posture corrector for men and women. Targets upper back, shoulder and spine alignment. Breathable lightweight material comfortable under clothing. Fully adjustable straps fit all body sizes. Wear 20-30 minutes per day to retrain posture muscles.",
-    features: ["Unisex Design", "Fully Adjustable", "Breathable Material", "Wear Under Clothing", "Physio Recommended"],
+    id: 4, name: "Adjustable Back Support Brace", image: "https://ae01.alicdn.com/kf/S582882d977604d93b158aa0f5748d847P.jpg", price: 29.99,
+    category: "Health", emoji: "🦴",
+    desc: "VBOSi adjustable back support brace. For men and women.",
+    longDesc: "Adjustable back support brace for men and women that sits across the upper back and shoulders. Lightweight, breathable material that can be worn under clothing. Adjustable straps for a range of body sizes. Not a medical device — if you have back or shoulder pain, speak to a healthcare professional.",
+    features: ["Unisex Design", "Fully Adjustable", "Breathable Material", "Wear Under Clothing", "Three Sizes"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Nude", hex: "#c8a882" }],
     sizes: ["S/M", "L/XL", "XXL"],
-    reviews: [
-      { name: "Chris N.", rating: 5, text: "Been wearing this for 3 weeks. My back pain has reduced massively.", date: "Mar 2025" },
-      { name: "Priya M.", rating: 5, text: "Works under my work clothes perfectly.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 5, name: "Smart Cat Water Fountain", image: "https://ae01.alicdn.com/kf/S6c799e5956bb4f96a0e53199022c8925W.jpg", price: 44.99, compare: 69.99,
-    category: "Pets", badge: "New Drop", rating: 4.9, reviewCount: 2876,
-    sold: 2876, stock: 43, emoji: "🐱",
+    id: 5, name: "Smart Cat Water Fountain", image: "https://ae01.alicdn.com/kf/S6c799e5956bb4f96a0e53199022c8925W.jpg", price: 44.99,
+    category: "Pets", emoji: "🐱",
     desc: "ROJECO wireless automatic pet fountain. 2600mAh battery. Infrared sensor. For cats and dogs.",
     longDesc: "Keep your pets hydrated with the ROJECO smart wireless fountain. 2600mAh rechargeable battery runs for weeks without being plugged in. Intelligent infrared sensor detects your pet and activates water flow automatically. Triple filtration system removes hair, debris and impurities.",
     features: ["2600mAh Battery", "Infrared Sensor", "Triple Filtration", "Ultra Quiet Pump", "Wireless Cordless"],
     colors: [{ name: "White", hex: "#f5f5f5" }, { name: "Pink", hex: "#f0d0d8" }],
     sizes: [],
-    reviews: [
-      { name: "Lisa T.", rating: 5, text: "My cat refused to drink from a bowl. This fountain changed everything.", date: "Mar 2025" },
-      { name: "Ben A.", rating: 5, text: "Battery lasts about 3 weeks. My dog loves it.", date: "Mar 2025" },
-    ],
   },
   {
-    id: 6, name: "Luxury Large Tote Bag", image: "https://ae01.alicdn.com/kf/S2e8f9865374f4636a21ebc81e0fa9b08N.jpg", price: 49.99, compare: 79.99,
-    category: "Accessories", badge: "Trending", rating: 4.8, reviewCount: 2341,
-    sold: 2341, stock: 67, emoji: "👜",
+    id: 6, name: "Luxury Large Tote Bag", image: "https://ae01.alicdn.com/kf/S2e8f9865374f4636a21ebc81e0fa9b08N.jpg", price: 49.99,
+    category: "Accessories", emoji: "👜",
     desc: "2025 large capacity luxury tote. Mommy bag, shoulder bag and commuter bag in one.",
     longDesc: "The ultimate everyday bag for the modern woman. Massive main compartment fits a laptop, water bottle, baby essentials and everything in between. Premium light luxury materials with gold-tone hardware. Multiple inner pockets keep everything organised.",
     features: ["Large Capacity", "Premium Hardware", "Multiple Pockets", "Shoulder and Tote Carry", "Versatile Daily Use"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Brown", hex: "#8B4513" }, { name: "Beige", hex: "#d4b896" }],
     sizes: [],
-    reviews: [
-      { name: "Amara D.", rating: 5, text: "Fits absolutely everything. I use it as my work bag and gym bag.", date: "Mar 2025" },
-      { name: "Rachel P.", rating: 5, text: "Got so many compliments. Looks way more expensive than it is.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 7, name: "BioloMix Stand Mixer 1200W", image: "https://ae01.alicdn.com/kf/S88a514b7c9fb4fcb8b5502ea92d4e7eaN.jpg", price: 89.99, compare: 139.99,
-    category: "Home", badge: "Best Seller", rating: 4.9, reviewCount: 4102,
-    sold: 4102, stock: 38, emoji: "🍰",
-    desc: "1200W professional stand mixer. 6L bowl. 6 speeds. Quiet DC motor. Cream, whisk and dough attachments.",
-    longDesc: "Professional grade 1200W stand mixer with whisper-quiet DC motor. 6 litre stainless steel bowl handles large batches. Comes with cream beater, egg whisk and dough hook. 6 speed settings plus pulse function.",
-    features: ["1200W Quiet DC Motor", "6 Litre Bowl", "6 Speed Settings", "3 Attachments Included", "Professional Grade"],
+    id: 7, name: "BioloMix Stand Mixer 1200W", image: "https://ae01.alicdn.com/kf/S88a514b7c9fb4fcb8b5502ea92d4e7eaN.jpg", price: 89.99,
+    category: "Home", emoji: "🍰",
+    desc: "1200W stand mixer. 6L bowl. 6 speeds. DC motor. Cream, whisk and dough attachments.",
+    longDesc: "1200W stand mixer with a DC motor. 6 litre stainless steel bowl handles large batches. Comes with cream beater, egg whisk and dough hook. 6 speed settings plus pulse function.",
+    features: ["1200W Quiet DC Motor", "6 Litre Bowl", "6 Speed Settings", "3 Attachments Included", "Pulse Function"],
     colors: [{ name: "Silver", hex: "#8a8a8a" }, { name: "Black", hex: "#1a1a1a" }, { name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Hannah W.", rating: 5, text: "Replaced my KitchenAid with this. Just as good at a fraction of the price.", date: "Mar 2025" },
-      { name: "Tunde B.", rating: 5, text: "The quiet motor is unreal. Kneads bread dough perfectly.", date: "Mar 2025" },
-    ],
   },
   {
-    id: 8, name: "Cordless Drill Kit 45Nm", image: "https://ae01.alicdn.com/kf/S0797fa3e8a6d41efb051222b1abc2c41L.jpg", price: 54.99, compare: 84.99,
-    category: "Home", badge: "New Drop", rating: 4.7, reviewCount: 1893,
-    sold: 1893, stock: 55, emoji: "🔧",
+    id: 8, name: "Cordless Drill Kit 45Nm", image: "https://ae01.alicdn.com/kf/S0797fa3e8a6d41efb051222b1abc2c41L.jpg", price: 54.99,
+    category: "Home", emoji: "🔧",
     desc: "45Nm cordless drill and screwdriver kit. LED work light. Perfect for home and garden DIY.",
     longDesc: "Complete cordless drill and screwdriver combination kit. 45Nm torque handles wood, metal and masonry. Built-in LED work light illuminates dark spaces. Includes full drill bit and screwdriver bit set. Rechargeable battery with long runtime.",
     features: ["45Nm Torque", "LED Work Light", "Cordless Freedom", "Full Bit Set Included", "Long Battery Life"],
     colors: [{ name: "Yellow", hex: "#f5c518" }, { name: "Black", hex: "#1a1a1a" }],
     sizes: [],
-    reviews: [
-      { name: "Steve M.", rating: 5, text: "Built an entire shed with this. Never lost power and the torque is impressive.", date: "Mar 2025" },
-      { name: "Kevin A.", rating: 4, text: "Great value kit. Does everything a beginner needs.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 9, name: "Smart WiFi6 HD Projector", image: "https://ae01.alicdn.com/kf/A22fe268bafb24be5a53457e06f39b33e6.png", price: 119.99, compare: 189.99,
-    category: "Home", badge: "Hot", rating: 4.8, reviewCount: 3204,
-    sold: 3204, stock: 29, emoji: "🎬",
+    id: 9, name: "Smart WiFi6 HD Projector", image: "https://ae01.alicdn.com/kf/A22fe268bafb24be5a53457e06f39b33e6.png", price: 119.99,
+    category: "Home", emoji: "🎬",
     desc: "WiFi6 smart projector. Wireless phone sync. HD home cinema. iOS and Android. Perfect for camping and parties.",
     longDesc: "Turn any wall into a cinema with this Smart WiFi6 HD projector. Wirelessly sync your iPhone or Android in seconds. Crisp HD image up to 120 inches. Built-in speaker delivers room-filling sound. Perfect for movie nights, outdoor camping, birthday parties and sports events.",
     features: ["WiFi6 Technology", "Wireless Phone Sync", "Up to 120 Inch Screen", "iOS and Android", "Built-in Speaker"],
     colors: [{ name: "White", hex: "#f5f5f5" }, { name: "Black", hex: "#1a1a1a" }],
     sizes: [],
-    reviews: [
-      { name: "Jay F.", rating: 5, text: "Set this up in my garden for a movie night. 40 people came and the picture was perfect.", date: "Mar 2025" },
-      { name: "Chloe R.", rating: 5, text: "Used it camping last weekend. Everyone was blown away.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 10, name: "NIBOSI Luxury Men Watch", image: "https://ae01.alicdn.com/kf/S7f47122866f945ad8b9db1af8ffd133b8.jpg", price: 39.99, compare: 64.99,
-    category: "Accessories", badge: "Top Rated", rating: 4.8, reviewCount: 6721,
-    sold: 6721, stock: 94, emoji: "⌚",
+    id: 10, name: "NIBOSI Luxury Men Watch", image: "https://ae01.alicdn.com/kf/S7f47122866f945ad8b9db1af8ffd133b8.jpg", price: 39.99,
+    category: "Accessories", emoji: "⌚",
     desc: "NIBOSI luxury waterproof digital quartz watch. Luminous dial. Silicone strap. Date display.",
     longDesc: "NIBOSI top brand luxury watch combining digital and quartz movement. Waterproof construction survives splashes and rain. Super luminous dial readable in complete darkness. Automatic date display. Suits business, casual and sport occasions.",
     features: ["Waterproof Design", "Luminous Dial", "Digital and Quartz", "Date Display", "Silicone Strap"],
     colors: [{ name: "All Black", hex: "#1a1a1a" }, { name: "Silver", hex: "#8a8a8a" }, { name: "Rose Gold", hex: "#b8860c" }, { name: "Blue", hex: "#1a3a6e" }],
     sizes: [],
-    reviews: [
-      { name: "Michael O.", rating: 5, text: "Wore this to a wedding and got asked where I bought it three times.", date: "Mar 2025" },
-      { name: "Sam T.", rating: 5, text: "Build quality is far above the price.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 11, name: "Platform Slide Sandals", image: "https://ae01.alicdn.com/kf/Seae4e029658e42fb866840a0146081ccN.jpg", price: 27.99, compare: 44.99,
-    category: "Accessories", badge: "Viral", rating: 4.7, reviewCount: 5430,
-    sold: 5430, stock: 112, emoji: "👡",
+    id: 11, name: "Platform Slide Sandals", image: "https://ae01.alicdn.com/kf/Seae4e029658e42fb866840a0146081ccN.jpg", price: 27.99,
+    category: "Accessories", emoji: "👡",
     desc: "2025 fashion platform sandals. Thick sole. Solid colour. Perfect for beach, party and everyday wear.",
     longDesc: "Elevate any outfit with these 2025 fashion platform slide sandals. Chunky thick sole adds height and comfort. Smooth solid colour upper suits casual outfits, beach days, pool parties and summer events. Lightweight and easy to slip on.",
     features: ["Platform Thick Sole", "Slip On Design", "Lightweight Comfort", "Beach and Party Ready", "2025 Fashion Style"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "White", hex: "#f5f5f5" }, { name: "Beige", hex: "#d4b896" }, { name: "Pink", hex: "#e8a0b0" }],
     sizes: ["UK 3", "UK 4", "UK 5", "UK 6", "UK 7", "UK 8"],
-    reviews: [
-      { name: "Zara K.", rating: 5, text: "Wore these on holiday in Spain. So comfortable for walking all day.", date: "Mar 2025" },
-      { name: "Bola A.", rating: 5, text: "Perfect for summer. The platform gives just enough height.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 12, name: "Samsung 25W Super Fast Charger", image: "https://ae01.alicdn.com/kf/S2ff051d0ac9243b8848bdbcf31ad933cL.jpg", price: 19.99, compare: 32.99,
-    category: "Accessories", badge: "Best Seller", rating: 4.9, reviewCount: 9841,
-    sold: 9841, stock: 200, emoji: "⚡",
-    desc: "Samsung 25W super fast charger. USB Type-C. Compatible with Galaxy S24, S23, S22, A54, A34, Z Flip and Fold.",
-    longDesc: "Official compatible 25W super fast charger for Samsung Galaxy devices. USB Type-C charges from 0 to 50% in just 30 minutes. Compatible with Galaxy S24, S23, S22, S21, S20, A54, A34, Z Flip, Z Fold and all USB-C Samsung devices. Intelligent chip prevents overcharging.",
-    features: ["25W Super Fast Charge", "USB Type-C", "0 to 50% in 30 Minutes", "Overcharge Protection", "Wide Samsung Compatibility"],
+    id: 12, name: "25W USB-C Fast Charger", image: "https://ae01.alicdn.com/kf/S2ff051d0ac9243b8848bdbcf31ad933cL.jpg", price: 19.99,
+    category: "Accessories", emoji: "⚡",
+    desc: "25W USB Type-C wall charger. Compatible with Samsung Galaxy S24, S23, S22, A54, A34, Z Flip and Z Fold. Not made or endorsed by Samsung.",
+    longDesc: "Third-party 25W USB Type-C wall charger. Compatible with Samsung Galaxy S24, S23, S22, S21, S20, A54, A34, Z Flip and Z Fold, and other USB-C phones that support 25W charging. Charging speed depends on your phone and cable. This is not a Samsung product and is not made, sponsored or endorsed by Samsung.",
+    features: ["25W Output", "USB Type-C", "Overcharge Protection", "Compatible with Samsung Galaxy (see list)"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Emeka J.", rating: 5, text: "Charges my S24 Ultra insanely fast.", date: "Mar 2025" },
-      { name: "Nina S.", rating: 5, text: "Bought 3 — one for home, work and my bag.", date: "Mar 2025" },
-    ],
   },
   {
-    id: 13, name: "PDT LED Face Mask 7 Colors", image: "https://ae01.alicdn.com/kf/S3ef6a0b87f744da38fb453cf4d48a0eaW.jpg", price: 49.99, compare: 89.99,
-    category: "Beauty", badge: "Best Seller", rating: 4.8, reviewCount: 6234,
-    sold: 6234, stock: 54, emoji: "✨",
-    desc: "287 LED photon light therapy face mask. 7 colors. Skin rejuvenation, anti-aging and acne treatment.",
-    longDesc: "Professional grade 287 LED PDT photon light therapy mask used in top salons worldwide. 7 color modes target different skin concerns. Red for anti-aging, blue for acne, green for pigmentation. 20 minute daily sessions deliver visible results within 2 weeks.",
-    features: ["287 LEDs", "7 Color Modes", "Anti-Aging and Acne", "Salon Grade", "Rechargeable"],
+    id: 13, name: "PDT LED Face Mask 7 Colors", image: "https://ae01.alicdn.com/kf/S3ef6a0b87f744da38fb453cf4d48a0eaW.jpg", price: 49.99,
+    category: "Beauty", emoji: "✨",
+    desc: "287 LED face mask with 7 light colour modes. Rechargeable.",
+    longDesc: "Cosmetic LED face mask with 287 LEDs and 7 selectable light colours. Rechargeable. This is not a medical device and is not intended to diagnose, treat or cure any skin condition. Follow the supplied instructions and avoid use if you are photosensitive.",
+    features: ["287 LEDs", "7 Color Modes", "Rechargeable"],
     colors: [{ name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Jade M.", rating: 5, text: "Used this every night for 3 weeks. My skin has never looked better.", date: "Mar 2025" },
-      { name: "Tolu A.", rating: 5, text: "Saved me a fortune on salon treatments.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 14, name: "Face Vacuum Blackhead Remover", image: "https://ae01.alicdn.com/kf/S64f4f062a72b412a859ecb243068bc16C.jpg", price: 29.99, compare: 49.99,
-    category: "Beauty", badge: "Trending", rating: 4.7, reviewCount: 8901,
-    sold: 8901, stock: 143, emoji: "💆",
-    desc: "Electric face vacuum blackhead remover. Dead skin cleansing. 4 suction heads. USB rechargeable.",
-    longDesc: "Professional electric facial vacuum that removes blackheads, dead skin and impurities deep from pores. 4 interchangeable suction heads target different areas. 3 suction levels from gentle to deep cleanse. Visible results after first use.",
-    features: ["4 Suction Heads", "3 Suction Levels", "USB Rechargeable", "Deep Pore Cleanse", "Visible First Use"],
+    id: 14, name: "Face Vacuum Blackhead Remover", image: "https://ae01.alicdn.com/kf/S64f4f062a72b412a859ecb243068bc16C.jpg", price: 29.99,
+    category: "Beauty", emoji: "💆",
+    desc: "Electric face vacuum pore cleaner. 4 suction heads. USB rechargeable.",
+    longDesc: "Electric facial suction device for cleansing the skin surface. 4 interchangeable suction heads and 3 suction levels. USB rechargeable. Start on the lowest setting and do not hold on one spot, as strong suction can cause marks or bruising.",
+    features: ["4 Suction Heads", "3 Suction Levels", "USB Rechargeable"],
     colors: [{ name: "Pink", hex: "#e8a0b0" }, { name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Kezia B.", rating: 5, text: "Cleared my blackheads completely in one session.", date: "Mar 2025" },
-      { name: "Sade O.", rating: 4, text: "Works really well on my nose.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 15, name: "24K Gold Hydrating Skincare Set", image: "https://ae01.alicdn.com/kf/S9e05198ba62d42e69d4e5b63c2e666caA.jpg", price: 39.99, compare: 64.99,
-    category: "Beauty", badge: "New Drop", rating: 4.8, reviewCount: 3102,
-    sold: 3102, stock: 87, emoji: "🌹",
-    desc: "QUIYUM 5 piece deep hydration kit. 24K gold and rose petal. Wrinkle smoothing and skin tightening.",
-    longDesc: "Luxurious 5 piece skincare gift set infused with 24K gold and rose petal extract. Complete deep hydration system includes cleanser, serum, day cream, night cream and eye cream. Targets wrinkles, dryness and loss of firmness. Comes in premium gift box.",
-    features: ["24K Gold Infused", "5 Piece Complete Set", "Deep Hydration", "Anti-Wrinkle Formula", "Perfect Gift Set"],
+    id: 15, name: "24K Gold Skincare Set", image: "https://ae01.alicdn.com/kf/S9e05198ba62d42e69d4e5b63c2e666caA.jpg", price: 39.99,
+    category: "Beauty", emoji: "🌹",
+    desc: "QUIYUM 5 piece skincare set with 24K gold and rose petal extract.",
+    longDesc: "Luxurious 5 piece skincare gift set infused with 24K gold and rose petal extract. Includes cleanser, serum, day cream, night cream and eye cream. Comes in a gift box. Patch test before first use.",
+    features: ["24K Gold and Rose Extract", "5 Piece Set", "Moisturising Creams", "Gift Box"],
     colors: [{ name: "Gold", hex: "#b8960c" }],
     sizes: [],
-    reviews: [
-      { name: "Blessing N.", rating: 5, text: "Bought this as a gift for my mum. Beautiful packaging.", date: "Mar 2025" },
-      { name: "Funmi A.", rating: 5, text: "My skin feels incredible after 2 weeks.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 16, name: "Professional Makeup Brush Set", image: "https://ae01.alicdn.com/kf/S322337184d9c45a1b510bbe7d2a57f2cd.jpg", price: 24.99, compare: 39.99,
-    category: "Beauty", badge: "Top Rated", rating: 4.9, reviewCount: 11230,
-    sold: 11230, stock: 200, emoji: "💄",
+    id: 16, name: "Professional Makeup Brush Set", image: "https://ae01.alicdn.com/kf/S322337184d9c45a1b510bbe7d2a57f2cd.jpg", price: 24.99,
+    category: "Beauty", emoji: "💄",
     desc: "Professional soft fluffy makeup brush set. Foundation, powder, eyeshadow, kabuki and blending brushes.",
-    longDesc: "Complete professional makeup brush collection with ultra-soft synthetic bristles. Includes foundation, powder, contour, blush, eyeshadow, blending and kabuki brushes. Cruelty-free and hypoallergenic. Comes with storage roll bag.",
-    features: ["Ultra-Soft Bristles", "Full Face Set", "Cruelty-Free", "Hypoallergenic", "Storage Bag Included"],
+    longDesc: "Makeup brush set with soft synthetic bristles. Includes foundation, powder, contour, blush, eyeshadow, blending and kabuki brushes. Comes with storage roll bag.",
+    features: ["Soft Synthetic Bristles", "Full Face Set", "Storage Bag Included"],
     colors: [{ name: "Rose Gold", hex: "#b8860c" }, { name: "Black", hex: "#1a1a1a" }, { name: "Purple", hex: "#4a1a7e" }],
     sizes: [],
-    reviews: [
-      { name: "Chisom P.", rating: 5, text: "Best brushes I have ever owned. So soft and blend perfectly.", date: "Mar 2025" },
-      { name: "Lauren T.", rating: 5, text: "My old brushes feel like sandpaper compared to these.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 17, name: "78 Color Glitter Eyeshadow Palette", image: "https://ae01.alicdn.com/kf/Sf767bf44e4c24996ba23459779df751bI.jpg", price: 22.99, compare: 36.99,
-    category: "Beauty", badge: "Viral", rating: 4.8, reviewCount: 9876,
-    sold: 9876, stock: 167, emoji: "🎨",
+    id: 17, name: "78 Color Glitter Eyeshadow Palette", image: "https://ae01.alicdn.com/kf/Sf767bf44e4c24996ba23459779df751bI.jpg", price: 22.99,
+    category: "Beauty", emoji: "🎨",
     desc: "78 color glitter and matte eyeshadow palette. Waterproof, long lasting pressed powder.",
     longDesc: "78 stunning shades combining matte, shimmer and glitter finishes. Waterproof formula lasts all day without creasing. Highly pigmented pressed powder blends effortlessly. Compact mirror included. Suitable for all skin tones.",
     features: ["78 Shades", "Matte and Glitter Mix", "Waterproof Formula", "Highly Pigmented", "Mirror Included"],
     colors: [{ name: "Multi", hex: "#e8a0b0" }],
     sizes: [],
-    reviews: [
-      { name: "Yemi S.", rating: 5, text: "The pigmentation is insane. One swipe and the colour is full.", date: "Mar 2025" },
-      { name: "Abby W.", rating: 5, text: "Wore the gold shimmer shade to a wedding. Got compliments all night.", date: "Mar 2025" },
-    ],
   },
   {
-    id: 18, name: "24K Gold Jelly Face Mask", image: "https://ae01.alicdn.com/kf/S49c9dbb7c6674f38b6d05c0ac00f81f6i.jpg", price: 19.99, compare: 32.99,
-    category: "Beauty", badge: "Hot", rating: 4.7, reviewCount: 4521,
-    sold: 4521, stock: 198, emoji: "🌟",
-    desc: "350g hydrating 24K gold soft jelly mask powder. Rose petal crystal formula. Salon spa quality.",
-    longDesc: "Professional salon quality 24K gold crystal jelly mask powder. Mix with water to create a luxurious gel mask that peels off cleanly. Rose petal extract brightens and hydrates. 350g tub gives approximately 20 full face treatments.",
-    features: ["24K Gold Formula", "Rose Petal Extract", "20 Treatments Per Tub", "Peel Off Design", "All Skin Types"],
+    id: 18, name: "24K Gold Jelly Face Mask", image: "https://ae01.alicdn.com/kf/S49c9dbb7c6674f38b6d05c0ac00f81f6i.jpg", price: 19.99,
+    category: "Beauty", emoji: "🌟",
+    desc: "350g 24K gold soft jelly mask powder with rose petal. Mix with water and peel off.",
+    longDesc: "24K gold crystal jelly mask powder. Mix with water to create a gel mask that peels off. Contains rose petal extract. 350g tub gives approximately 20 face masks. Patch test before first use.",
+    features: ["24K Gold Formula", "Rose Petal Extract", "About 20 Masks Per Tub", "Peel Off Design"],
     colors: [{ name: "Gold", hex: "#b8960c" }],
     sizes: [],
-    reviews: [
-      { name: "Ngozi K.", rating: 5, text: "My skin glows after every use. The peel off is so satisfying.", date: "Mar 2025" },
-      { name: "Maria L.", rating: 5, text: "Used this at a girls night. Everyone wanted to buy one.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 19, name: "Anti-Theft Luggage Strap", image: "https://ae01.alicdn.com/kf/S77e1729c1b254223bcffb59398505b2bY.jpg", price: 12.99, compare: 19.99,
-    category: "Travel", badge: "", rating: 4.8, reviewCount: 7432,
-    sold: 7432, stock: 300, emoji: "🧳",
+    id: 19, name: "Anti-Theft Luggage Strap", image: "https://ae01.alicdn.com/kf/S77e1729c1b254223bcffb59398505b2bY.jpg", price: 12.99,
+    category: "Travel", emoji: "🧳",
     desc: "Anti-theft cross strap luggage buckle. Adjustable bundling belt. Keeps suitcases secure during travel.",
     longDesc: "Keep your luggage safe with this adjustable anti-theft cross strap. Durable buckle system locks around your suitcase preventing accidental opening. Fits all suitcase sizes. Bright colours make your luggage easy to spot on the baggage carousel.",
     features: ["Anti-Theft Design", "Fits All Suitcase Sizes", "Adjustable Length", "Durable Buckle", "Easy Identification"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Red", hex: "#8B0000" }, { name: "Blue", hex: "#1a3a6e" }],
     sizes: [],
-    reviews: [
-      { name: "Dele F.", rating: 5, text: "My suitcase arrived perfectly intact. Peace of mind for every trip.", date: "Mar 2025" },
-      { name: "Sarah H.", rating: 4, text: "Very sturdy buckle. Easy to fit and adjust.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 20, name: "360 Travel Neck Pillow", image: "https://ae01.alicdn.com/kf/Sdd903683c01244499a50cc1e23db6342Y.jpg", price: 22.99, compare: 34.99,
-    category: "Travel", badge: "Best Seller", rating: 4.8, reviewCount: 5621,
-    sold: 5621, stock: 89, emoji: "✈️",
+    id: 20, name: "360 Travel Neck Pillow", image: "https://ae01.alicdn.com/kf/Sdd903683c01244499a50cc1e23db6342Y.jpg", price: 22.99,
+    category: "Travel", emoji: "✈️",
     desc: "COQ 360 degree neck support travel pillow. For flights, office naps and car journeys.",
-    longDesc: "The ultimate travel companion for long haul flights and road trips. 360 degree neck support prevents neck strain and head dropping during sleep. Memory foam core adapts to your neck shape. Compact and compressible. Removable washable cover.",
+    longDesc: "The ultimate travel companion for long haul flights and road trips. 360 degree wrap-around neck support. Memory foam core. Compact and compressible. Removable washable cover.",
     features: ["360 Degree Support", "Memory Foam Core", "Washable Cover", "Compact and Portable", "Flight and Office"],
     colors: [{ name: "Grey", hex: "#8a8a8a" }, { name: "Navy", hex: "#1a1a3e" }, { name: "Black", hex: "#1a1a1a" }],
     sizes: [],
-    reviews: [
-      { name: "Kemi A.", rating: 5, text: "Flew 12 hours and slept the whole way. This pillow is life changing.", date: "Mar 2025" },
-      { name: "Paul R.", rating: 5, text: "Use it at my desk too. Neck pain completely gone.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 21, name: "TESSAN 140W Travel Adapter", image: "https://ae01.alicdn.com/kf/S02f14e9d85564070ac38ab3baae861cdQ.jpg", price: 34.99, compare: 54.99,
-    category: "Travel", badge: "Trending", rating: 4.9, reviewCount: 4320,
-    sold: 4320, stock: 112, emoji: "🔌",
+    id: 21, name: "TESSAN 140W Travel Adapter", image: "https://ae01.alicdn.com/kf/S02f14e9d85564070ac38ab3baae861cdQ.jpg", price: 34.99,
+    category: "Travel", emoji: "🔌",
     desc: "TESSAN 140W GaN international travel adapter. EU, UK, USA and Australia. 3 USB-C and 1 USB-A.",
     longDesc: "The ultimate all-in-one international travel adapter. Works in over 150 countries. 140W GaN technology supports super fast charging. 3 USB-C ports and 1 USB-A charge up to 4 devices simultaneously. Universal AC outlet works with laptops. Compact foldable plug design.",
     features: ["Works in 150+ Countries", "140W GaN Fast Charging", "3 USB-C Ports", "4 Devices Simultaneously", "Compact Foldable"],
     colors: [{ name: "White", hex: "#f5f5f5" }, { name: "Black", hex: "#1a1a1a" }],
     sizes: [],
-    reviews: [
-      { name: "Temi O.", rating: 5, text: "Charged my MacBook, iPhone and iPad simultaneously. Perfect.", date: "Mar 2025" },
-      { name: "James W.", rating: 5, text: "Works perfectly in every country I have visited.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 22, name: "JISULIFE Portable Neck Fan", image: "https://ae01.alicdn.com/kf/S3784cfc3f17c4efe839d325ba78a4697K.jpg", price: 29.99, compare: 44.99,
-    category: "Travel", badge: "Viral", rating: 4.8, reviewCount: 12340,
-    sold: 12340, stock: 156, emoji: "💨",
+    id: 22, name: "JISULIFE Portable Neck Fan", image: "https://ae01.alicdn.com/kf/S3784cfc3f17c4efe839d325ba78a4697K.jpg", price: 29.99,
+    category: "Travel", emoji: "💨",
     desc: "JISULIFE 4500mAh wearable neck fan. 100 wind speeds. LED display. Ultra lightweight.",
     longDesc: "Stay cool anywhere with the JISULIFE hands-free wearable neck fan. Massive 4500mAh battery delivers up to 8 hours of continuous use. 100 precise wind speed settings. LED display shows battery level and speed. Perfect for outdoor events, commuting, festivals and hot offices.",
     features: ["4500mAh Battery", "100 Wind Speeds", "LED Display", "8 Hour Runtime", "Hands-Free Design"],
     colors: [{ name: "White", hex: "#f5f5f5" }, { name: "Black", hex: "#1a1a1a" }, { name: "Pink", hex: "#e8a0b0" }],
     sizes: [],
-    reviews: [
-      { name: "Ife B.", rating: 5, text: "Wore this at an outdoor festival all day. Never got hot once.", date: "Mar 2025" },
-      { name: "Grace P.", rating: 5, text: "Perfect for my hot office. The 100 speeds mean I can get it exactly right.", date: "Mar 2025" },
-    ],
   },
   {
-    id: 23, name: "4-in-1 Travel Bottle Set", image: "https://ae01.alicdn.com/kf/Sdf2e7d75789d4451823290e8d2d03515y.jpg", price: 15.99, compare: 24.99,
-    category: "Travel", badge: "", rating: 4.7, reviewCount: 6780,
-    sold: 6780, stock: 243, emoji: "🧴",
-    desc: "4-in-1 leak proof travel dispenser set. For perfume, shampoo, conditioner and lotion. TSA approved.",
-    longDesc: "Never suffer leaking toiletries again. 4 leak-proof travel bottles in TSA approved sizes. Fill with your favourite products. Airtight caps and secure seals prevent leakage. Transparent bottles show fill levels at a glance. Reusable and eco-friendly.",
-    features: ["4 Bottles Included", "100% Leak Proof", "TSA Approved Size", "Transparent Design", "Reusable and Eco"],
+    id: 23, name: "4-in-1 Travel Bottle Set", image: "https://ae01.alicdn.com/kf/Sdf2e7d75789d4451823290e8d2d03515y.jpg", price: 15.99,
+    category: "Travel", emoji: "🧴",
+    desc: "4-in-1 travel dispenser set with sealed caps. For perfume, shampoo, conditioner and lotion.",
+    longDesc: "4 refillable travel-size bottles. Fill with your favourite products. Sealed caps help prevent leaks. Check your airline's liquid rules before you fly. Transparent bottles show fill levels at a glance. Reusable and eco-friendly.",
+    features: ["4 Bottles Included", "Sealed Caps", "Travel Size", "Transparent Design", "Refillable"],
     colors: [{ name: "Clear", hex: "#e8f4e8" }, { name: "Pink", hex: "#e8a0b0" }],
     sizes: [],
-    reviews: [
-      { name: "Ada C.", rating: 5, text: "Travelled with my favourite products without any leaks. Game changer.", date: "Mar 2025" },
-      { name: "Tom B.", rating: 4, text: "Very secure lids. Survived a 10 hour flight with no issues.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 24, name: "Ergonomic Cervical Pillow", image: "https://ae01.alicdn.com/kf/S7c23bdd38c8d4a2d9b6767b2b3c88950m.jpg", price: 34.99, compare: 54.99,
-    category: "Health", badge: "Top Rated", rating: 4.8, reviewCount: 5430,
-    sold: 5430, stock: 76, emoji: "😴",
-    desc: "Ergonomic cervical traction pillow. Supports all sleeping positions. Anti-snoring and body relaxation.",
-    longDesc: "Wake up pain free with this ergonomically designed cervical traction pillow. Dual height contour supports both back and side sleeping positions. Memory foam core adapts to your exact neck shape. Promotes natural spinal alignment reducing neck pain and snoring.",
-    features: ["Cervical Traction Design", "All Sleep Positions", "Memory Foam Core", "Anti-Snoring", "Cooling Cover"],
+    id: 24, name: "Contoured Memory Foam Pillow", image: "https://ae01.alicdn.com/kf/S7c23bdd38c8d4a2d9b6767b2b3c88950m.jpg", price: 34.99,
+    category: "Health", emoji: "😴",
+    desc: "Contoured memory foam pillow. For back and side sleepers.",
+    longDesc: "Contoured memory foam pillow with a dual-height shape for back and side sleeping positions. Not a medical device — if you have neck pain or a sleep problem such as snoring, speak to a healthcare professional.",
+    features: ["Contoured Shape", "Back and Side Sleepers", "Memory Foam Core"],
     colors: [{ name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Bola T.", rating: 5, text: "Woke up without neck pain for the first time in years.", date: "Mar 2025" },
-      { name: "Karen S.", rating: 5, text: "My husband stopped snoring within a week of using this.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 25, name: "3D Electric Fireplace Humidifier", image: "https://ae01.alicdn.com/kf/Sc2f922a47c7e4dccb667b79f4e31f9beP.jpg", price: 59.99, compare: 94.99,
-    category: "Home", badge: "Viral", rating: 4.9, reviewCount: 7832,
-    sold: 7832, stock: 48, emoji: "🔥",
+    id: 25, name: "3D Electric Fireplace Humidifier", image: "https://ae01.alicdn.com/kf/Sc2f922a47c7e4dccb667b79f4e31f9beP.jpg", price: 59.99,
+    category: "Home", emoji: "🔥",
     desc: "3D water vapor atomized electric fireplace. Realistic steam flame effect. Room humidifier and decoration.",
-    longDesc: "Create cosy fireplace ambience without any heat or fire risk. 3D water vapor technology creates stunningly realistic flickering flame effect. Doubles as a room humidifier. Colourful LED lighting with multiple flame colour options. Safe around children and pets.",
-    features: ["Realistic 3D Flame Effect", "Built-In Humidifier", "Colourful LED Lighting", "Safe No Heat Flame", "Remote Control"],
+    longDesc: "Decorative flame effect made from LED-lit water vapour — there is no real flame. Doubles as a room humidifier. Colourful LED lighting with multiple flame colour options. Keep out of reach of children and pets, as with any mains-powered appliance.",
+    features: ["Realistic 3D Flame Effect", "Built-In Humidifier", "Colourful LED Lighting", "No Real Flame", "Remote Control"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Nora K.", rating: 5, text: "Looks absolutely stunning in my living room. The flame is incredibly realistic.", date: "Mar 2025" },
-      { name: "David A.", rating: 5, text: "The humidifier function is brilliant too.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 26, name: "3D Foam Wall Sticker Panels", image: "https://ae01.alicdn.com/kf/S16b92c7f8503481bbaddda13342776c5z.jpg", price: 17.99, compare: 28.99,
-    category: "Home", badge: "Trending", rating: 4.7, reviewCount: 9123,
-    sold: 9123, stock: 312, emoji: "🏠",
+    id: 26, name: "3D Foam Wall Sticker Panels", image: "https://ae01.alicdn.com/kf/S16b92c7f8503481bbaddda13342776c5z.jpg", price: 17.99,
+    category: "Home", emoji: "🏠",
     desc: "Self-adhesive 3D foam wall panels. Peel and stick. Suitable for living room, bedroom and ceiling.",
     longDesc: "Transform any wall in minutes with self-adhesive 3D foam wall panels. Simply peel and stick — no tools needed. Waterproof and easy to wipe clean. Can be cut to size. Removable without damaging walls. Perfect for renters.",
     features: ["Peel and Stick", "No Tools Needed", "Waterproof", "Renter Friendly", "Cut to Size"],
     colors: [{ name: "White", hex: "#f5f5f5" }, { name: "Grey", hex: "#8a8a8a" }, { name: "Beige", hex: "#d4b896" }],
     sizes: [],
-    reviews: [
-      { name: "Ola F.", rating: 5, text: "Transformed my bedroom wall in 30 minutes. Looks like professional work.", date: "Mar 2025" },
-      { name: "Lisa M.", rating: 4, text: "Easy to apply and looks great. Perfect for a rental.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 27, name: "Stretch Sofa Cover", image: "https://ae-pic-a1.aliexpress-media.com/kf/S00f9c3475d7649449a3b172cb040d62eS.jpg", price: 27.99, compare: 44.99,
-    category: "Home", badge: "", rating: 4.7, reviewCount: 8234,
-    sold: 8234, stock: 189, emoji: "🛋️",
+    id: 27, name: "Stretch Sofa Cover", image: "https://ae-pic-a1.aliexpress-media.com/kf/S00f9c3475d7649449a3b172cb040d62eS.jpg", price: 27.99,
+    category: "Home", emoji: "🛋️",
     desc: "Jacquard stretch recliner sofa cover. Non-slip elastic slipcover. Protects sofas and armchairs.",
     longDesc: "Give your sofa a fresh new look without replacing it. Premium jacquard fabric with built-in stretch fits most sofa shapes. Non-slip bottom stays perfectly in place. Machine washable. Protects against pet hair, spills and scratches.",
     features: ["Universal Stretch Fit", "Non-Slip Bottom", "Machine Washable", "Pet and Spill Protection", "Jacquard Fabric"],
     colors: [{ name: "Grey", hex: "#8a8a8a" }, { name: "Beige", hex: "#d4b896" }, { name: "Dark Brown", hex: "#3a2010" }, { name: "Navy", hex: "#1a1a3e" }],
     sizes: ["Armchair", "2 Seater", "3 Seater", "L-Shape"],
-    reviews: [
-      { name: "Abby N.", rating: 5, text: "My sofa looks brand new. The non-slip backing is excellent.", date: "Mar 2025" },
-      { name: "Cath P.", rating: 4, text: "Great quality fabric. Fits my 3 seater perfectly.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 28, name: "Microfibre Bedding Set", image: "https://ae01.alicdn.com/kf/A171e9f326432494fa10d62933f4ef90f0.jpg", price: 34.99, compare: 54.99,
-    category: "Home", badge: "Best Seller", rating: 4.9, reviewCount: 14320,
-    sold: 14320, stock: 234, emoji: "🛏️",
+    id: 28, name: "Microfibre Bedding Set", image: "https://ae01.alicdn.com/kf/A171e9f326432494fa10d62933f4ef90f0.jpg", price: 34.99,
+    category: "Home", emoji: "🛏️",
     desc: "4 piece soft brushed microfibre bedding set with fitted sheet. UK Single, Double, King and Super King.",
-    longDesc: "Hotel quality 4 piece bedding set at a fraction of the price. Duvet cover, 2 pillowcases and fitted sheet in ultra-soft brushed microfibre. Gets softer with every wash. Breathable fabric regulates temperature year round. Machine washable and quick drying.",
-    features: ["4 Piece Set", "Ultra-Soft Microfibre", "Gets Softer with Washing", "All UK Sizes", "Easy Care"],
+    longDesc: "4 piece bedding set: duvet cover, 2 pillowcases and fitted sheet in soft brushed microfibre. Machine washable and quick drying.",
+    features: ["4 Piece Set", "Brushed Microfibre", "All UK Sizes", "Machine Washable"],
     colors: [{ name: "White", hex: "#f5f5f5" }, { name: "Grey", hex: "#8a8a8a" }, { name: "Navy", hex: "#1a1a3e" }, { name: "Blush Pink", hex: "#e8c0c8" }],
     sizes: ["Single", "Double", "King", "Super King"],
-    reviews: [
-      { name: "Yinka B.", rating: 5, text: "Feels like sleeping in a 5 star hotel. Bought 3 sets for every bed.", date: "Mar 2025" },
-      { name: "Emma T.", rating: 5, text: "Washes beautifully and does not crease badly.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 29, name: "Marathon Carbon Running Shoes", image: "https://ae01.alicdn.com/kf/Seca37513ac994225ba26995802a6eba6n.jpg", price: 64.99, compare: 99.99,
-    category: "Fitness", badge: "New Drop", rating: 4.8, reviewCount: 3241,
-    sold: 3241, stock: 67, emoji: "👟",
+    id: 29, name: "Marathon Carbon Running Shoes", image: "https://ae01.alicdn.com/kf/Seca37513ac994225ba26995802a6eba6n.jpg", price: 64.99,
+    category: "Fitness", emoji: "👟",
     desc: "Carbon board marathon running shoes. Breathable lightweight. Non-slip. For men and women.",
-    longDesc: "Professional grade marathon running shoes with carbon fibre board for maximum energy return. Ultra-lightweight breathable upper keeps feet cool. Non-slip rubber outsole grips all surfaces. Cushioned midsole protects knees and joints. Suitable for road running, treadmill and race day.",
-    features: ["Carbon Board Sole", "Ultra-Lightweight", "Breathable Upper", "Non-Slip Outsole", "Joint Protecting Cushion"],
+    longDesc: "Running shoes with a carbon fibre plate in the sole. Lightweight breathable upper. Rubber outsole with a grip pattern. Cushioned midsole. Suitable for road and treadmill running.",
+    features: ["Carbon Plate Sole", "Lightweight", "Breathable Upper", "Rubber Outsole", "Cushioned Midsole"],
     colors: [{ name: "Black White", hex: "#1a1a1a" }, { name: "Blue White", hex: "#1a3a6e" }, { name: "Pink White", hex: "#e8a0b0" }],
     sizes: ["UK 3", "UK 4", "UK 5", "UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"],
-    reviews: [
-      { name: "Emeka R.", rating: 5, text: "Ran my first half marathon in these. The carbon plate is genuinely noticeable.", date: "Mar 2025" },
-      { name: "Claire B.", rating: 5, text: "Lightest shoes I have ever owned. My pace improved immediately.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 30, name: "6 Pack Resistance Bands", image: "https://ae01.alicdn.com/kf/S39de7922fbc64441aee4d502a58da3f6f.jpg", price: 18.99, compare: 29.99,
-    category: "Fitness", badge: "Best Seller", rating: 4.9, reviewCount: 18920,
-    sold: 18920, stock: 400, emoji: "💪",
+    id: 30, name: "6 Pack Resistance Bands", image: "https://ae01.alicdn.com/kf/S39de7922fbc64441aee4d502a58da3f6f.jpg", price: 18.99,
+    category: "Fitness", emoji: "💪",
     desc: "6 piece crossfit resistance band set. 6 resistance levels. Home gym, yoga and strength training.",
     longDesc: "Complete resistance band set for full body workouts anywhere. 6 bands with progressively increasing resistance. Made from 100% natural latex. Perfect for squats, glute workouts, arm exercises, yoga and pilates. Comes with carry bag and exercise guide.",
     features: ["6 Resistance Levels", "Natural Latex", "Full Body Workout", "Carry Bag Included", "Exercise Guide"],
     colors: [{ name: "Multi", hex: "#f5c518" }],
     sizes: [],
-    reviews: [
-      { name: "Jade W.", rating: 5, text: "Use these every morning. Quality far better than cheap ones that snap.", date: "Mar 2025" },
-      { name: "Femi A.", rating: 5, text: "Travelled with these and worked out in my hotel room every day.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 31, name: "Ab Wheel Roller", image: "https://ae01.alicdn.com/kf/S93a6b11bd22147bba337615fba13761ej.jpg", price: 22.99, compare: 34.99,
-    category: "Fitness", badge: "Trending", rating: 4.8, reviewCount: 7654,
-    sold: 7654, stock: 143, emoji: "🏋️",
+    id: 31, name: "Ab Wheel Roller", image: "https://ae01.alicdn.com/kf/S93a6b11bd22147bba337615fba13761ej.jpg", price: 22.99,
+    category: "Fitness", emoji: "🏋️",
     desc: "6 elbow design ab wheel with automatic rebound. Anti-slip. Core and abdominal workout equipment.",
-    longDesc: "Build a stronger core with the 6 elbow ab wheel roller. Automatic rebound mechanism assists beginners. Wide anti-slip wheel provides stability. Ergonomic foam handles reduce wrist strain. Targets abs, obliques, back and shoulders in one movement.",
-    features: ["Automatic Rebound", "6 Elbow Stability", "Anti-Slip Wheel", "Foam Handles", "Full Core Workout"],
+    longDesc: "Ab wheel roller with a 6 elbow frame and automatic rebound mechanism. Wide anti-slip wheel. Foam handles. For core exercises.",
+    features: ["Automatic Rebound", "6 Elbow Stability", "Anti-Slip Wheel", "Foam Handles", "Core Exercises"],
     colors: [{ name: "Black Red", hex: "#8B0000" }, { name: "Black Blue", hex: "#1a3a6e" }],
     sizes: [],
-    reviews: [
-      { name: "Tunde K.", rating: 5, text: "Visible abs after 6 weeks of daily use.", date: "Mar 2025" },
-      { name: "Steve A.", rating: 4, text: "Solid build quality. Much better than cheap rollers.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 32, name: "Knee Brace Compression Sleeve", image: "https://ae01.alicdn.com/kf/S3f7687ca17be4958a1c3678060132123y.jpg", price: 16.99, compare: 26.99,
-    category: "Health", badge: "", rating: 4.8, reviewCount: 12450,
-    sold: 12450, stock: 300, emoji: "🦵",
-    desc: "Knee brace support compression sleeve. For gym, running and sports. Joint pain relief.",
-    longDesc: "Medically designed knee compression sleeve for pain relief and injury support. Graduated compression reduces swelling and improves circulation. Non-slip silicone strips keep it in position during any activity. Breathable fabric prevents overheating. Suitable for arthritis, runner knee, sports injuries and recovery.",
-    features: ["Graduated Compression", "Non-Slip Silicone", "Breathable Fabric", "Pain Relief", "All Activity Use"],
+    id: 32, name: "Knee Brace Compression Sleeve", image: "https://ae01.alicdn.com/kf/S3f7687ca17be4958a1c3678060132123y.jpg", price: 16.99,
+    category: "Health", emoji: "🦵",
+    desc: "Knee compression sleeve. For gym, running and sports.",
+    longDesc: "Elastic knee compression sleeve with non-slip silicone strips to help it stay in place. Breathable fabric. Not a medical device — for injuries, arthritis or ongoing knee pain, speak to a healthcare professional.",
+    features: ["Compression Fit", "Non-Slip Silicone", "Breathable Fabric", "Four Sizes"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Grey", hex: "#8a8a8a" }],
     sizes: ["S", "M", "L", "XL"],
-    reviews: [
-      { name: "Mike O.", rating: 5, text: "Wore this during a 10K run. Knee pain completely managed.", date: "Mar 2025" },
-      { name: "Pat S.", rating: 5, text: "Most comfortable knee support I have tried.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 33, name: "Seamless Yoga Sports Bra", image: "https://ae01.alicdn.com/kf/S4751968f50fe435e845f52d53ac9d2aeZ.jpg", price: 21.99, compare: 34.99,
-    category: "Fitness", badge: "Hot", rating: 4.8, reviewCount: 9870,
-    sold: 9870, stock: 178, emoji: "🧘",
+    id: 33, name: "Seamless Yoga Sports Bra", image: "https://ae01.alicdn.com/kf/S4751968f50fe435e845f52d53ac9d2aeZ.jpg", price: 21.99,
+    category: "Fitness", emoji: "🧘",
     desc: "HISTELLO seamless sports bra vest. Quick-dry. High elastic. For yoga, running and gym.",
     longDesc: "High performance seamless sports bra and vest in one. Ultra-stretch fabric moves with your body. Quick-dry technology wicks moisture. Removable padding for adjustable support. Flatlock seams prevent chafing. Suitable for yoga, pilates, running and gym.",
     features: ["Seamless Construction", "Quick-Dry Fabric", "Removable Padding", "High Stretch", "No Chafe Seams"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Grey", hex: "#8a8a8a" }, { name: "Pink", hex: "#e8a0b0" }, { name: "Green", hex: "#1a5a2a" }],
     sizes: ["XS", "S", "M", "L", "XL"],
-    reviews: [
-      { name: "Olu B.", rating: 5, text: "Most comfortable sports bra I own. Stays in place through intense workouts.", date: "Mar 2025" },
-      { name: "Nadia P.", rating: 5, text: "Wear this to yoga every day.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 34, name: "Men Compression Running Shirt", image: "https://ae01.alicdn.com/kf/S8284dd7403c04090a104effd3e103f2ak.jpg", price: 24.99, compare: 39.99,
-    category: "Fitness", badge: "", rating: 4.7, reviewCount: 6543,
-    sold: 6543, stock: 134, emoji: "🏃",
+    id: 34, name: "Men Compression Running Shirt", image: "https://ae01.alicdn.com/kf/S8284dd7403c04090a104effd3e103f2ak.jpg", price: 24.99,
+    category: "Fitness", emoji: "🏃",
     desc: "Men long sleeve compression t-shirt. Quick-dry. Gym, jogging and athletic training top.",
-    longDesc: "High performance long sleeve compression shirt for men. Graduated compression improves blood flow and reduces muscle fatigue. Quick-dry fabric pulls sweat away instantly. Four-way stretch moves with every exercise. Suitable for running, gym, cycling and all athletic training.",
-    features: ["Graduated Compression", "Quick-Dry Fabric", "Four-Way Stretch", "Anti-Odour", "No Irritation Stitching"],
+    longDesc: "Long sleeve compression-fit shirt for men. Quick-dry fabric. Four-way stretch. Suitable for running, gym and cycling.",
+    features: ["Compression Fit", "Quick-Dry Fabric", "Four-Way Stretch", "Flat Seams"],
     colors: [{ name: "Black", hex: "#1a1a1a" }, { name: "Navy", hex: "#1a1a3e" }, { name: "Grey", hex: "#8a8a8a" }, { name: "Red", hex: "#8B0000" }],
     sizes: ["S", "M", "L", "XL", "XXL"],
-    reviews: [
-      { name: "Biodun A.", rating: 5, text: "Wear this for every gym session. The compression makes a difference.", date: "Mar 2025" },
-      { name: "Ryan C.", rating: 4, text: "Great fit and very breathable. Washed 20 times and still looks new.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 35, name: "Boxing Reflex Speed Ball", image: "https://ae01.alicdn.com/kf/Sed41b9ee9fb94675a868a8f60030c97fM.jpg", price: 14.99, compare: 22.99,
-    category: "Fitness", badge: "Viral", rating: 4.7, reviewCount: 15230,
-    sold: 15230, stock: 267, emoji: "🥊",
-    desc: "Head-mounted boxing reflex speed ball. Improves reaction time, speed and coordination.",
-    longDesc: "Train your reflexes, speed and hand-eye coordination anywhere. Adjustable elastic band fits all head sizes. The unpredictable bounce pattern dramatically improves reaction time. Perfect for boxing training, MMA, stress relief and general fitness. No gym needed.",
-    features: ["Improves Reaction Time", "Adjustable Head Strap", "Unpredictable Bounce", "Use Anywhere", "Stress Relief"],
+    id: 35, name: "Boxing Reflex Speed Ball", image: "https://ae01.alicdn.com/kf/Sed41b9ee9fb94675a868a8f60030c97fM.jpg", price: 14.99,
+    category: "Fitness", emoji: "🥊",
+    desc: "Head-mounted boxing reflex ball on an elastic cord. For reaction and hand-eye coordination practice.",
+    longDesc: "Reflex ball on an elastic cord attached to an adjustable headband. Practise punching timing and hand-eye coordination at home. For boxing and general fitness practice.",
+    features: ["Adjustable Head Strap", "Elastic Cord", "Use Anywhere"],
     colors: [{ name: "Black Red", hex: "#8B0000" }, { name: "Black Blue", hex: "#1a3a6e" }],
     sizes: [],
-    reviews: [
-      { name: "Dele M.", rating: 5, text: "My boxing coach is amazed at how much my speed improved.", date: "Mar 2025" },
-      { name: "Josh T.", rating: 5, text: "Kids love it too. Great for hand eye coordination.", date: "Feb 2025" },
-    ],
   },
   {
-    id: 36, name: "Non-Electric Dual Nozzle Bidet", image: "https://ae01.alicdn.com/kf/S5641536aea66425388dd4ab329bb5c951.jpg", price: 29.99, compare: 49.99,
-    category: "Home", badge: "Top Rated", rating: 4.8, reviewCount: 11230,
-    sold: 11230, stock: 98, emoji: "🚿",
+    id: 36, name: "Non-Electric Dual Nozzle Bidet", image: "https://ae01.alicdn.com/kf/S5641536aea66425388dd4ab329bb5c951.jpg", price: 29.99,
+    category: "Home", emoji: "🚿",
     desc: "SAMODRA non-electric self-cleaning bidet. Dual nozzle frontal and rear wash. Easy toilet attachment.",
-    longDesc: "Upgrade your bathroom hygiene instantly. No electricity required — connects directly to your existing water supply. Dual nozzle system provides both frontal and rear wash. Self-cleaning nozzles retract when not in use. Adjustable water pressure. Fits most standard toilet seats in minutes.",
+    longDesc: "Non-electric bidet attachment. No electricity required — connects directly to your existing water supply. Dual nozzle system provides both frontal and rear wash. Self-cleaning nozzles retract when not in use. Adjustable water pressure. Fits most standard toilet seats in minutes.",
     features: ["No Electricity Needed", "Dual Nozzle System", "Self-Cleaning Nozzles", "Adjustable Pressure", "Easy 10 Min Install"],
     colors: [{ name: "White", hex: "#f5f5f5" }],
     sizes: [],
-    reviews: [
-      { name: "Chidi F.", rating: 5, text: "Installed in 10 minutes. Can never go back to not having one.", date: "Mar 2025" },
-      { name: "Anne B.", rating: 5, text: "The self-cleaning feature is brilliant. So hygienic.", date: "Feb 2025" },
-    ],
   },
 ];
 
 const CATS = ["All","Travel","Outdoors","Pets","Fitness","Home","Beauty","Health","Accessories"];
 
-const BADGE_MAP: Record<string, [string, string]> = {
-  "Best Seller":["#fff8e1","#b45309"],
-  "Trending":   ["#e0f2fe","#0369a1"],
-  "Top Rated":  ["#f0fdf4","#15803d"],
-  "New Drop":   ["#fdf4ff","#7e22ce"],
-  "Viral":      ["#fff1f2","#be123c"],
-  "Hot":        ["#fff7ed","#c2410c"],
-};
-
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
     title: "Privacy Policy",
-    body: "Last updated: March 2025\n\nZAYVI is committed to protecting your privacy. This policy explains how we collect, use and protect your personal information.\n\nWhat we collect:\n• Name, email and shipping address to fulfil your order\n• Payment information processed securely by Stripe — we never store your card details\n• Browsing data to improve your shopping experience\n\nHow we use your data:\n• To process and deliver your orders\n• To send order confirmations and tracking updates\n• To send marketing emails if you opt in — you can unsubscribe at any time\n• To improve our website and product selection\n\nYour rights:\n• You can request a copy of your data at any time\n• You can ask us to delete your data\n• You can opt out of marketing at any time\n\nWe do not sell your data to third parties.\n\nFor questions: hello@zayvi.store",
+    body: "Last updated: March 2025\n\nZAYVI is committed to protecting your privacy. This policy explains how we collect, use and protect your personal information.\n\nWhat we collect:\n• Name, email and shipping address to fulfil your order\n• Payment information processed securely by PayPal — we never store your card details\n• Browsing data to improve your shopping experience\n\nHow we use your data:\n• To process and deliver your orders\n• To send order confirmations and tracking updates\n• To send marketing emails if you opt in — you can unsubscribe at any time\n• To improve our website and product selection\n\nYour rights:\n• You can request a copy of your data at any time\n• You can ask us to delete your data\n• You can opt out of marketing at any time\n\nWe do not sell your data to third parties.\n\nFor questions: hello@zayvi.store",
   },
   returns: {
     title: "Returns Policy",
@@ -546,11 +357,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "Frequently Asked Questions",
-    body: "ORDERS AND DELIVERY\n\nHow long does delivery take?\nMost orders arrive in 7-14 business days for UK customers. International orders take 10-21 business days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once your order is dispatched. Allow 24-48 hours for tracking to update.\n\nCan I change or cancel my order?\nContact us at hello@zayvi.store as soon as possible. We can make changes before dispatch but cannot cancel orders that have already shipped.\n\nRETURNS AND REFUNDS\n\nWhat is your returns policy?\nWe offer 30-day returns on all items. Email hello@zayvi.store with your order number to start a return.\n\nWhat if my item arrives damaged?\nEmail us a photo within 7 days and we will send a replacement or full refund immediately.\n\nHow long do refunds take?\nRefunds are processed within 5 business days of receiving your return.\n\nPAYMENTS\n\nWhich payment methods do you accept?\nVisa, Mastercard, Apple Pay, Google Pay and all major cards via Stripe.\n\nIs it safe to pay on ZAYVI?\nYes. All payments are processed by Stripe, one of the world's most trusted payment providers. We never store your card details.\n\nDo you offer free shipping?\nYes — FREE worldwide shipping on every single order. No minimum spend required.",
+    body: "ORDERS AND DELIVERY\n\nHow long does delivery take?\nMost orders arrive in 7-14 business days for UK customers. International orders take 10-21 business days.\n\nCan I track my order?\nYes. You will receive a tracking link by email once your order is dispatched. Allow 24-48 hours for tracking to update.\n\nCan I change or cancel my order?\nContact us at hello@zayvi.store as soon as possible. We can make changes before dispatch but cannot cancel orders that have already shipped.\n\nRETURNS AND REFUNDS\n\nWhat is your returns policy?\nWe offer 30-day returns on all items. Email hello@zayvi.store with your order number to start a return.\n\nWhat if my item arrives damaged?\nEmail us a photo within 7 days and we will send a replacement or full refund immediately.\n\nHow long do refunds take?\nRefunds are processed within 5 business days of receiving your return.\n\nPAYMENTS\n\nWhich payment methods do you accept?\nPayPal, or debit and credit cards through PayPal checkout.\n\nIs it safe to pay on ZAYVI?\nYes. Payments are processed by PayPal. We never see or store your card details.\n\nDo you offer free shipping?\nYes — FREE worldwide shipping on every single order. No minimum spend required.",
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI is an AI-powered ecommerce store built to discover and deliver the world's most exciting trending products directly to your door.\n\nOur story:\nWe started ZAYVI with a simple idea — use technology to find the products people actually want before they even know they want them. Our system scans thousands of products every day, scoring each one on demand, trend velocity, quality and value. Only the very best make it to our store.\n\nWhat makes us different:\n• AI-powered product discovery — we find trending products before they go mainstream\n• Rigorous quality screening — every product is reviewed before listing\n• Worldwide delivery — we ship to over 50 countries\n• 30-day returns — shop with complete confidence\n• Real customer reviews — honest feedback from real buyers\n\nOur promise:\nEvery product on ZAYVI is selected because we believe it offers genuine value. If you are ever unhappy with a purchase we will make it right.\n\nFree worldwide shipping on orders over £75.\n30-day hassle-free returns on everything.\n\nThank you for shopping with us.\n\nThe ZAYVI Team\nhello@zayvi.store",
+    body: "ZAYVI is an AI-powered ecommerce store built to discover and deliver the world's most exciting trending products directly to your door.\n\nOur story:\nWe started ZAYVI with a simple idea — use technology to find the products people actually want before they even know they want them. Our system scans thousands of products every day, scoring each one on demand, trend velocity, quality and value. Only the very best make it to our store.\n\nWhat makes us different:\n• AI-powered product discovery — we find trending products before they go mainstream\n• Rigorous quality screening — every product is reviewed before listing\n• Worldwide delivery\n• 30-day returns on unused items\n\nOur promise:\nEvery product on ZAYVI is selected because we believe it offers genuine value. If you are ever unhappy with a purchase we will make it right.\n\nFree worldwide shipping on every order.\n30-day returns on unused items in original packaging.\n\nThank you for shopping with us.\n\nThe ZAYVI Team\nhello@zayvi.store",
   },
   giftcards: {
     title: "Gift Cards",
@@ -566,28 +377,9 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   press: {
     title: "Press",
-    body: "ZAYVI in the media.\n\nAbout ZAYVI:\nZAYVI is an AI-powered ecommerce store that uses machine learning to discover and curate trending products from around the world. We ship to over 50 countries and offer free worldwide shipping on orders over £75.\n\nFounded: 2025\nHeadquarters: United Kingdom\nWebsite: zayvi.store\n\nKey facts:\n• AI-powered product discovery system\n• 36+ carefully curated products across 8 categories\n• Worldwide shipping to 50+ countries\n• 30-day hassle-free returns\n• Stripe-secured payments\n\nFor press enquiries, interviews, partnerships or media assets:\n\nEmail: hello@zayvi.store\nSubject line: PRESS\n\nWe aim to respond to all media enquiries within 24 hours.",
+    body: "ZAYVI in the media.\n\nAbout ZAYVI:\nZAYVI is an AI-powered ecommerce store that uses machine learning to discover and curate trending products from around the world. We ship worldwide and offer free shipping on every order.\n\nFounded: 2025\nHeadquarters: United Kingdom\nWebsite: zayvi.store\n\nKey facts:\n• AI-powered product discovery system\n• 36 products across 8 categories\n• Free worldwide shipping\n• 30-day returns on unused items\n• Checkout through PayPal\n\nFor press enquiries, interviews, partnerships or media assets:\n\nEmail: hello@zayvi.store\nSubject line: PRESS\n\nWe aim to respond to all media enquiries within 24 hours.",
   },
 };
-
-function Stars({ n, sz = 13 }: { n: number; sz?: number }) {
-  return (
-    <span style={{ color: "#f59e0b", fontSize: sz, letterSpacing: -1 }}>
-      {"★".repeat(Math.floor(n))}{"☆".repeat(5 - Math.floor(n))}
-    </span>
-  );
-}
-
-function BadgePill({ label }: { label: string }) {
-  if (!label) return null;
-  const [bg, fg] = BADGE_MAP[label] || ["#f0f0f0","#555"];
-  return (
-    <span style={{ background: bg, color: fg, fontSize: 10, fontWeight: 700,
-      padding: "3px 10px", borderRadius: 20, letterSpacing: 0.5, whiteSpace: "nowrap" }}>
-      {label}
-    </span>
-  );
-}
 
 function ColorDot({ color, active, onClick }: {
   color: { name: string; hex: string }; active: boolean; onClick: () => void;
@@ -808,7 +600,6 @@ function QuickView({ product, open, onClose, onAdd }: {
     if (open) { setQty(1); setCol(0); setTab("desc"); setAdded(false); }
   }, [open]);
   if (!product) return null;
-  const save = (((product.compare - product.price) / product.compare) * 100).toFixed(0);
   const handleAdd = () => {
     onAdd(product, qty, product.colors[col]?.name);
     setAdded(true);
@@ -840,12 +631,6 @@ function QuickView({ product, open, onClose, onAdd }: {
                   : product.emoji
                 }
               </div>
-              {product.stock < 30 && (
-                <div style={{ textAlign: "center", fontSize: 11, color: "#dc2626",
-                  background: "#fef2f2", padding: "6px 12px", borderRadius: 6 }}>
-                  Only {product.stock} left
-                </div>
-              )}
             </div>
             <div style={{ padding: 32, display: "flex", flexDirection: "column",
               gap: 14, position: "relative" }}>
@@ -854,20 +639,10 @@ function QuickView({ product, open, onClose, onAdd }: {
                 border: "1px solid #eee", background: "#fafafa", cursor: "pointer",
                 fontSize: 14, display: "flex", alignItems: "center",
                 justifyContent: "center", color: "#999" }}>✕</button>
-              {product.badge && <div><BadgePill label={product.badge} /></div>}
               <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111",
                 lineHeight: 1.2, margin: 0 }}>{product.name}</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Stars n={product.rating} sz={14} />
-                <span style={{ fontSize: 12, color: "#888" }}>
-                  {product.rating} ({product.reviewCount.toLocaleString()} reviews)
-                </span>
-              </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                 <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>£{product.price}</span>
-                <span style={{ fontSize: 15, color: "#ccc", textDecoration: "line-through" }}>£{product.compare}</span>
-                <span style={{ fontSize: 11, background: "#dcfce7", color: "#16a34a",
-                  padding: "3px 8px", borderRadius: 5, fontWeight: 700 }}>Save {save}%</span>
               </div>
               {product.colors.length > 1 && (
                 <div>
@@ -934,7 +709,7 @@ function QuickView({ product, open, onClose, onAdd }: {
                         color: tab === k ? "#111" : "#aaa",
                         borderBottom: `2px solid ${tab === k ? "#111" : "transparent"}`,
                         marginBottom: -1 }}>
-                      {l}{k === "rev" ? ` (${product.reviews.length})` : ""}
+                      {l}
                     </button>
                   ))}
                 </div>
@@ -949,24 +724,11 @@ function QuickView({ product, open, onClose, onAdd }: {
                     ))}
                   </ul>
                 )}
-                {tab === "rev" && product.reviews.map((r, i) => (
-                  <div key={i} style={{ marginBottom: 12, paddingBottom: 12,
-                    borderBottom: i < product.reviews.length - 1 ? "1px solid #f5f5f5" : "none" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <div style={{ width: 28, height: 28, borderRadius: "50%",
-                          background: "#f0f0f0", display: "flex", alignItems: "center",
-                          justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#888" }}>
-                          {r.name[0]}
-                        </div>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{r.name}</span>
-                      </div>
-                      <span style={{ fontSize: 10, color: "#ccc" }}>{r.date}</span>
-                    </div>
-                    <Stars n={r.rating} sz={11} />
-                    <p style={{ fontSize: 12, color: "#666", marginTop: 4, lineHeight: 1.6 }}>{r.text}</p>
-                  </div>
-                ))}
+                {tab === "rev" && (
+                  <p style={{ fontSize: 13, color: "#888", lineHeight: 1.8, margin: 0 }}>
+                    No reviews yet.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -984,7 +746,6 @@ function Card({ product, onView, onAdd }: {
   const [hov,  setHov]  = useState(false);
   const [col,  setCol]  = useState(0);
   const [wish, setWish] = useState(false);
-  const save = (((product.compare - product.price) / product.compare) * 100).toFixed(0);
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ background: "#fff", borderRadius: 16, overflow: "hidden", cursor: "pointer",
@@ -1001,16 +762,6 @@ function Card({ product, onView, onAdd }: {
           : <div style={{ fontSize: 84, transform: hov ? "scale(1.08)" : "scale(1)",
               transition: "transform .3s" }}>{product.emoji}</div>
         }
-        {product.badge && (
-          <div style={{ position: "absolute", top: 12, left: 12 }}>
-            <BadgePill label={product.badge} />
-          </div>
-        )}
-        <div style={{ position: "absolute", top: 12, right: 12,
-          background: "#fff", color: "#16a34a", fontSize: 10, fontWeight: 700,
-          padding: "3px 8px", borderRadius: 5, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-          -{save}%
-        </div>
         <button onClick={e => { e.stopPropagation(); setWish(w => !w); }}
           style={{ position: "absolute", bottom: 12, right: 12, width: 32, height: 32,
             borderRadius: "50%", background: "#fff", border: "none", cursor: "pointer",
@@ -1020,13 +771,6 @@ function Card({ product, onView, onAdd }: {
             color: wish ? "#dc2626" : "#ccc" }}>
           {wish ? "♥" : "♡"}
         </button>
-        {product.stock < 30 && (
-          <div style={{ position: "absolute", bottom: 12, left: 12, fontSize: 10,
-            color: "#dc2626", background: "#fff", padding: "3px 8px", borderRadius: 5,
-            fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-            Only {product.stock} left
-          </div>
-        )}
         {hov && (
           <div style={{ position: "absolute", inset: 0, display: "flex",
             alignItems: "flex-end", justifyContent: "center", paddingBottom: 14 }}>
@@ -1046,10 +790,6 @@ function Card({ product, onView, onAdd }: {
           style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 6, lineHeight: 1.3 }}>
           {product.name}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-          <Stars n={product.rating} />
-          <span style={{ fontSize: 11, color: "#aaa" }}>({product.reviewCount.toLocaleString()})</span>
-        </div>
         {product.colors.length > 1 && (
           <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
             {product.colors.map((c, i) => (
@@ -1060,9 +800,6 @@ function Card({ product, onView, onAdd }: {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>£{product.price}</span>
-            <span style={{ fontSize: 12, color: "#ccc", textDecoration: "line-through", marginLeft: 6 }}>
-              £{product.compare}
-            </span>
           </div>
           <button
             onClick={e => { e.stopPropagation(); onAdd(product, 1, product.colors[col]?.name); }}
@@ -1136,18 +873,14 @@ export default function Home() {
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) =>
       sort === "price-asc"  ? a.price - b.price :
-      sort === "price-desc" ? b.price - a.price :
-      sort === "top-rated"  ? b.rating - a.rating :
-      sort === "best"       ? b.sold - a.sold : 0);
+      sort === "price-desc" ? b.price - a.price : 0);
 
-  const marquee = "✦ FREE worldwide shipping on every order   ✦ 30-day hassle-free returns   ✦ New arrivals every week   ✦ 15,000+ happy customers   ✦ Stripe · Apple Pay · Google Pay   ";
+  const marquee = "✦ FREE worldwide shipping on every order   ✦ 30-day returns on unused items   ✦ Secure checkout with PayPal   ";
 
   const footerCols = [
     { title: "Shop", items: [
       { label: "All Products", fn: () => { setCat("All"); setSort("featured"); scrollToGrid(); } },
-      { label: "Best Sellers", fn: () => { setSort("best"); setCat("All"); scrollToGrid(); } },
-      { label: "New Arrivals", fn: () => { setSort("featured"); setCat("All"); scrollToGrid(); } },
-      { label: "Sale",         fn: () => { setSort("price-asc"); setCat("All"); scrollToGrid(); } },
+      { label: "Lowest Price", fn: () => { setSort("price-asc"); setCat("All"); scrollToGrid(); } },
       { label: "Gift Cards",   fn: () => setPage("giftcards") },
     ]},
     { title: "Help", items: [
@@ -1238,10 +971,8 @@ export default function Home() {
                     <div style={{ fontSize: 10, fontWeight: 800, color: "#aaa",
                       letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Collections</div>
                     {[
-                      { label: "Best Sellers", fn: () => { setSort("best"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
-                      { label: "New Arrivals", fn: () => { setSort("featured"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
-                      { label: "Under £25",    fn: () => { setSort("price-asc"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
-                      { label: "Top Rated",    fn: () => { setSort("top-rated"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
+                      { label: "All Products", fn: () => { setSort("featured"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
+                      { label: "Lowest Price", fn: () => { setSort("price-asc"); setCat("All"); setMegaOn(false); scrollToGrid(); } },
                     ].map(item => (
                       <button key={item.label} onClick={item.fn}
                         style={{ display: "block", width: "100%", textAlign: "left",
@@ -1255,8 +986,7 @@ export default function Home() {
               )}
             </div>
             {[
-              { label: "Best Sellers", fn: () => { setSort("best"); setCat("All"); scrollToGrid(); } },
-              { label: "New Arrivals", fn: () => { setSort("featured"); setCat("All"); scrollToGrid(); } },
+              { label: "All Products", fn: () => { setSort("featured"); setCat("All"); scrollToGrid(); } },
             ].map(item => (
               <button key={item.label} onClick={item.fn}
                 style={{ padding: "8px 14px", background: "none", border: "none",
@@ -1266,9 +996,9 @@ export default function Home() {
             ))}
             <button onClick={() => { setSort("price-asc"); setCat("All"); scrollToGrid(); }}
               style={{ padding: "8px 14px", background: "none", border: "none",
-                cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#dc2626", borderRadius: 6 }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#b91c1c")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#dc2626")}>Sale</button>
+                cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#444", borderRadius: 6 }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#111")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#444")}>Lowest Price</button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <button onClick={() => setSearchOn(true)}
@@ -1354,16 +1084,16 @@ export default function Home() {
               <span style={{ width: 6, height: 6, borderRadius: "50%",
                 background: STORE_COLOR, display: "inline-block" }} />
               <span style={{ fontSize: 11, color: STORE_COLOR, fontWeight: 700, letterSpacing: 0.8 }}>
-                NEW ARRIVALS WEEKLY
+                FREE WORLDWIDE SHIPPING
               </span>
             </div>
             <h1 style={{ fontSize: "clamp(34px, 4vw, 56px)", fontWeight: 900, color: "#111",
               lineHeight: 1.08, letterSpacing: -1, marginBottom: 18 }}>
-              Products the<br />
-              <span style={{ color: STORE_COLOR }}>world is buying</span><br />right now.
+              Everyday products,<br />
+              <span style={{ color: STORE_COLOR }}>delivered</span><br />to your door.
             </h1>
             <p style={{ fontSize: 16, color: "#777", lineHeight: 1.8, marginBottom: 28, maxWidth: 400 }}>
-              AI-powered discovery. Trending items. Worldwide delivery. 30-day guarantee.
+              A small range of home, travel, beauty and fitness products. Free worldwide delivery. 30-day returns.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button onClick={scrollToGrid}
@@ -1374,21 +1104,13 @@ export default function Home() {
                 onMouseLeave={e => (e.currentTarget.style.background = "#111")}>
                 Shop Now →
               </button>
-              <button onClick={() => { setSort("best"); scrollToGrid(); }}
+              <button onClick={() => { setSort("price-asc"); scrollToGrid(); }}
                 style={{ background: "transparent", color: "#111", border: "1px solid #ddd",
                   borderRadius: 10, padding: "13px 26px", cursor: "pointer", fontSize: 14, fontWeight: 700 }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = "#999")}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = "#ddd")}>
-                Best Sellers
+                Lowest Price
               </button>
-            </div>
-            <div style={{ display: "flex", gap: 28, marginTop: 32, flexWrap: "wrap" }}>
-              {[["15,000+","Happy Customers"],["4.8★","Avg Rating"],["50+","Countries"]].map(([v,l]) => (
-                <div key={l}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: "#111" }}>{v}</div>
-                  <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{l}</div>
-                </div>
-              ))}
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1443,8 +1165,6 @@ export default function Home() {
             style={{ border: "1px solid #e5e5e5", borderRadius: 8, padding: "9px 14px",
               fontSize: 13, color: "#555", outline: "none", background: "#fff", cursor: "pointer" }}>
             <option value="featured">Featured</option>
-            <option value="best">Best Selling</option>
-            <option value="top-rated">Top Rated</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
           </select>
@@ -1468,10 +1188,9 @@ export default function Home() {
         borderBottom: "1px solid #f0f0f0", padding: "40px 28px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto",
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
-          {[["🔒","Secure Payments","Stripe, Apple Pay and Google Pay."],
+          {[["🔒","Secure Payments","Checkout through PayPal (card or PayPal balance)."],
             ["🚚","Free Worldwide Shipping","Free on every order. No minimum."],
-            ["↩️","30-Day Returns","Full refund, zero questions."],
-            ["⭐","4.8 Star Average","15,000+ verified reviews."]
+            ["↩️","30-Day Returns","Return unused items within 30 days of delivery."]
           ].map(([icon,title,desc]) => (
             <div key={title as string} style={{ textAlign: "center" }}>
               <div style={{ fontSize: 30, marginBottom: 10 }}>{icon}</div>
@@ -1489,7 +1208,7 @@ export default function Home() {
           <h2 style={{ fontSize: 30, fontWeight: 900, color: "#fff",
             marginBottom: 10, letterSpacing: -0.5 }}>Get early access to new drops</h2>
           <p style={{ fontSize: 14, color: "#666", marginBottom: 24, lineHeight: 1.7 }}>
-            Join 12,000+ subscribers. Exclusive discounts, new products first.
+            Hear about new products and offers first.
           </p>
           {subDone
             ? <div style={{ background: "#052e16", border: "1px solid #16a34a55",
@@ -1549,7 +1268,7 @@ export default function Home() {
             alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div style={{ fontSize: 12, color: "#333" }}>2025 {STORE_NAME}. Zero subscriptions.</div>
             <div style={{ display: "flex", gap: 6 }}>
-              {["Visa","Mastercard","PayPal","Apple Pay","Google Pay","Stripe"].map(p => (
+              {["PayPal","Visa","Mastercard"].map(p => (
                 <span key={p} style={{ fontSize: 10, color: "#444", background: "#111",
                   border: "1px solid #222", padding: "4px 10px", borderRadius: 4 }}>{p}</span>
               ))}
