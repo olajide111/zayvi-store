@@ -42,7 +42,7 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI curates everyday essentials that actually work — travel, recovery and daily tools with no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
+    body: "ZAYVI is focused on travel and daily essentials that earn their place — no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
   },
   affiliate: {
     title: "Affiliate Programme",
@@ -144,7 +144,6 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
-      {/* Announcement — clear value */}
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
         FREE Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure PayPal & Card Checkout
       </div>
@@ -164,16 +163,10 @@ export default function Home() {
 
       <TrustBar />
 
-      {/* Best Sellers — primary conversion section */}
       <div ref={bestRef}>
-        <BestSellers
-          products={PRODUCTS}
-          onView={(p) => setQv(p)}
-          onAdd={addToCart}
-        />
+        <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
-      {/* Social proof strip */}
       <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
         <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
           “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
@@ -183,12 +176,11 @@ export default function Home() {
 
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
 
-      {/* Full catalogue */}
       <section ref={gridRef} style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px 64px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "All Products" : cat}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["All", "Travel", "Beauty", "Fitness", "Pets", "Accessories", "Health"].map((c) => (
+            {["All", "Travel", "Carry", "Recovery", "Daily"].map((c) => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
