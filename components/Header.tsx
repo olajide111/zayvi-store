@@ -15,7 +15,7 @@ type Props = {
 
 export default function Header({ cartCount, onCartOpen, onShopAll, onCategory, scrolled }: Props) {
   const [megaOn, setMegaOn] = useState(false);
-  const cats = ["Travel", "Beauty", "Home", "Fitness", "Pets", "Accessories", "Health"];
+  const cats = ["Travel", "Carry", "Recovery", "Daily"];
 
   return (
     <nav
@@ -93,7 +93,7 @@ export default function Header({ cartCount, onCartOpen, onShopAll, onCategory, s
                   gap: 8,
                   zIndex: 200,
                   marginTop: 8,
-                  minWidth: 280,
+                  minWidth: 240,
                 }}
               >
                 {cats.map((c) => (
@@ -123,20 +123,6 @@ export default function Header({ cartCount, onCartOpen, onShopAll, onCategory, s
               </div>
             )}
           </div>
-          <button
-            onClick={onShopAll}
-            style={{
-              padding: "8px 14px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-              color: "#444",
-            }}
-          >
-            New In
-          </button>
           <button
             onClick={onShopAll}
             style={{
