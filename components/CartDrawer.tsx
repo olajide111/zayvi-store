@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { PRODUCTS } from "@/lib/products";
+import SquareCardForm from "./SquareCardForm";
 
 const STORE_COLOR = "#16a34a";
 
@@ -19,10 +21,13 @@ type Props = {
   onClose: () => void;
   onQty: (id: number, color: string | undefined, d: number) => void;
   onRemove: (id: number, color: string | undefined) => void;
-  onCheckout: () => void;
+  onCheckout: () => void; // PayPal
 };
 
 export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout }: Props) {
+  const [showSquare, setShowSquare] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
   const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -57,15 +62,7 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
           boxShadow: "-8px 0 40px rgba(0,0,0,.14)",
         }}
       >
-        <div
-          style={{
-            padding: "20px 24px",
-            borderBottom: "1px solid #f0f0f0",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#111" }}>Your Cart</div>
             <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>
@@ -74,15 +71,7 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
           </div>
           <button
             onClick={onClose}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              border: "1px solid #eee",
-              background: "#fafafa",
-              cursor: "pointer",
-              fontSize: 16,
-            }}
+            style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid #eee", background: "#fafafa", cursor: "pointer", fontSize: 16 }}
           >
             ✕
           </button>
@@ -106,125 +95,33 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
               return (
                 <div
                   key={`${item.id}-${item.selectedColor}`}
-                  style={{
-                    display: "flex",
-                    gap: 14,
-                    paddingBottom: 16,
-                    marginBottom: 16,
-                    borderBottom: "1px solid #f5f5f5",
-                  }}
+                  style={{ display: "flex", gap: 14, paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f5f5f5" }}
                 >
-                  <div
-                    style={{
-                      width: 68,
-                      height: 68,
-                      background: "#f9f9f9",
-                      borderRadius: 10,
-                      overflow: "hidden",
-                      flexShrink: 0,
-                    }}
-                  >
+                  <div style={{ width: 68, height: 68, background: "#f9f9f9", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
                     {product?.image ? (
-                      <img
-                        src={product.image}
-                        alt={item.name}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
+                      <img src={product.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <div
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 28,
-                        }}
-                      >
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
                         {item.emoji}
                       </div>
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#111",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.name}
                     </div>
                     {item.selectedColor && (
-                      <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
-                        {item.selectedColor}
-                      </div>
+                      <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{item.selectedColor}</div>
                     )}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginTop: 8,
-                      }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                       <div style={{ display: "flex", border: "1px solid #e5e5e5", borderRadius: 6 }}>
-                        <button
-                          onClick={() => onQty(item.id, item.selectedColor, -1)}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          −
-                        </button>
-                        <span
-                          style={{
-                            width: 28,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 13,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.qty}
-                        </span>
-                        <button
-                          onClick={() => onQty(item.id, item.selectedColor, 1)}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          +
-                        </button>
+                        <button onClick={() => onQty(item.id, item.selectedColor, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
+                        <span style={{ width: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600 }}>{item.qty}</span>
+                        <button onClick={() => onQty(item.id, item.selectedColor, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>
-                          £{(item.price * item.qty).toFixed(2)}
-                        </div>
-                        <button
-                          onClick={() => onRemove(item.id, item.selectedColor)}
-                          style={
-                            {
-                              fontSize: 10,
-                              color: "#ccc",
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                            }
-                          }
-                        >
+                        <div style={{ fontSize: 14, fontWeight: 800 }}>£{(item.price * item.qty).toFixed(2)}</div>
+                        <button onClick={() => onRemove(item.id, item.selectedColor)} style={{ fontSize: 10, color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>
                           Remove
                         </button>
                       </div>
@@ -238,34 +135,67 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
 
         {cart.length > 0 && (
           <div style={{ padding: 24, borderTop: "1px solid #f0f0f0" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 16,
-                fontSize: 16,
-                fontWeight: 800,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16, fontWeight: 800 }}>
               <span>Subtotal</span>
               <span>£{sub.toFixed(2)}</span>
             </div>
+
+            {/* PayPal */}
             <button
               onClick={onCheckout}
               style={{
                 width: "100%",
-                background: STORE_COLOR,
+                background: "#0070ba",
                 color: "#fff",
                 border: "none",
                 borderRadius: 12,
-                padding: "16px",
-                fontSize: 15,
+                padding: "14px",
+                fontSize: 14,
                 fontWeight: 700,
                 cursor: "pointer",
+                marginBottom: 10,
               }}
             >
-              Checkout with PayPal
+              Pay with PayPal
             </button>
+
+            {/* Toggle Square card form */}
+            <button
+              onClick={() => setShowSquare((v) => !v)}
+              style={
+                {
+                  width: "100%",
+                  background: showSquare ? "#f5f5f5" : "#111",
+                  color: showSquare ? "#111" : "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: 12,
+                  padding: "14px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }
+              }
+            >
+              {showSquare ? "Hide card form" : "Pay with Card (Square)"}
+            </button>
+
+            {showSquare && (
+              <SquareCardForm
+                amount={sub}
+                items={cart.map((i) => ({ id: i.id, qty: i.qty }))}
+                onSuccess={() => {
+                  setMsg("Payment successful!");
+                  setTimeout(() => onClose(), 1500);
+                }}
+                onError={(m) => setMsg(m)}
+              />
+            )}
+
+            {msg && (
+              <div style={{ marginTop: 12, fontSize: 13, color: msg.includes("success") ? STORE_COLOR : "#dc2626", textAlign: "center" }}>
+                {msg}
+              </div>
+            )}
           </div>
         )}
       </div>
