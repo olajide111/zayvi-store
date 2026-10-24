@@ -4,96 +4,113 @@ const STORE_COLOR = "#16a34a";
 
 type Props = {
   onShopAll: () => void;
+  onBestSellers: () => void;
 };
 
-export default function Hero({ onShopAll }: Props) {
+export default function Hero({ onShopAll, onBestSellers }: Props) {
   return (
     <section
       style={{
         maxWidth: 1280,
         margin: "0 auto",
-        padding: "48px 24px 40px",
+        padding: "40px 24px 32px",
         display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 48,
+        gridTemplateColumns: "1.1fr 0.9fr",
+        gap: 40,
         alignItems: "center",
       }}
     >
       <div>
-        <h1
+        <div
           style={{
-            fontSize: "clamp(2.4rem, 5vw, 3.6rem)",
-            fontWeight: 800,
-            lineHeight: 1.1,
-            color: "#111",
-            letterSpacing: -1.5,
+            display: "inline-block",
+            background: "#f0fdf4",
+            color: STORE_COLOR,
+            fontSize: 12,
+            fontWeight: 700,
+            padding: "6px 12px",
+            borderRadius: 20,
             marginBottom: 16,
+            letterSpacing: 0.3,
           }}
         >
-          Everyday essentials,
+          FREE UK & WORLDWIDE SHIPPING
+        </div>
+        <h1
+          style={{
+            fontSize: "clamp(2.2rem, 4.5vw, 3.4rem)",
+            fontWeight: 800,
+            lineHeight: 1.12,
+            color: "#111",
+            letterSpacing: -1.2,
+            marginBottom: 14,
+          }}
+        >
+          Everyday essentials
           <br />
-          <span style={{ color: STORE_COLOR }}>elevated.</span>
+          that actually work.
         </h1>
-        <p style={{ fontSize: 17, color: "#555", lineHeight: 1.6, marginBottom: 28, maxWidth: 420 }}>
-          Curated products that actually make life better.
-          <br />
-          Free shipping worldwide.
+        <p style={{ fontSize: 16, color: "#555", lineHeight: 1.65, marginBottom: 24, maxWidth: 420 }}>
+          Curated travel, recovery and daily tools — designed to feel premium, priced to make sense. 30-day returns. No clutter.
         </p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button
-            onClick={onShopAll}
+            onClick={onBestSellers}
             style={{
               background: STORE_COLOR,
               color: "#fff",
               border: "none",
               borderRadius: 10,
-              padding: "14px 28px",
+              padding: "14px 26px",
               fontSize: 15,
               fontWeight: 700,
               cursor: "pointer",
             }}
           >
-            Shop All Products
+            Shop Best Sellers
           </button>
           <button
             onClick={onShopAll}
             style={{
               background: "transparent",
-              color: STORE_COLOR,
-              border: `2px solid ${STORE_COLOR}`,
+              color: "#111",
+              border: "2px solid #111",
               borderRadius: 10,
-              padding: "12px 26px",
+              padding: "12px 24px",
               fontSize: 15,
               fontWeight: 700,
               cursor: "pointer",
             }}
           >
-            New Arrivals
+            View all
           </button>
+        </div>
+        <div style={{ display: "flex", gap: 20, marginTop: 28, fontSize: 13, color: "#666" }}>
+          <span>✓ 30-day returns</span>
+          <span>✓ Secure checkout</span>
+          <span>✓ 4.8★ average</span>
         </div>
       </div>
 
       <div
         style={{
-          borderRadius: 24,
+          borderRadius: 20,
           overflow: "hidden",
           background: "#f0f0ec",
           aspectRatio: "4/3",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          boxShadow: "0 20px 50px rgba(0,0,0,.08)",
         }}
       >
         <img
           src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=900&q=80"
-          alt="Elevated everyday essentials"
+          alt="ZAYVI everyday essentials"
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
 
       <style>{`
         @media (max-width: 768px) {
-          section { grid-template-columns: 1fr !important; padding: 32px 20px !important; }
+          section { grid-template-columns: 1fr !important; padding: 28px 20px !important; }
         }
       `}</style>
     </section>
