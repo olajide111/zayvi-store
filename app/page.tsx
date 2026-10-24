@@ -5,6 +5,7 @@ import { PRODUCTS } from "@/lib/products";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
+import BestSellers from "@/components/BestSellers";
 import CategoryGrid from "@/components/CategoryGrid";
 import ProductCard from "@/components/ProductCard";
 import CartDrawer, { type CartItem } from "@/components/CartDrawer";
@@ -25,7 +26,7 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   shipping: {
     title: "Shipping Information",
-    body: "FREE worldwide shipping on every order.\n\nUK: 7–14 business days\nUS & Europe: 8–16 business days\nRest of world: 12–21 business days\n\nTracking link sent by email once dispatched.",
+    body: "FREE shipping on every order.\n\nUK: 5–10 business days\nEurope: 7–14 business days\nRest of world: 10–21 business days\n\nTracking link sent by email once dispatched.",
   },
   tracking: {
     title: "Track Your Order",
@@ -37,11 +38,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "FAQs",
-    body: "Delivery usually takes 7–14 days in the UK and 10–21 days internationally.\n\nYes, free worldwide shipping on every order.\n\n30-day returns on unused items. Payments are securely processed.",
+    body: "UK delivery usually takes 5–10 business days.\n\nYes — free shipping on every order.\n\n30-day returns on unused items. Payments are securely processed via PayPal or card.",
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI curates everyday essentials that feel a little elevated. We focus on useful, well-designed products with free worldwide shipping and straightforward returns.\n\nThank you for shopping with us.",
+    body: "ZAYVI curates everyday essentials that actually work — travel, recovery and daily tools with no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
   },
   affiliate: {
     title: "Affiliate Programme",
@@ -81,6 +82,7 @@ export default function Home() {
   const [toast, setToast] = useState<string | null>(null);
   const [page, setPage] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const bestRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -94,6 +96,7 @@ export default function Home() {
   };
 
   const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBest = () => bestRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const addToCart = (product: (typeof PRODUCTS)[0], qty = 1, color?: string) => {
     setCart((prev) => {
@@ -141,8 +144,9 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
+      {/* Announcement — clear value */}
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        FREE Worldwide Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure Checkout
+        FREE Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure PayPal & Card Checkout
       </div>
 
       <Header
@@ -153,13 +157,36 @@ export default function Home() {
         scrolled={scrolled}
       />
 
-      <Hero onShopAll={() => { setCat("All"); scrollToGrid(); }} />
+      <Hero
+        onShopAll={() => { setCat("All"); scrollToGrid(); }}
+        onBestSellers={scrollToBest}
+      />
+
       <TrustBar />
+
+      {/* Best Sellers — primary conversion section */}
+      <div ref={bestRef}>
+        <BestSellers
+          products={PRODUCTS}
+          onView={(p) => setQv(p)}
+          onAdd={addToCart}
+        />
+      </div>
+
+      {/* Social proof strip */}
+      <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
+        <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
+          “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
+        </p>
+        <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>— Verified buyer, UK</p>
+      </div>
+
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
 
+      {/* Full catalogue */}
       <section ref={gridRef} style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px 64px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "Trending Now" : cat}</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "All Products" : cat}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["All", "Travel", "Beauty", "Fitness", "Pets", "Accessories", "Health"].map((c) => (
               <button
@@ -184,12 +211,7 @@ export default function Home() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
           {filtered.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              onView={(prod) => setQv(prod)}
-              onAdd={addToCart}
-            />
+            <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
           ))}
         </div>
 
@@ -210,12 +232,7 @@ export default function Home() {
         onCheckout={handlePayPal}
       />
 
-      <QuickView
-        product={qv}
-        open={!!qv}
-        onClose={() => setQv(null)}
-        onAdd={addToCart}
-      />
+      <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />
 
       {page && <PageModal pageKey={page} onClose={() => setPage(null)} />}
 
