@@ -6,23 +6,20 @@ type Props = {
 
 const CATS = [
   { name: "Travel", image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&q=80" },
-  { name: "Beauty", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&q=80" },
-  { name: "Home", image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&q=80" },
-  { name: "Fitness", image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&q=80" },
-  { name: "Pets", image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&q=80" },
-  { name: "Accessories", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80" },
+  { name: "Carry", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80" },
+  { name: "Recovery", image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&q=80" },
+  { name: "Daily", image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=400&q=80" },
 ];
 
 export default function CategoryGrid({ onSelect }: Props) {
   return (
-    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 24px 24px" }}>
-      <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 20 }}>
-        Shop by Category
-      </h2>
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 24px 24px" }}>
+      <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 8 }}>Shop by category</h2>
+      <p style={{ fontSize: 14, color: "#666", marginBottom: 20 }}>Everything we sell earns its place.</p>
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
           gap: 16,
         }}
       >
@@ -40,16 +37,10 @@ export default function CategoryGrid({ onSelect }: Props) {
               padding: 0,
             }}
           >
-            <div style={{ height: 110, overflow: "hidden" }}>
-              <img
-                src={c.image}
-                alt={c.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
+            <div style={{ height: 120, overflow: "hidden" }}>
+              <img src={c.image} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
-            <div style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#111" }}>
-              {c.name}
-            </div>
+            <div style={{ padding: "14px 16px", fontSize: 15, fontWeight: 700, color: "#111" }}>{c.name}</div>
           </button>
         ))}
       </div>

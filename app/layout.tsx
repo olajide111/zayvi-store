@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZAYVI — Everyday essentials, elevated",
+  title: "ZAYVI — Travel & Daily Essentials",
   description:
-    "Curated everyday products that actually make life better. Free worldwide shipping. 30-day returns.",
+    "Pack light. Live better. Curated travel gear and daily tools. Free shipping. 30-day returns.",
   openGraph: {
-    title: "ZAYVI — Everyday essentials, elevated",
-    description: "Curated products with free worldwide shipping.",
+    title: "ZAYVI — Travel & Daily Essentials",
+    description: "Travel gear and daily tools that earn their place. Free shipping worldwide.",
     type: "website",
   },
 };
@@ -29,10 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

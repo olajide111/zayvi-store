@@ -34,11 +34,11 @@ export default function Hero({ onShopAll, onBestSellers }: Props) {
             letterSpacing: 0.3,
           }}
         >
-          FREE UK & WORLDWIDE SHIPPING
+          TRAVEL & DAILY ESSENTIALS
         </div>
         <h1
           style={{
-            fontSize: "clamp(2.2rem, 4.5vw, 3.4rem)",
+            fontSize: "clamp(2.2rem, 4.5vw, 3.3rem)",
             fontWeight: 800,
             lineHeight: 1.12,
             color: "#111",
@@ -46,12 +46,12 @@ export default function Hero({ onShopAll, onBestSellers }: Props) {
             marginBottom: 14,
           }}
         >
-          Everyday essentials
+          Pack light.
           <br />
-          that actually work.
+          Live better.
         </h1>
         <p style={{ fontSize: 16, color: "#555", lineHeight: 1.65, marginBottom: 24, maxWidth: 420 }}>
-          Curated travel, recovery and daily tools — designed to feel premium, priced to make sense. 30-day returns. No clutter.
+          Travel gear and daily tools that actually earn their place — no filler, free shipping, 30-day returns.
         </p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button
@@ -86,9 +86,9 @@ export default function Hero({ onShopAll, onBestSellers }: Props) {
           </button>
         </div>
         <div style={{ display: "flex", gap: 20, marginTop: 28, fontSize: 13, color: "#666" }}>
+          <span>✓ Free shipping</span>
           <span>✓ 30-day returns</span>
           <span>✓ Secure checkout</span>
-          <span>✓ 4.8★ average</span>
         </div>
       </div>
 
@@ -102,8 +102,8 @@ export default function Hero({ onShopAll, onBestSellers }: Props) {
         }}
       >
         <img
-          src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=900&q=80"
-          alt="ZAYVI everyday essentials"
+          src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=900&q=80"
+          alt="Travel and daily essentials"
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
