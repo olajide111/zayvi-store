@@ -326,19 +326,39 @@ export const PRODUCTS = [
   },
 ];
 
-export type CartLine = { id: number; qty: number };
+export type CartLine = { id: number; qty: number; color?: string; size?: string };
+export type PricedLine = { id: number; name: string; price: number; qty: number; color?: string; size?: string };
 
-/** Rebuild the order from the catalogue: prices and names come from here, never from the browser. */
-export function priceCart(raw: unknown): { lines: { id: number; name: string; price: number; qty: number }[]; total: number } {
+/** "Colour: Black · Size: M" — shown to the buyer and sent to the payment provider. */
+export function variantLabel(l: { color?: string; size?: string }): string {
+  return [l.color && `Colour: ${l.color}`, l.size && `Size: ${l.size}`].filter(Boolean).join(" · ");
+}
+
+/** Same product in a different colour or size is a separate line. */
+export function lineKey(l: { id: number; color?: string; size?: string }): string {
+  return `${l.id}|${l.color ?? ""}|${l.size ?? ""}`;
+}
+
+/**
+ * Rebuild the order from the catalogue: prices and names come from here, never from the browser.
+ * Colour and size must be ones the product is actually sold in (and are required when it has any).
+ */
+export function priceCart(raw: unknown): { lines: PricedLine[]; total: number; totalPence: number } {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 50) throw new Error("Your basket is empty or too large.");
-  const lines = raw.map((item: unknown) => {
-    const x = (item ?? {}) as { id?: unknown; qty?: unknown };
+  const lines = raw.map((item: unknown): PricedLine => {
+    const x = (item ?? {}) as { id?: unknown; qty?: unknown; color?: unknown; size?: unknown };
     const p = PRODUCTS.find((q) => q.id === Number(x.id));
     const qty = Number(x.qty);
     if (!p) throw new Error("A product in your basket is no longer available.");
     if (!Number.isInteger(qty) || qty < 1 || qty > 20) throw new Error("Each item can be ordered 1 to 20 times.");
-    return { id: p.id, name: p.name, price: p.price, qty };
+    const color = typeof x.color === "string" && x.color ? x.color : undefined;
+    const size = typeof x.size === "string" && x.size ? x.size : undefined;
+    if (p.colors.length > 0 ? !p.colors.some((c) => c.name === color) : color !== undefined)
+      throw new Error(`Please choose a colour for ${p.name}.`);
+    if ((p.sizes as string[]).length > 0 ? !(p.sizes as string[]).includes(size ?? "") : size !== undefined)
+      throw new Error(`Please choose a size for ${p.name}.`);
+    return { id: p.id, name: p.name, price: p.price, qty, color, size };
   });
-  const pence = lines.reduce((s, l) => s + Math.round(l.price * 100) * l.qty, 0);
-  return { lines, total: pence / 100 };
+  const totalPence = lines.reduce((s, l) => s + Math.round(l.price * 100) * l.qty, 0);
+  return { lines, total: totalPence / 100, totalPence };
 }
