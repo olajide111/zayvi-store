@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Square Web Payments SDK card form.
- * Requires NEXT_PUBLIC_SQUARE_APP_ID and a location ID.
+ * Requires NEXT_PUBLIC_SQUARE_APP_ID.
  * Loads the Square script dynamically so the rest of the site still works without keys.
  */
 
 type Props = {
-  amount: number; // in GBP, e.g. 34.50
+  amount: number;
   items: { id: number; qty: number }[];
   onSuccess: () => void;
   onError: (msg: string) => void;
@@ -26,44 +26,47 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
   const [ready, setReady] = useState(false);
   const [card, setCard] = useState<any>(null);
   const appId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
-  const locationId = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID; // optional public location if you prefer
 
-  // Load Square.js once
-  const loadSquare = async () => {
-    if (window.Square) return window.Square;
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://sandbox.web.squarecdn.com/v1/square.js"; // change to production URL later
-      script.onload = () => resolve(window.Square);
-      script.onerror = () => reject(new Error("Failed to load Square"));
-      document.body.appendChild(script);
-    });
-  };
+  useEffect(() => {
+    if (!appId) return;
 
-  const initCard = async () => {
-    if (!appId) {
-      onError("Square Application ID is missing");
-      return;
-    }
-    try {
-      const Square = await loadSquare();
-      const payments = Square.payments(appId, locationId || "sandbox");
-      const cardInstance = await payments.card();
-      await cardInstance.attach("#square-card-container");
-      setCard(cardInstance);
-      setReady(true);
-    } catch (e) {
-      console.error(e);
-      onError("Could not initialise Square card form");
-    }
-  };
+    let cancelled = false;
 
-  // Auto-init when component mounts
-  useState(() => {
-    // slight delay so the container exists
-    const t = setTimeout(initCard, 100);
-    return () => clearTimeout(t);
-  });
+    const init = async () => {
+      try {
+        if (!window.Square) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement("script");
+            // Sandbox for testing – change to https://web.squarecdn.com/v1/square.js for production
+            script.src = "https://sandbox.web.squarecdn.com/v1/square.js";
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Failed to load Square"));
+            document.body.appendChild(script);
+          });
+        }
+
+        if (cancelled) return;
+
+        const payments = window.Square.payments(appId, "sandbox");
+        const cardInstance = await payments.card();
+        await cardInstance.attach("#square-card-container");
+
+        if (!cancelled) {
+          setCard(cardInstance);
+          setReady(true);
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) onError("Could not initialise Square card form");
+      }
+    };
+
+    const t = setTimeout(init, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [appId]);
 
   const handlePay = async () => {
     if (!card) return;
