@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { PRODUCTS } from "@/lib/products";
+import { PRODUCTS, lineKey, variantLabel } from "@/lib/products";
 
 const STORE_NAME = "ZAYVI";
 const STORE_COLOR = "#16a34a";
@@ -104,17 +104,18 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
 
 interface CartItem {
   id: number; name: string; emoji: string;
-  price: number; qty: number; selectedColor?: string;
+  price: number; qty: number; color?: string; size?: string;
 }
+
+type AddFn = (p: typeof PRODUCTS[0], qty: number, color: string | undefined, size: string | undefined) => void;
 
 function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
   cart: CartItem[]; open: boolean; onClose: () => void;
-  onQty: (id: number, color: string | undefined, d: number) => void;
-  onRemove: (id: number, color: string | undefined) => void;
+  onQty: (key: string, d: number) => void;
+  onRemove: (key: string) => void;
 }) {
   const sub  = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt  = cart.reduce((a, i) => a + i.qty, 0);
-  const left = 0;
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0,
@@ -156,7 +157,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                 <div style={{ fontSize: 14, color: "#aaa" }}>Your cart is empty</div>
               </div>
             : cart.map(item => (
-              <div key={`${item.id}-${item.selectedColor}`}
+              <div key={lineKey(item)}
                 style={{ display: "flex", gap: 14, paddingBottom: 16, marginBottom: 16,
                   borderBottom: "1px solid #f5f5f5" }}>
                 <div style={{ width: 68, height: 68, background: "#f9f9f9", borderRadius: 10,
@@ -167,22 +168,22 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {item.name}
                   </div>
-                  {item.selectedColor && (
+                  {variantLabel(item) && (
                     <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
-                      {item.selectedColor}
+                      {variantLabel(item)}
                     </div>
                   )}
                   <div style={{ display: "flex", alignItems: "center",
                     justifyContent: "space-between", marginTop: 8 }}>
                     <div style={{ display: "flex", border: "1px solid #e5e5e5",
                       borderRadius: 6, overflow: "hidden" }}>
-                      <button onClick={() => onQty(item.id, item.selectedColor, -1)}
+                      <button onClick={() => onQty(lineKey(item), -1)}
                         style={{ width: 28, height: 28, background: "none", border: "none",
                           cursor: "pointer", fontSize: 16, color: "#888" }}>−</button>
                       <span style={{ width: 28, display: "flex", alignItems: "center",
                         justifyContent: "center", fontSize: 13, fontWeight: 600,
                         color: "#111" }}>{item.qty}</span>
-                      <button onClick={() => onQty(item.id, item.selectedColor, 1)}
+                      <button onClick={() => onQty(lineKey(item), 1)}
                         style={{ width: 28, height: 28, background: "none", border: "none",
                           cursor: "pointer", fontSize: 16, color: "#888" }}>+</button>
                     </div>
@@ -190,7 +191,7 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                       <div style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>
                         £{(item.price * item.qty).toFixed(2)}
                       </div>
-                      <button onClick={() => onRemove(item.id, item.selectedColor)}
+                      <button onClick={() => onRemove(lineKey(item))}
                         style={{ fontSize: 10, color: "#ccc", background: "none",
                           border: "none", cursor: "pointer", marginTop: 2 }}>
                         Remove
@@ -237,11 +238,11 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
                   const res = await fetch('/api/paypal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: cart }),
+                    body: JSON.stringify({ items: cart.map(i => ({ id: i.id, qty: i.qty, color: i.color, size: i.size })) }),
                   });
                   const data = await res.json();
                   if (data.url) window.location.href = data.url;
-                  else alert("PayPal error. Please try again.");
+                  else alert(data.error || "PayPal error. Please try again.");
                 } catch {
                   alert("PayPal error. Please try again.");
                 }
@@ -265,19 +266,17 @@ function CartDrawer({ cart, open, onClose, onQty, onRemove }: {
 function QuickView({ product, open, onClose, onAdd }: {
   product: typeof PRODUCTS[0] | null; open: boolean;
   onClose: () => void;
-  onAdd: (p: typeof PRODUCTS[0], qty: number, color: string | undefined) => void;
+  onAdd: AddFn;
 }) {
+  // Remounted per product (see key on <QuickView>), so choices start fresh each time.
   const [qty,   setQty]   = useState(1);
   const [col,   setCol]   = useState(0);
   const [sz,    setSz]    = useState(0);
   const [tab,   setTab]   = useState("desc");
   const [added, setAdded] = useState(false);
-  useEffect(() => {
-    if (open) { setQty(1); setCol(0); setTab("desc"); setAdded(false); }
-  }, [open]);
   if (!product) return null;
   const handleAdd = () => {
-    onAdd(product, qty, product.colors[col]?.name);
+    onAdd(product, qty, product.colors[col]?.name, product.sizes[sz]);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -301,8 +300,8 @@ function QuickView({ product, open, onClose, onAdd }: {
               gap: 16, minHeight: 500 }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center",
                 justifyContent: "center", fontSize: 110 }}>
-                {(product as any).image
-                  ? <img src={(product as any).image} alt={product.name}
+                {product.image
+                  ? <img src={product.image} alt={product.name}
                       style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 12 }} />
                   : product.emoji
                 }
@@ -360,7 +359,7 @@ function QuickView({ product, open, onClose, onAdd }: {
                       border: "none", cursor: "pointer", fontSize: 18, color: "#555" }}>−</button>
                   <span style={{ width: 42, textAlign: "center",
                     fontSize: 15, fontWeight: 700, color: "#111" }}>{qty}</span>
-                  <button onClick={() => setQty(q => q + 1)}
+                  <button onClick={() => setQty(q => Math.min(20, q + 1))}
                     style={{ width: 38, height: 38, background: "#fafafa",
                       border: "none", cursor: "pointer", fontSize: 18, color: "#555" }}>+</button>
                 </div>
@@ -417,7 +416,7 @@ function QuickView({ product, open, onClose, onAdd }: {
 function Card({ product, onView, onAdd }: {
   product: typeof PRODUCTS[0];
   onView: (p: typeof PRODUCTS[0]) => void;
-  onAdd: (p: typeof PRODUCTS[0], qty: number, color: string | undefined) => void;
+  onAdd: AddFn;
 }) {
   const [hov,  setHov]  = useState(false);
   const [col,  setCol]  = useState(0);
@@ -431,8 +430,8 @@ function Card({ product, onView, onAdd }: {
       <div onClick={() => onView(product)}
         style={{ background: "#f9f9f9", height: 210, display: "flex",
           alignItems: "center", justifyContent: "center", position: "relative" }}>
-        {(product as any).image
-          ? <img src={(product as any).image} alt={product.name}
+        {product.image
+          ? <img src={product.image} alt={product.name}
               style={{ width: "100%", height: "100%", objectFit: "cover",
                 transform: hov ? "scale(1.08)" : "scale(1)", transition: "transform .3s" }} />
           : <div style={{ fontSize: 84, transform: hov ? "scale(1.08)" : "scale(1)",
@@ -478,13 +477,18 @@ function Card({ product, onView, onAdd }: {
             <span style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>£{product.price}</span>
           </div>
           <button
-            onClick={e => { e.stopPropagation(); onAdd(product, 1, product.colors[col]?.name); }}
+            onClick={e => {
+              e.stopPropagation();
+              // Sized products need a size choice first, so open the product view instead.
+              if (product.sizes.length > 0) onView(product);
+              else onAdd(product, 1, product.colors[col]?.name, undefined);
+            }}
             onMouseEnter={e => (e.currentTarget.style.background = "#333")}
             onMouseLeave={e => (e.currentTarget.style.background = "#111")}
             style={{ background: "#111", color: "#fff", border: "none", borderRadius: 8,
               padding: "9px 16px", cursor: "pointer", fontSize: 12, fontWeight: 700,
               transition: "background .15s" }}>
-            Add
+            {product.sizes.length > 0 ? "Choose size" : "Add"}
           </button>
         </div>
       </div>
@@ -505,7 +509,6 @@ export default function Home() {
   const [toast,   setToast]   = useState<string | null>(null);
   const [page,    setPage]    = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const gridRef   = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50);
@@ -518,27 +521,26 @@ export default function Home() {
   }, [searchOn]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
-  const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToGrid = () => document.getElementById("grid")?.scrollIntoView({ behavior: "smooth" });
 
-  const addToCart = (product: typeof PRODUCTS[0], qty = 1, color?: string) => {
+  const addToCart: AddFn = (product, qty, color, size) => {
+    const key = lineKey({ id: product.id, color, size });
     setCart(prev => {
-      const ex = prev.find(i => i.id === product.id && i.selectedColor === color);
-      if (ex) return prev.map(i =>
-        i.id === product.id && i.selectedColor === color ? { ...i, qty: i.qty + qty } : i);
+      const ex = prev.find(i => lineKey(i) === key);
+      if (ex) return prev.map(i => lineKey(i) === key ? { ...i, qty: Math.min(20, i.qty + qty) } : i);
       return [...prev, { id: product.id, name: product.name, emoji: product.emoji,
-        price: product.price, qty, selectedColor: color }];
+        price: product.price, qty: Math.min(20, qty), color, size }];
     });
     showToast(`✓ ${product.name} added to cart`);
     setCartOpen(true);
   };
 
-  const removeFromCart = (id: number, color: string | undefined) =>
-    setCart(p => p.filter(i => !(i.id === id && i.selectedColor === color)));
+  const removeFromCart = (key: string) =>
+    setCart(p => p.filter(i => lineKey(i) !== key));
 
-  const updateQty = (id: number, color: string | undefined, delta: number) =>
+  const updateQty = (key: string, delta: number) =>
     setCart(p => p.map(i =>
-      i.id === id && i.selectedColor === color
-        ? { ...i, qty: Math.max(1, i.qty + delta) } : i));
+      lineKey(i) === key ? { ...i, qty: Math.min(20, Math.max(1, i.qty + delta)) } : i));
 
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -729,8 +731,8 @@ export default function Home() {
                   style={{ background: "#fff", borderRadius: 12, padding: 12, cursor: "pointer",
                     boxShadow: "0 2px 8px rgba(0,0,0,.07)", display: "flex", gap: 10, alignItems: "center" }}>
                   <span style={{ fontSize: 22, flexShrink: 0 }}>
-                    {(p as any).image
-                      ? <img src={(p as any).image} alt={p.name} style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
+                    {p.image
+                      ? <img src={p.image} alt={p.name} style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
                       : p.emoji}
                   </span>
                   <div>
@@ -795,8 +797,8 @@ export default function Home() {
                   alignItems: "center", gap: 8, transition: "transform .2s, box-shadow .2s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1.03)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 28px rgba(0,0,0,.09)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = "scale(1)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                {(p as any).image
-                  ? <img src={(p as any).image} alt={p.name}
+                {p.image
+                  ? <img src={p.image} alt={p.name}
                       style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: "16px 16px 0 0" }} />
                   : <div style={{ fontSize: 46, padding: 18 }}>{p.emoji}</div>
                 }
@@ -824,7 +826,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section ref={gridRef} id="grid" style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 28px" }}>
+      <section id="grid" style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 28px" }}>
         <div style={{ display: "flex", justifyContent: "space-between",
           alignItems: "center", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
@@ -939,7 +941,7 @@ export default function Home() {
       {page && <PageModal pageKey={page} onClose={() => setPage(null)} />}
       <CartDrawer cart={cart} open={cartOpen}
         onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeFromCart} />
-      <QuickView product={qv} open={!!qv}
+      <QuickView key={qv?.id ?? "none"} product={qv} open={!!qv}
         onClose={() => setQv(null)} onAdd={addToCart} />
     </div>
   );
