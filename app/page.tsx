@@ -11,6 +11,12 @@ import Footer from "@/components/Footer";
 const STORE_COLOR = "#16a34a";
 const BOTTLE = PRODUCTS.find((p) => p.id === 1)!;
 
+const COLOR_IMAGES: Record<string, string> = {
+  "Forest Green": "/products/aerobottle.jpg",
+  "Matte Black": "/products/aerobottle-black.jpg",
+  "Sand": "/products/aerobottle-sand.jpg",
+};
+
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
     title: "Privacy Policy",
@@ -107,6 +113,7 @@ export default function Home() {
     );
 
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
+  const heroImage = COLOR_IMAGES[color] || BOTTLE.image;
 
   const handlePayPal = async () => {
     try {
@@ -201,7 +208,7 @@ export default function Home() {
         </div>
 
         <div style={{ borderRadius: 20, overflow: "hidden", background: "#f0f0ec", aspectRatio: "1/1", boxShadow: "0 20px 50px rgba(0,0,0,.08)" }}>
-          <img src={BOTTLE.image} alt="AeroBottle" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={heroImage} alt={`AeroBottle ${color}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       </section>
 
