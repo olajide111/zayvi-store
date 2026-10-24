@@ -15,7 +15,7 @@ export type Product = {
   features: string[];
   colors: ProductColor[];
   sizes: string[];
-  badge?: string; // e.g. "Best Seller", "New"
+  badge?: string;
 };
 
 export const PRODUCTS: Product[] = [
@@ -40,7 +40,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 2,
     name: "Lumina Face Cream",
-    image: "https://images.unsplash.com/photo-1620916569498-e3c0c4e5e5e5?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=800&q=80",
     price: 42.0,
     category: "Beauty",
     emoji: "✨",
@@ -72,7 +72,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 4,
     name: "Echo Foam Roller",
-    image: "https://images.unsplash.com/photo-1599058945522-28d884b0e5e0?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80",
     price: 29.0,
     category: "Fitness",
     emoji: "🧘",
@@ -106,7 +106,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 6,
     name: "SoftPack Cubes Set",
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1565029904592-b6f2c5e0e0e0?w=800&q=80",
     price: 28.0,
     category: "Travel",
     emoji: "🧳",
@@ -194,7 +194,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 12,
     name: "Smart Pet Fountain",
-    image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80",
     price: 48.0,
     category: "Pets",
     emoji: "🐱",
