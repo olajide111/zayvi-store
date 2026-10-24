@@ -8,6 +8,7 @@ import TrustBar from "@/components/TrustBar";
 import CategoryGrid from "@/components/CategoryGrid";
 import ProductCard from "@/components/ProductCard";
 import CartDrawer, { type CartItem } from "@/components/CartDrawer";
+import QuickView from "@/components/QuickView";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
@@ -16,7 +17,7 @@ const STORE_COLOR = "#16a34a";
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
     title: "Privacy Policy",
-    body: "Last updated: March 2025\n\nZAYVI is committed to protecting your privacy. We collect name, email and shipping address only to fulfil orders. Payment is handled by PayPal — we never store card details.\n\nWe do not sell your data. Contact hello@zayvi.store for any requests.",
+    body: "Last updated: March 2025\n\nZAYVI is committed to protecting your privacy. We collect name, email and shipping address only to fulfil orders. Payment is handled securely — we never store card details.\n\nWe do not sell your data. Contact hello@zayvi.store for any requests.",
   },
   returns: {
     title: "Returns Policy",
@@ -36,7 +37,7 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "FAQs",
-    body: "Delivery usually takes 7–14 days in the UK and 10–21 days internationally.\n\nYes, free worldwide shipping on every order.\n\n30-day returns on unused items. Payments are securely processed by PayPal.",
+    body: "Delivery usually takes 7–14 days in the UK and 10–21 days internationally.\n\nYes, free worldwide shipping on every order.\n\n30-day returns on unused items. Payments are securely processed.",
   },
   about: {
     title: "About ZAYVI",
@@ -53,85 +54,16 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
   if (!p) return null;
   return (
     <>
-      <div
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,.55)",
-          zIndex: 1400,
-          backdropFilter: "blur(4px)",
-        }}
-      />
-      <div
-        style={
-          {
-            position: "fixed",
-            inset: 0,
-            zIndex: 1401,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-          }
-        }
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 20,
-            width: "100%",
-            maxWidth: 560,
-            maxHeight: "85vh",
-            overflowY: "auto",
-            boxShadow: "0 32px 80px rgba(0,0,0,.3)",
-          }}
-        >
-          <div
-            style={
-              {
-                padding: "20px 24px",
-                borderBottom: "1px solid #f0f0f0",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                position: "sticky",
-                top: 0,
-                background: "#fff",
-              }
-            }
-          >
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 1400, backdropFilter: "blur(4px)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1401, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 32px 80px rgba(0,0,0,.3)" }}>
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
             <div style={{ fontSize: 18, fontWeight: 800 }}>{p.title}</div>
-            <button
-              onClick={onClose}
-              style={
-                {
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  border: "1px solid #eee",
-                  background: "#fafafa",
-                  cursor: "pointer",
-                }
-              }
-            >
-              ✕
-            </button>
+            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid #eee", background: "#fafafa", cursor: "pointer" }}>✕</button>
           </div>
           <div style={{ padding: 24 }}>
             {p.body.split("\n\n").map((para, i) => (
-              <p
-                key={i}
-                style={{
-                  fontSize: 14,
-                  color: "#555",
-                  lineHeight: 1.8,
-                  marginBottom: 16,
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {para}
-              </p>
+              <p key={i} style={{ fontSize: 14, color: "#555", lineHeight: 1.8, marginBottom: 16, whiteSpace: "pre-line" }}>{para}</p>
             ))}
           </div>
         </div>
@@ -143,6 +75,7 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
 export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [qv, setQv] = useState<(typeof PRODUCTS)[0] | null>(null);
   const [cat, setCat] = useState("All");
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -171,14 +104,7 @@ export default function Home() {
         );
       return [
         ...prev,
-        {
-          id: product.id,
-          name: product.name,
-          emoji: product.emoji,
-          price: product.price,
-          qty,
-          selectedColor: color,
-        },
+        { id: product.id, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color },
       ];
     });
     showToast(`✓ ${product.name} added`);
@@ -191,103 +117,49 @@ export default function Home() {
   const updateQty = (id: number, color: string | undefined, delta: number) =>
     setCart((p) =>
       p.map((i) =>
-        i.id === id && i.selectedColor === color
-          ? { ...i, qty: Math.max(1, i.qty + delta) }
-          : i
+        i.id === id && i.selectedColor === color ? { ...i, qty: Math.max(1, i.qty + delta) } : i
       )
     );
 
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
+  const filtered = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
 
-  const filtered =
-    cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
-
-  const handleCheckout = async () => {
+  const handlePayPal = async () => {
     try {
       const res = await fetch("/api/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: cart.map((i) => ({ id: i.id, qty: i.qty })),
-        }),
+        body: JSON.stringify({ items: cart.map((i) => ({ id: i.id, qty: i.qty })) }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else showToast("Checkout unavailable right now");
+      else showToast("PayPal checkout unavailable");
     } catch {
       showToast("Checkout failed — try again");
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f8f8f6",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        color: "#111",
-      }}
-    >
-      {/* Announcement bar */}
-      <div
-        style={{
-          background: "#111",
-          color: "#fff",
-          textAlign: "center",
-          padding: "10px 16px",
-          fontSize: 12,
-          letterSpacing: 0.3,
-        }}
-      >
-        FREE Worldwide Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure
-        PayPal Checkout
+    <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
+      <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
+        FREE Worldwide Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure Checkout
       </div>
 
       <Header
         cartCount={cartCount}
         onCartOpen={() => setCartOpen(true)}
-        onShopAll={() => {
-          setCat("All");
-          scrollToGrid();
-        }}
-        onCategory={(c) => {
-          setCat(c);
-          scrollToGrid();
-        }}
+        onShopAll={() => { setCat("All"); scrollToGrid(); }}
+        onCategory={(c) => { setCat(c); scrollToGrid(); }}
         scrolled={scrolled}
       />
 
-      <Hero
-        onShopAll={() => {
-          setCat("All");
-          scrollToGrid();
-        }}
-      />
-
+      <Hero onShopAll={() => { setCat("All"); scrollToGrid(); }} />
       <TrustBar />
+      <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
 
-      <CategoryGrid
-        onSelect={(c) => {
-          setCat(c);
-          scrollToGrid();
-        }}
-      />
-
-      {/* Product grid */}
       <section ref={gridRef} style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px 64px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 24,
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <h2 style={{ fontSize: 22, fontWeight: 800 }}>
-            {cat === "All" ? "Trending Now" : cat}
-          </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "Trending Now" : cat}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["All", "Travel", "Beauty", "Fitness", "Pets", "Accessories", "Health"].map((c) => (
               <button
@@ -310,27 +182,19 @@ export default function Home() {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            gap: 20,
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
           {filtered.map((p) => (
             <ProductCard
               key={p.id}
               product={p}
-              onView={() => {}}
+              onView={(prod) => setQv(prod)}
               onAdd={addToCart}
             />
           ))}
         </div>
 
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
-            No products in this category yet.
-          </div>
+          <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>No products in this category yet.</div>
         )}
       </section>
 
@@ -343,28 +207,20 @@ export default function Home() {
         onClose={() => setCartOpen(false)}
         onQty={updateQty}
         onRemove={removeFromCart}
-        onCheckout={handleCheckout}
+        onCheckout={handlePayPal}
+      />
+
+      <QuickView
+        product={qv}
+        open={!!qv}
+        onClose={() => setQv(null)}
+        onAdd={addToCart}
       />
 
       {page && <PageModal pageKey={page} onClose={() => setPage(null)} />}
 
       {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 28,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#111",
-            color: "#fff",
-            padding: "12px 24px",
-            borderRadius: 40,
-            fontSize: 13,
-            fontWeight: 700,
-            zIndex: 9999,
-            boxShadow: "0 8px 28px rgba(0,0,0,.2)",
-          }}
-        >
+        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "12px 24px", borderRadius: 40, fontSize: 13, fontWeight: 700, zIndex: 9999, boxShadow: "0 8px 28px rgba(0,0,0,.2)" }}>
           {toast}
         </div>
       )}
