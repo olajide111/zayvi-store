@@ -1,6 +1,6 @@
 // ZAYVI — Travel & Daily Essentials
 // Focused catalogue built for conversion. Prices always taken from here on the server.
-// Images use Unsplash so the store works immediately (replace with real product photos later).
+// Images use direct product photo URLs so the store works immediately.
 
 export type ProductColor = { name: string; hex: string };
 
@@ -23,7 +23,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 1,
     name: "AeroBottle Travel Bottle",
-    image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=800&q=80",
+    image: "https://www.nalno.com/cdn/shop/products/Primus_Steel_Ilus01.jpg?v=1595572143",
     price: 34.0,
     category: "Travel",
     emoji: "🧴",
@@ -41,7 +41,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 2,
     name: "SoftPack Cubes Set",
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80",
+    image: "https://slimages.macysassets.com/is/image/MCY/products/4/optimized/29451524_fpx.tif?$filterlrg$&wid=600",
     price: 28.0,
     category: "Travel",
     emoji: "🧳",
@@ -58,7 +58,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 3,
     name: "Travel Neck Pillow",
-    image: "https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=800&q=80",
+    image: "https://slimages.macysassets.com/is/image/MCY/products/2/optimized/36600612_fpx.tif?$filterlrg$&wid=600",
     price: 32.0,
     category: "Travel",
     emoji: "✈️",
@@ -75,7 +75,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 4,
     name: "Travel Adapter 140W",
-    image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=800&q=80",
+    image: "https://m.media-amazon.com/images/I/51SWn4xhvzL.jpg",
     price: 36.0,
     category: "Travel",
     emoji: "🔌",
@@ -92,7 +92,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 5,
     name: "Essential Daypack",
-    image: "https://images.unsplash.com/photo-1622560480654-d96214fdc887?w=800&q=80",
+    image: "https://www.evo.com/cdn/shop/files/product-image-1304854.jpg?v=1781110162",
     price: 78.0,
     category: "Carry",
     emoji: "🎒",
@@ -110,7 +110,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 6,
     name: "Everyday Tote",
-    image: "https://images.unsplash.com/photo-1590874103328-eac38a674b4a?w=800&q=80",
+    image: "https://thumbs.dreamstime.com/b/folded-white-tote-bag-product-photography-folded-white-cotton-tote-bag-flat-handles-soft-creases-isolated-white-376221648.jpg",
     price: 52.0,
     category: "Carry",
     emoji: "👜",
@@ -127,7 +127,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 7,
     name: "Contour Memory Pillow",
-    image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
+    image: "https://dusk.com/cdn/shop/files/memory-foam-standard-pillow-white-715068-cutout.jpg?v=1788275639",
     price: 39.0,
     category: "Recovery",
     emoji: "😴",
@@ -140,7 +140,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 8,
     name: "Echo Foam Roller",
-    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&q=80",
     price: 29.0,
     category: "Recovery",
     emoji: "🧘",
@@ -169,7 +169,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 10,
     name: "LED Face Mask",
-    image: "https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=800&q=80",
+    image: "https://www.celluma.com/cdn/shop/files/Celluma-FACE-acne-red-light-therapy-2000x2000px_1024x1024.jpg?v=1737505626",
     price: 59.0,
     category: "Daily",
     emoji: "💡",
@@ -182,7 +182,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 11,
     name: "Lumina Face Cream",
-    image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&q=80",
     price: 42.0,
     category: "Daily",
     emoji: "✨",
@@ -195,7 +195,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 12,
     name: "Makeup Brush Set",
-    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800&q=80",
     price: 29.0,
     category: "Daily",
     emoji: "💄",
