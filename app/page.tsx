@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PRODUCTS } from "@/lib/products";
 import Header from "@/components/Header";
+import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
+import BestSellers from "@/components/BestSellers";
+import CategoryGrid from "@/components/CategoryGrid";
+import ProductCard from "@/components/ProductCard";
 import CartDrawer, { type CartItem } from "@/components/CartDrawer";
+import QuickView from "@/components/QuickView";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
 const STORE_COLOR = "#16a34a";
-const BOTTLE = PRODUCTS.find((p) => p.id === 1)!;
-
-const COLOR_IMAGES: Record<string, string> = {
-  "Forest Green": "/products/aerobottle.jpg",
-  "Matte Black": "/products/aerobottle-black.jpg",
-  "Sand": "/products/aerobottle-sand.jpg",
-};
 
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
@@ -44,11 +42,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI makes one bottle that actually works — stays cold, looks good, no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
+    body: "ZAYVI is focused on travel and daily essentials that earn their place — no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
   },
   affiliate: {
     title: "Affiliate Programme",
-    body: "Earn commission by sharing the AeroBottle. Email hello@zayvi.store to apply.",
+    body: "Earn commission by sharing ZAYVI products. Email hello@zayvi.store to apply.",
   },
 };
 
@@ -78,10 +76,13 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
 export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [qv, setQv] = useState<(typeof PRODUCTS)[0] | null>(null);
+  const [cat, setCat] = useState("All");
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [page, setPage] = useState<string | null>(null);
-  const [color, setColor] = useState(BOTTLE.colors[0].name);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const bestRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -94,26 +95,37 @@ export default function Home() {
     setTimeout(() => setToast(null), 2200);
   };
 
-  const addBottle = () => {
+  const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBest = () => bestRef.current?.scrollIntoView({ behavior: "smooth" });
+
+  const addToCart = (product: (typeof PRODUCTS)[0], qty = 1, color?: string) => {
     setCart((prev) => {
-      const ex = prev.find((i) => i.id === BOTTLE.id && i.selectedColor === color);
-      if (ex) return prev.map((i) => (i.id === BOTTLE.id && i.selectedColor === color ? { ...i, qty: i.qty + 1 } : i));
-      return [...prev, { id: BOTTLE.id, name: BOTTLE.name, emoji: BOTTLE.emoji, price: BOTTLE.price, qty: 1, selectedColor: color }];
+      const ex = prev.find((i) => i.id === product.id && i.selectedColor === color);
+      if (ex)
+        return prev.map((i) =>
+          i.id === product.id && i.selectedColor === color ? { ...i, qty: i.qty + qty } : i
+        );
+      return [
+        ...prev,
+        { id: product.id, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color },
+      ];
     });
-    showToast("✓ AeroBottle added");
+    showToast(`✓ ${product.name} added`);
     setCartOpen(true);
   };
 
-  const removeFromCart = (id: number, col: string | undefined) =>
-    setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === col)));
+  const removeFromCart = (id: number, color: string | undefined) =>
+    setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === color)));
 
-  const updateQty = (id: number, col: string | undefined, delta: number) =>
+  const updateQty = (id: number, color: string | undefined, delta: number) =>
     setCart((p) =>
-      p.map((i) => (i.id === id && i.selectedColor === col ? { ...i, qty: Math.max(1, i.qty + delta) } : i))
+      p.map((i) =>
+        i.id === id && i.selectedColor === color ? { ...i, qty: Math.max(1, i.qty + delta) } : i
+      )
     );
 
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
-  const heroImage = COLOR_IMAGES[color] || BOTTLE.image;
+  const filtered = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
 
   const handlePayPal = async () => {
     try {
@@ -133,149 +145,75 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        FREE Shipping &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure Checkout
+        FREE Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure PayPal & Card Checkout
       </div>
 
       <Header
         cartCount={cartCount}
         onCartOpen={() => setCartOpen(true)}
-        onShopAll={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        onCategory={() => {}}
+        onShopAll={() => { setCat("All"); scrollToGrid(); }}
+        onCategory={(c) => { setCat(c); scrollToGrid(); }}
         scrolled={scrolled}
       />
 
-      {/* Hero */}
-      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px 32px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }}>
-        <div>
-          <div style={{ display: "inline-block", background: "#f0fdf4", color: STORE_COLOR, fontSize: 12, fontWeight: 700, padding: "6px 12px", borderRadius: 20, marginBottom: 16 }}>
-            BEST SELLER
-          </div>
-          <h1 style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", fontWeight: 800, lineHeight: 1.08, letterSpacing: -1.5, marginBottom: 12 }}>
-            The bottle that<br />stays cold all day.
-          </h1>
-          <p style={{ fontSize: 17, color: "#555", lineHeight: 1.6, marginBottom: 24, maxWidth: 420 }}>
-            Double-wall insulated steel. 24 hours cold, 12 hours hot. Leak-proof. Looks good on your desk and in your bag.
-          </p>
-
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Colour</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {BOTTLE.colors.map((c) => (
-                <button
-                  key={c.name}
-                  onClick={() => setColor(c.name)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "50%",
-                    background: c.hex,
-                    border: color === c.name ? "3px solid #111" : "2px solid #ddd",
-                    cursor: "pointer",
-                  }}
-                  title={c.name}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 28, fontWeight: 800 }}>£{BOTTLE.price.toFixed(0)}</div>
-            <div style={{ fontSize: 13, color: "#666" }}>Free shipping</div>
-          </div>
-
-          <button
-            onClick={addBottle}
-            style={{
-              background: STORE_COLOR,
-              color: "#fff",
-              border: "none",
-              borderRadius: 12,
-              padding: "16px 32px",
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: "pointer",
-              width: "100%",
-              maxWidth: 320,
-            }}
-          >
-            Add to Cart — £{BOTTLE.price.toFixed(0)}
-          </button>
-
-          <div style={{ display: "flex", gap: 20, marginTop: 20, fontSize: 13, color: "#666" }}>
-            <span>✓ 30-day returns</span>
-            <span>✓ Secure checkout</span>
-          </div>
-        </div>
-
-        <div style={{ borderRadius: 20, overflow: "hidden", background: "#f0f0ec", aspectRatio: "1/1", boxShadow: "0 20px 50px rgba(0,0,0,.08)" }}>
-          <img src={heroImage} alt={`AeroBottle ${color}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        </div>
-      </section>
+      <Hero
+        onShopAll={() => { setCat("All"); scrollToGrid(); }}
+        onBestSellers={scrollToBest}
+      />
 
       <TrustBar />
 
-      {/* Benefits */}
-      <section style={{ maxWidth: 900, margin: "0 auto", padding: "56px 24px" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 800, textAlign: "center", marginBottom: 36 }}>Why people keep it</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 28 }}>
-          {[
-            { t: "Stays cold 24 hours", d: "Ice water in the morning is still cold at night." },
-            { t: "Stays hot 12 hours", d: "Coffee stays drinkable from commute to lunch." },
-            { t: "Leak-proof", d: "Goes in your bag without worrying about the laptop." },
-            { t: "Looks good", d: "Soft-touch finish that doesn’t scream gym bottle." },
-          ].map((b) => (
-            <div key={b.t} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{b.t}</div>
-              <div style={{ fontSize: 14, color: "#555", lineHeight: 1.5 }}>{b.d}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Proof */}
-      <div style={{ background: "#fff", padding: "48px 24px", textAlign: "center", borderTop: "1px solid #eee", borderBottom: "1px solid #eee" }}>
-        <p style={{ fontSize: 17, color: "#333", maxWidth: 520, margin: "0 auto 12px", lineHeight: 1.6 }}>
-          “Finally a bottle that doesn’t leak in my bag and still looks decent on my desk.”
-        </p>
-        <p style={{ fontSize: 13, color: "#888" }}>— Verified buyer, UK</p>
+      <div ref={bestRef}>
+        <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
-      {/* Specs */}
-      <section style={{ maxWidth: 700, margin: "0 auto", padding: "56px 24px" }}>
-        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Details</h2>
-        <ul style={{ listStyle: "none", padding: 0, fontSize: 15, color: "#444", lineHeight: 1.9 }}>
-          {BOTTLE.features.map((f) => (
-            <li key={f}>• {f}</li>
-          ))}
-          <li>• 750ml capacity</li>
-          <li>• Soft-touch powder coat</li>
-          <li>• Fits most cup holders</li>
-        </ul>
-      </section>
+      <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
+        <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
+          “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
+        </p>
+        <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>— Verified buyer, UK</p>
+      </div>
 
-      {/* Final CTA */}
-      <section style={{ background: "#111", color: "#fff", textAlign: "center", padding: "64px 24px" }}>
-        <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Get the AeroBottle</h2>
-        <p style={{ fontSize: 16, color: "#ccc", marginBottom: 24 }}>£{BOTTLE.price.toFixed(0)} · Free shipping · 30-day returns</p>
-        <button
-          onClick={addBottle}
-          style={{
-            background: STORE_COLOR,
-            color: "#fff",
-            border: "none",
-            borderRadius: 12,
-            padding: "16px 36px",
-            fontSize: 16,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Add to Cart
-        </button>
+      <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
+
+      <section ref={gridRef} style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px 64px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "All Products" : cat}</h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {["All", "Travel", "Carry", "Recovery", "Daily"].map((c) => (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  border: cat === c ? `2px solid ${STORE_COLOR}` : "1px solid #e5e5e5",
+                  background: cat === c ? "#f0fdf4" : "#fff",
+                  color: cat === c ? STORE_COLOR : "#555",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
+          {filtered.map((p) => (
+            <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>No products in this category yet.</div>
+        )}
       </section>
 
       <Newsletter />
-      <Footer onPage={setPage} onShopAll={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+      <Footer onPage={setPage} onShopAll={() => { setCat("All"); scrollToGrid(); }} />
 
       <CartDrawer
         cart={cart}
@@ -286,22 +224,15 @@ export default function Home() {
         onCheckout={handlePayPal}
       />
 
+      <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />
+
       {page && <PageModal pageKey={page} onClose={() => setPage(null)} />}
 
       {toast && (
-        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "12px 24px", borderRadius: 40, fontSize: 13, fontWeight: 700, zIndex: 9999 }}>
+        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "12px 24px", borderRadius: 40, fontSize: 13, fontWeight: 700, zIndex: 9999, boxShadow: "0 8px 28px rgba(0,0,0,.2)" }}>
           {toast}
         </div>
       )}
-
-      <style>{`
-        @media (max-width: 768px) {
-          section[style*="grid-template-columns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-            padding: 32px 20px !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
