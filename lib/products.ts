@@ -1,6 +1,6 @@
 // ZAYVI — Travel & Daily Essentials
 // Focused catalogue built for conversion. Prices always taken from here on the server.
-// Images: place generated photos in /public/products/ with the filenames below.
+// Images use Unsplash so the store works immediately (replace with real product photos later).
 
 export type ProductColor = { name: string; hex: string };
 
@@ -23,7 +23,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 1,
     name: "AeroBottle Travel Bottle",
-    image: "/products/aerobottle.jpg",
+    image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=800&q=80",
     price: 34.0,
     category: "Travel",
     emoji: "🧴",
@@ -41,7 +41,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 2,
     name: "SoftPack Cubes Set",
-    image: "/products/packing-cubes.jpg",
+    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80",
     price: 28.0,
     category: "Travel",
     emoji: "🧳",
@@ -58,7 +58,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 3,
     name: "Travel Neck Pillow",
-    image: "/products/neck-pillow.jpg",
+    image: "https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=800&q=80",
     price: 32.0,
     category: "Travel",
     emoji: "✈️",
@@ -75,7 +75,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 4,
     name: "Travel Adapter 140W",
-    image: "/products/travel-adapter.jpg",
+    image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=800&q=80",
     price: 36.0,
     category: "Travel",
     emoji: "🔌",
@@ -92,7 +92,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 5,
     name: "Essential Daypack",
-    image: "/products/daypack.jpg",
+    image: "https://images.unsplash.com/photo-1622560480654-d96214fdc887?w=800&q=80",
     price: 78.0,
     category: "Carry",
     emoji: "🎒",
@@ -110,7 +110,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 6,
     name: "Everyday Tote",
-    image: "/products/tote.jpg",
+    image: "https://images.unsplash.com/photo-1590874103328-eac38a674b4a?w=800&q=80",
     price: 52.0,
     category: "Carry",
     emoji: "👜",
@@ -127,7 +127,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 7,
     name: "Contour Memory Pillow",
-    image: "/products/memory-pillow.jpg",
+    image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
     price: 39.0,
     category: "Recovery",
     emoji: "😴",
@@ -140,7 +140,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 8,
     name: "Echo Foam Roller",
-    image: "/products/foam-roller.jpg",
+    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80",
     price: 29.0,
     category: "Recovery",
     emoji: "🧘",
@@ -156,7 +156,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 9,
     name: "Resistance Bands Set",
-    image: "/products/resistance-bands.jpg",
+    image: "https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=800&q=80",
     price: 24.0,
     category: "Recovery",
     emoji: "💪",
@@ -169,7 +169,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 10,
     name: "LED Face Mask",
-    image: "/products/led-mask.jpg",
+    image: "https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=800&q=80",
     price: 59.0,
     category: "Daily",
     emoji: "💡",
@@ -182,7 +182,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 11,
     name: "Lumina Face Cream",
-    image: "/products/face-cream.jpg",
+    image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=800&q=80",
     price: 42.0,
     category: "Daily",
     emoji: "✨",
@@ -195,7 +195,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 12,
     name: "Makeup Brush Set",
-    image: "/products/makeup-brushes.jpg",
+    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80",
     price: 29.0,
     category: "Daily",
     emoji: "💄",
