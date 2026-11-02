@@ -35,6 +35,7 @@ export default function ProductPage() {
     if (existing) existing.qty += qty;
     else cart.push({ id: product.id, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color });
     localStorage.setItem("zayvi-cart", JSON.stringify(cart));
+    window.dispatchEvent(new CustomEvent("zayvi-cart-updated", { detail: cart }));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
