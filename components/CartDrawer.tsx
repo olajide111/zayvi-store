@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { PRODUCTS } from "@/lib/products";
-import SquareCardForm from "./SquareCardForm";
-
-const STORE_COLOR = "#16a34a";
 
 export type CartItem = {
   id: number;
@@ -21,13 +17,10 @@ type Props = {
   onClose: () => void;
   onQty: (id: number, color: string | undefined, d: number) => void;
   onRemove: (id: number, color: string | undefined) => void;
-  onCheckout: () => void; // PayPal
+  onCheckout: () => void;
 };
 
 export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout }: Props) {
-  const [showSquare, setShowSquare] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
   const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -35,6 +28,7 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
     <>
       <div
         onClick={onClose}
+        aria-hidden="true"
         style={{
           position: "fixed",
           inset: 0,
@@ -45,7 +39,10 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
           transition: "opacity .3s",
         }}
       />
-      <div
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping basket"
         style={{
           position: "fixed",
           top: 0,
@@ -64,37 +61,32 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
       >
         <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#111" }}>Your Cart</div>
-            <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#111" }}>Your basket</div>
+            <div style={{ fontSize: 12, color: "#777", marginTop: 2 }}>
               {cnt} item{cnt !== 1 ? "s" : ""}
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close basket"
             style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid #eee", background: "#fafafa", cursor: "pointer", fontSize: 16 }}
           >
             ✕
           </button>
         </div>
 
-        <div style={{ padding: "12px 24px", background: "#fafafa", borderBottom: "1px solid #f0f0f0" }}>
-          <div style={{ fontSize: 12, color: STORE_COLOR, fontWeight: 700 }}>
-            🎉 FREE worldwide shipping on every order
-          </div>
-        </div>
-
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
           {cart.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
-              <div style={{ fontSize: 14, color: "#aaa" }}>Your cart is empty</div>
+              <div style={{ fontSize: 14, color: "#777" }}>Your basket is empty</div>
             </div>
           ) : (
             cart.map((item) => {
               const product = PRODUCTS.find((p) => p.id === item.id);
               return (
                 <div
-                  key={`${item.id}-${item.selectedColor}`}
+                  key={`${item.id}-${item.selectedColor ?? ""}`}
                   style={{ display: "flex", gap: 14, paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f5f5f5" }}
                 >
                   <div style={{ width: 68, height: 68, background: "#f9f9f9", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
@@ -111,17 +103,17 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
                       {item.name}
                     </div>
                     {item.selectedColor && (
-                      <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{item.selectedColor}</div>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>{item.selectedColor}</div>
                     )}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                       <div style={{ display: "flex", border: "1px solid #e5e5e5", borderRadius: 6 }}>
-                        <button onClick={() => onQty(item.id, item.selectedColor, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
+                        <button aria-label={`Decrease ${item.name} quantity`} onClick={() => onQty(item.id, item.selectedColor, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
                         <span style={{ width: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600 }}>{item.qty}</span>
-                        <button onClick={() => onQty(item.id, item.selectedColor, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
+                        <button aria-label={`Increase ${item.name} quantity`} onClick={() => onQty(item.id, item.selectedColor, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 14, fontWeight: 800 }}>£{(item.price * item.qty).toFixed(2)}</div>
-                        <button onClick={() => onRemove(item.id, item.selectedColor)} style={{ fontSize: 10, color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>
+                        <button onClick={() => onRemove(item.id, item.selectedColor)} style={{ fontSize: 11, color: "#777", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
                           Remove
                         </button>
                       </div>
@@ -139,8 +131,6 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
               <span>Subtotal</span>
               <span>£{sub.toFixed(2)}</span>
             </div>
-
-            {/* PayPal */}
             <button
               onClick={onCheckout}
               style={{
@@ -153,52 +143,16 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
                 fontSize: 14,
                 fontWeight: 700,
                 cursor: "pointer",
-                marginBottom: 10,
               }}
             >
-              Pay with PayPal
+              Continue with PayPal
             </button>
-
-            {/* Toggle Square card form */}
-            <button
-              onClick={() => setShowSquare((v) => !v)}
-              style={
-                {
-                  width: "100%",
-                  background: showSquare ? "#f5f5f5" : "#111",
-                  color: showSquare ? "#111" : "#fff",
-                  border: "1px solid #ddd",
-                  borderRadius: 12,
-                  padding: "14px",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }
-              }
-            >
-              {showSquare ? "Hide card form" : "Pay with Card (Square)"}
-            </button>
-
-            {showSquare && (
-              <SquareCardForm
-                amount={sub}
-                items={cart.map((i) => ({ id: i.id, qty: i.qty }))}
-                onSuccess={() => {
-                  setMsg("Payment successful!");
-                  setTimeout(() => onClose(), 1500);
-                }}
-                onError={(m) => setMsg(m)}
-              />
-            )}
-
-            {msg && (
-              <div style={{ marginTop: 12, fontSize: 13, color: msg.includes("success") ? STORE_COLOR : "#dc2626", textAlign: "center" }}>
-                {msg}
-              </div>
-            )}
+            <p style={{ fontSize: 11, color: "#777", lineHeight: 1.5, marginTop: 10 }}>
+              Your payment will be processed by PayPal. Review delivery details before placing an order.
+            </p>
           </div>
         )}
-      </div>
+      </aside>
     </>
   );
 }
