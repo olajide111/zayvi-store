@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 type Props = {
   amount: number;
@@ -19,6 +19,8 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [card, setCard] = useState<any>(null);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
   const appId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
   const environment = process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox";
 
@@ -50,7 +52,7 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
         }
       } catch (error) {
         console.error("Square card initialisation failed", error);
-        if (!cancelled) onError("Card payments are temporarily unavailable. Please try PayPal or try again later.");
+        if (!cancelled) onErrorRef.current("Card payments are temporarily unavailable. Please try PayPal or try again later.");
       }
     };
 
@@ -59,7 +61,7 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
       cancelled = true;
       if (cardInstance?.destroy) cardInstance.destroy().catch(() => undefined);
     };
-  }, [appId, environment, onError]);
+  }, [appId, environment]);
 
   const handlePay = async () => {
     if (!card || loading || amount <= 0) return;
