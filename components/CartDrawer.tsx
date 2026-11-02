@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { PRODUCTS } from "@/lib/products";
+import SquareCardForm from "@/components/SquareCardForm";
 
 export type CartItem = {
   id: number;
@@ -22,6 +24,7 @@ type Props = {
 };
 
 export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout, checkoutLoading = false }: Props) {
+  const [squareError, setSquareError] = useState<string | null>(null);
   const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -153,6 +156,13 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
             <p style={{ fontSize: 11, color: "#777", lineHeight: 1.5, marginTop: 10 }}>
               You will be redirected to PayPal to review and approve your payment.
             </p>
+            {squareError && <p role="alert" style={{ fontSize: 12, color: "#b42318", marginTop: 12 }}>{squareError}</p>}
+            <SquareCardForm
+              amount={sub}
+              items={cart.map((item) => ({ id: item.id, qty: item.qty }))}
+              onSuccess={() => { setSquareError(null); onClose(); }}
+              onError={setSquareError}
+            />
           </div>
         )}
       </aside>
