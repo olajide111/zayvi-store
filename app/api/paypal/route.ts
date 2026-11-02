@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const accessToken = await getAccessToken();
+    const storeUrl = process.env.NEXT_PUBLIC_STORE_URL || req.nextUrl.origin;
     const res = await fetch(\`\${PAYPAL_BASE}/v2/checkout/orders\`, {
       method: "POST",
       headers: {
