@@ -43,7 +43,7 @@ export default function ProductPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12 }}>
-        Travel & everyday essentials • PayPal checkout
+        Travel & everyday essentials • PayPal and card checkout
       </div>
 
       <header style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
