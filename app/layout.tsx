@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ZAYVI — Travel & Daily Essentials",
   description:
-    "Pack light. Live better. Curated travel gear and daily tools. Free shipping. 30-day returns.",
+    "Pack light. Live better. Curated travel gear and useful everyday essentials.",
   openGraph: {
     title: "ZAYVI — Travel & Daily Essentials",
-    description: "Travel gear and daily tools that earn their place. Free shipping worldwide.",
+    description: "Travel gear and daily essentials that earn their place.",
     type: "website",
   },
 };

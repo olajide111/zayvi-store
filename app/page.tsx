@@ -22,15 +22,15 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   returns: {
     title: "Returns Policy",
-    body: "30-day returns on unused items in original packaging.\n\nEmail hello@zayvi.store with your order number. Damaged items: send a photo within 7 days for replacement or refund.\n\nRefunds processed within 5 business days of receiving the return.",
+    body: "Our returns process and eligibility terms are being finalised. Please contact hello@zayvi.store before placing an order to confirm the current arrangements.",
   },
   shipping: {
     title: "Shipping Information",
-    body: "FREE shipping on every order.\n\nUK: 5–10 business days\nEurope: 7–14 business days\nRest of world: 10–21 business days\n\nTracking link sent by email once dispatched.",
+    body: "Delivery availability, charges and estimated delivery dates must be confirmed before you place an order. Please contact hello@zayvi.store for current delivery information.",
   },
   tracking: {
     title: "Track Your Order",
-    body: "Check your email for the tracking link once your order ships. Allow 24–48 hours for tracking to update.\n\nNeed help? Email hello@zayvi.store with your order number.",
+    body: "If you have already paid through PayPal, contact hello@zayvi.store and include your PayPal order reference so we can help with your enquiry.",
   },
   contact: {
     title: "Contact Us",
@@ -38,11 +38,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "FAQs",
-    body: "UK delivery usually takes 5–10 business days.\n\nYes — free shipping on every order.\n\n30-day returns on unused items. Payments are securely processed via PayPal or card.",
+    body: "How much is delivery? Contact us to confirm the delivery charge for your item before ordering.\n\nWhat is your returns process? Contact us for the current returns arrangements before ordering.\n\nHow do I pay? Checkout is available through PayPal or card, where enabled."
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI is focused on travel and daily essentials that earn their place — no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
+    body: "ZAYVI is focused on useful travel and everyday essentials, with a carefully selected range designed to make daily life simpler."
   },
   affiliate: {
     title: "Affiliate Programme",
@@ -81,8 +81,36 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [page, setPage] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const bestRef = useRef<HTMLDivElement>(null);
+  const cartHydrated = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("zayvi-cart");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setCart(parsed);
+      }
+    } catch {
+      localStorage.removeItem("zayvi-cart");
+    }
+    cartHydrated.current = true;
+
+    const syncCart = (event: Event) => {
+      const customEvent = event as CustomEvent<CartItem[]>;
+      if (Array.isArray(customEvent.detail)) setCart(customEvent.detail);
+    };
+    window.addEventListener("zayvi-cart-updated", syncCart);
+    return () => window.removeEventListener("zayvi-cart-updated", syncCart);
+  }, []);
+
+  useEffect(() => {
+    if (cartHydrated.current) {
+      localStorage.setItem("zayvi-cart", JSON.stringify(cart));
+    }
+  }, [cart]);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -128,6 +156,8 @@ export default function Home() {
   const filtered = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
 
   const handlePayPal = async () => {
+    if (checkoutLoading || cart.length === 0) return;
+    setCheckoutLoading(true);
     try {
       const res = await fetch("/api/paypal", {
         method: "POST",
@@ -135,17 +165,18 @@ export default function Home() {
         body: JSON.stringify({ items: cart.map((i) => ({ id: i.id, qty: i.qty })) }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else showToast("PayPal checkout unavailable");
-    } catch {
-      showToast("Checkout failed — try again");
+      if (!res.ok || !data.url) throw new Error(data.error || "PayPal checkout is unavailable.");
+      window.location.assign(data.url);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Checkout failed. Please try again.");
+      setCheckoutLoading(false);
     }
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        FREE Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure PayPal & Card Checkout
+        Travel & everyday essentials &nbsp;•&nbsp; PayPal and card checkout &nbsp;•&nbsp; Customer support
       </div>
 
       <Header
@@ -167,12 +198,6 @@ export default function Home() {
         <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
-      <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
-          “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
-        </p>
-        <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>— Verified buyer, UK</p>
-      </div>
 
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
 
@@ -222,6 +247,7 @@ export default function Home() {
         onQty={updateQty}
         onRemove={removeFromCart}
         onCheckout={handlePayPal}
+        checkoutLoading={checkoutLoading}
       />
 
       <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />

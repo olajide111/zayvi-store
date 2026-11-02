@@ -10,7 +10,7 @@ type Props = {
 };
 
 export default function BestSellers({ products, onView, onAdd }: Props) {
-  const bestsellers = products.filter((p) => p.badge === "Best Seller").slice(0, 4);
+  const bestsellers = products.slice(0, 4);
 
   if (bestsellers.length === 0) return null;
 
@@ -18,8 +18,8 @@ export default function BestSellers({ products, onView, onAdd }: Props) {
     <section style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 24px 40px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 4 }}>Best Sellers</h2>
-          <p style={{ fontSize: 14, color: "#666" }}>What people keep coming back for</p>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 4 }}>Featured picks</h2>
+          <p style={{ fontSize: 14, color: "#666" }}>A few essentials worth a closer look</p>
         </div>
       </div>
       <div

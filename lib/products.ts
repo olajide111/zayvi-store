@@ -36,7 +36,6 @@ export const PRODUCTS: Product[] = [
       { name: "Sand", hex: "#d4b896" },
     ],
     sizes: [],
-    badge: "Best Seller",
   },
   {
     id: 2,
@@ -53,7 +52,6 @@ export const PRODUCTS: Product[] = [
       { name: "Black", hex: "#1a1a1a" },
     ],
     sizes: [],
-    badge: "Best Seller",
   },
   {
     id: 3,
@@ -70,7 +68,6 @@ export const PRODUCTS: Product[] = [
       { name: "Navy", hex: "#1a1a3e" },
     ],
     sizes: [],
-    badge: "Best Seller",
   },
   {
     id: 4,
@@ -87,7 +84,6 @@ export const PRODUCTS: Product[] = [
       { name: "Black", hex: "#1a1a1a" },
     ],
     sizes: [],
-    badge: "Best Seller",
   },
   {
     id: 5,
@@ -105,7 +101,6 @@ export const PRODUCTS: Product[] = [
       { name: "Navy", hex: "#1a1a3e" },
     ],
     sizes: [],
-    badge: "Best Seller",
   },
   {
     id: 6,

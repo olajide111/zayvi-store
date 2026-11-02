@@ -35,6 +35,7 @@ export default function ProductPage() {
     if (existing) existing.qty += qty;
     else cart.push({ id: product.id, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color });
     localStorage.setItem("zayvi-cart", JSON.stringify(cart));
+    window.dispatchEvent(new CustomEvent("zayvi-cart-updated", { detail: cart }));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -42,7 +43,7 @@ export default function ProductPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12 }}>
-        FREE Worldwide Shipping • 30-Day Returns • Secure Checkout
+        Travel & everyday essentials • PayPal and card checkout
       </div>
 
       <header style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -66,10 +67,6 @@ export default function ProductPage() {
             </span>
           )}
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 8, lineHeight: 1.2 }}>{product.name}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ color: "#f59e0b" }}>★★★★★</span>
-            <span style={{ fontSize: 13, color: "#888" }}>4.8 (124 reviews)</span>
-          </div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#111", marginBottom: 20 }}>£{product.price.toFixed(2)}</div>
           <p style={{ fontSize: 15, color: "#555", lineHeight: 1.7, marginBottom: 24 }}>{product.longDesc}</p>
 
@@ -161,7 +158,7 @@ export default function ProductPage() {
           </div>
 
           <div style={{ marginTop: 20, fontSize: 13, color: "#888" }}>
-            ✓ Free worldwide shipping &nbsp;•&nbsp; ✓ 30-day returns
+            Delivery and returns information is available from customer support before purchase.
           </div>
         </div>
       </div>
