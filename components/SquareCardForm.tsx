@@ -2,12 +2,6 @@
 
 import { useState, useEffect } from "react";
 
-/**
- * Square Web Payments SDK card form.
- * Requires NEXT_PUBLIC_SQUARE_APP_ID.
- * Loads the Square script dynamically so the rest of the site still works without keys.
- */
-
 type Props = {
   amount: number;
   items: { id: number; qty: number }[];
@@ -26,74 +20,68 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
   const [ready, setReady] = useState(false);
   const [card, setCard] = useState<any>(null);
   const appId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
+  const environment = process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox";
 
   useEffect(() => {
     if (!appId) return;
-
     let cancelled = false;
+    let cardInstance: any;
 
     const init = async () => {
       try {
         if (!window.Square) {
           await new Promise<void>((resolve, reject) => {
             const script = document.createElement("script");
-            // Sandbox for testing – change to https://web.squarecdn.com/v1/square.js for production
-            script.src = "https://sandbox.web.squarecdn.com/v1/square.js";
+            script.src = environment === "production"
+              ? "https://web.squarecdn.com/v1/square.js"
+              : "https://sandbox.web.squarecdn.com/v1/square.js";
             script.onload = () => resolve();
             script.onerror = () => reject(new Error("Failed to load Square"));
-            document.body.appendChild(script);
+            document.head.appendChild(script);
           });
         }
-
-        if (cancelled) return;
-
-        const payments = window.Square.payments(appId, "sandbox");
-        const cardInstance = await payments.card();
+        if (cancelled || !window.Square) return;
+        const payments = window.Square.payments(appId, process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID);
+        cardInstance = await payments.card();
         await cardInstance.attach("#square-card-container");
-
         if (!cancelled) {
           setCard(cardInstance);
           setReady(true);
         }
-      } catch (e) {
-        console.error(e);
-        if (!cancelled) onError("Could not initialise Square card form");
+      } catch (error) {
+        console.error("Square card initialisation failed", error);
+        if (!cancelled) onError("Card payments are temporarily unavailable. Please try PayPal or try again later.");
       }
     };
 
-    const t = setTimeout(init, 150);
+    init();
     return () => {
       cancelled = true;
-      clearTimeout(t);
+      if (cardInstance?.destroy) cardInstance.destroy().catch(() => undefined);
     };
-  }, [appId]);
+  }, [appId, environment, onError]);
 
   const handlePay = async () => {
-    if (!card) return;
+    if (!card || loading || amount <= 0) return;
     setLoading(true);
     try {
       const result = await card.tokenize();
-      if (result.status === "OK") {
-        const res = await fetch("/api/square", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sourceId: result.token,
-            items,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          onSuccess();
-          if (data.redirect) window.location.href = data.redirect;
-        } else {
-          onError(data.error || "Payment failed");
-        }
-      } else {
-        onError(result.errors?.[0]?.message || "Card validation failed");
+      if (result.status !== "OK" || !result.token) {
+        onError(result.errors?.[0]?.message || "Please check your card details.");
+        return;
       }
-    } catch (e) {
-      onError("Payment error — please try again");
+
+      const res = await fetch("/api/square", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId: result.token, items }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Card payment failed. Please try again.");
+      onSuccess();
+      if (data.redirect) window.location.assign(data.redirect);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Card payment failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -101,42 +89,31 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
 
   if (!appId) {
     return (
-      <div style={{ padding: 16, background: "#fef3c7", borderRadius: 10, fontSize: 13, color: "#92400e" }}>
-        Square is not configured. Add <code>NEXT_PUBLIC_SQUARE_APP_ID</code> to <code>.env.local</code>.
-      </div>
+      <p style={{ fontSize: 12, color: "#777", lineHeight: 1.5, marginTop: 12 }}>
+        Card payments will be available here once Square is configured.
+      </p>
     );
   }
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <div
-        id="square-card-container"
-        style={{
-          minHeight: 90,
-          padding: 12,
-          border: "1px solid #e5e5e5",
-          borderRadius: 10,
-          background: "#fafafa",
-        }}
-      />
+    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eee" }}>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Pay securely by card</div>
+      <div id="square-card-container" style={{ minHeight: 90, padding: 12, border: "1px solid #e5e5e5", borderRadius: 10, background: "#fff" }} />
       <button
+        type="button"
         onClick={handlePay}
         disabled={!ready || loading}
         style={{
-          width: "100%",
-          marginTop: 12,
-          background: loading ? "#999" : "#000",
-          color: "#fff",
-          border: "none",
-          borderRadius: 10,
-          padding: "14px",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: ready && !loading ? "pointer" : "not-allowed",
+          width: "100%", marginTop: 12, background: !ready || loading ? "#777" : "#111",
+          color: "#fff", border: "none", borderRadius: 10, padding: "14px",
+          fontSize: 14, fontWeight: 700, cursor: ready && !loading ? "pointer" : "not-allowed",
         }}
       >
-        {loading ? "Processing…" : `Pay £${amount.toFixed(2)} with Card`}
+        {loading ? "Processing card payment…" : `Pay £${amount.toFixed(2)} by card`}
       </button>
+      <p style={{ fontSize: 11, color: "#777", lineHeight: 1.5, marginTop: 8 }}>
+        Your card details are securely handled by Square.
+      </p>
     </div>
   );
 }
