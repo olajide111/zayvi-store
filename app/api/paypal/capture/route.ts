@@ -6,11 +6,11 @@ async function getAccessToken() {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET_KEY;
   if (!clientId || !secret) throw new Error("PayPal is not configured.");
-  const auth = Buffer.from(\`\${clientId}:\${secret}\`).toString("base64");
-  const response = await fetch(\`\${PAYPAL_BASE}/v1/oauth2/token\`, {
+  const auth = Buffer.from(clientId + ":" + secret).toString("base64");
+  const response = await fetch(PAYPAL_BASE + "/v1/oauth2/token", {
     method: "POST",
     headers: {
-      Authorization: \`Basic \${auth}\`,
+      Authorization: "Basic " + auth,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: "grant_type=client_credentials",
@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
     }
 
     const accessToken = await getAccessToken();
-    const response = await fetch(\`\${PAYPAL_BASE}/v2/checkout/orders/\${encodeURIComponent(orderId)}/capture\`, {
+    const response = await fetch(PAYPAL_BASE + "/v2/checkout/orders/" + encodeURIComponent(orderId) + "/capture", {
       method: "POST",
       headers: {
-        Authorization: \`Bearer \${accessToken}\`,
+        Authorization: "Bearer " + accessToken,
         "Content-Type": "application/json",
       },
       body: "{}",
@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
 
     let order = result;
     if (result?.details?.[0]?.issue === "ORDER_ALREADY_CAPTURED" || result?.status !== "COMPLETED") {
-      const lookup = await fetch(\`\${PAYPAL_BASE}/v2/checkout/orders/\${encodeURIComponent(orderId)}\`, {
-        headers: { Authorization: \`Bearer \${accessToken}\` },
+      const lookup = await fetch(PAYPAL_BASE + "/v2/checkout/orders/" + encodeURIComponent(orderId), {
+        headers: { Authorization: "Bearer " + accessToken },
         cache: "no-store",
       });
       order = await lookup.json();
