@@ -66,10 +66,6 @@ export default function ProductPage() {
             </span>
           )}
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 8, lineHeight: 1.2 }}>{product.name}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ color: "#f59e0b" }}>★★★★★</span>
-            <span style={{ fontSize: 13, color: "#888" }}>4.8 (124 reviews)</span>
-          </div>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#111", marginBottom: 20 }}>£{product.price.toFixed(2)}</div>
           <p style={{ fontSize: 15, color: "#555", lineHeight: 1.7, marginBottom: 24 }}>{product.longDesc}</p>
 
