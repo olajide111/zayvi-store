@@ -43,7 +43,7 @@ export default function ProductPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12 }}>
-        FREE Worldwide Shipping • 30-Day Returns • Secure Checkout
+        Travel & everyday essentials • PayPal checkout
       </div>
 
       <header style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -158,7 +158,7 @@ export default function ProductPage() {
           </div>
 
           <div style={{ marginTop: 20, fontSize: 13, color: "#888" }}>
-            ✓ Free worldwide shipping &nbsp;•&nbsp; ✓ 30-day returns
+            Delivery and returns information is available from customer support before purchase.
           </div>
         </div>
       </div>
