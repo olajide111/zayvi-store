@@ -148,7 +148,7 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
               Continue with PayPal
             </button>
             <p style={{ fontSize: 11, color: "#777", lineHeight: 1.5, marginTop: 10 }}>
-              Your payment will be processed by PayPal. Review delivery details before placing an order.
+              You will be redirected to PayPal to review and approve your payment.
             </p>
           </div>
         )}
