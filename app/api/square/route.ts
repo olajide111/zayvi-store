@@ -14,6 +14,7 @@ import { priceCart } from "@/lib/products";
 export async function POST(req: NextRequest) {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN;
   const locationId = process.env.SQUARE_LOCATION_ID;
+  const environment = process.env.SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox";
 
   if (!accessToken || !locationId) {
     return NextResponse.json(
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { items, sourceId } = body;
 
-    if (!sourceId) {
+    if (!Array.isArray(items) || items.length === 0 || typeof sourceId !== "string" || !sourceId) {
       return NextResponse.json({ error: "Missing payment source." }, { status: 400 });
     }
 
@@ -42,8 +43,14 @@ export async function POST(req: NextRequest) {
 
     // Amount in smallest currency unit (pence for GBP)
     const amount = Math.round(total * 100);
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      return NextResponse.json({ error: "The basket total is invalid." }, { status: 400 });
+    }
 
-    const res = await fetch("https://connect.squareup.com/v2/payments", {
+    const apiBase = environment === "production"
+      ? "https://connect.squareup.com"
+      : "https://connect.squareupsandbox.com";
+    const res = await fetch(`${apiBase}/v2/payments`, {
       method: "POST",
       headers: {
         "Square-Version": "2024-01-18",
@@ -72,10 +79,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const storeUrl = process.env.NEXT_PUBLIC_STORE_URL || req.nextUrl.origin;
     return NextResponse.json({
       success: true,
       paymentId: data.payment?.id,
-      redirect: process.env.NEXT_PUBLIC_STORE_URL + "/success",
+      redirect: `${storeUrl}/success?provider=square&payment_id=${encodeURIComponent(data.payment?.id || "")}`,
     });
   } catch (err) {
     console.error("Square route error", err);
