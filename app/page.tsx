@@ -167,12 +167,6 @@ export default function Home() {
         <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
-      <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
-          “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
-        </p>
-        <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>— Verified buyer, UK</p>
-      </div>
 
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
 
