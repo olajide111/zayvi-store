@@ -83,6 +83,33 @@ export default function Home() {
   const [page, setPage] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const bestRef = useRef<HTMLDivElement>(null);
+  const cartHydrated = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("zayvi-cart");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setCart(parsed);
+      }
+    } catch {
+      localStorage.removeItem("zayvi-cart");
+    }
+    cartHydrated.current = true;
+
+    const syncCart = (event: Event) => {
+      const customEvent = event as CustomEvent<CartItem[]>;
+      if (Array.isArray(customEvent.detail)) setCart(customEvent.detail);
+    };
+    window.addEventListener("zayvi-cart-updated", syncCart);
+    return () => window.removeEventListener("zayvi-cart-updated", syncCart);
+  }, []);
+
+  useEffect(() => {
+    if (cartHydrated.current) {
+      localStorage.setItem("zayvi-cart", JSON.stringify(cart));
+    }
+  }, [cart]);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
