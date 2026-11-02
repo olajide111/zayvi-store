@@ -38,7 +38,7 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "FAQs",
-    body: "How much is delivery? Contact us to confirm the delivery charge for your item before ordering.\n\nWhat is your returns process? Contact us for the current returns arrangements before ordering.\n\nHow do I pay? Checkout is handled through PayPal."
+    body: "How much is delivery? Contact us to confirm the delivery charge for your item before ordering.\n\nWhat is your returns process? Contact us for the current returns arrangements before ordering.\n\nHow do I pay? Checkout is available through PayPal or card, where enabled."
   },
   about: {
     title: "About ZAYVI",
@@ -176,7 +176,7 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        Travel & everyday essentials &nbsp;•&nbsp; PayPal checkout &nbsp;•&nbsp; Customer support
+        Travel & everyday essentials &nbsp;•&nbsp; PayPal and card checkout &nbsp;•&nbsp; Customer support
       </div>
 
       <Header
