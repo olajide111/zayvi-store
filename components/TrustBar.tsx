@@ -1,6 +1,6 @@
 export default function TrustBar() {
   const items = [
-    { icon: "🔒", title: "PayPal checkout", sub: "Payment handled by PayPal" },
+    { icon: "🔒", title: "Secure payments", sub: "PayPal and Square card options" },
     { icon: "✦", title: "Curated essentials", sub: "A focused product selection" },
     { icon: "💬", title: "Need help?", sub: "hello@zayvi.store" },
     { icon: "🛒", title: "Easy basket", sub: "Review items before checkout" },
