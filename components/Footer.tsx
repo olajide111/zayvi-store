@@ -12,7 +12,7 @@ export default function Footer({ onPage, onShopAll }: Props) {
       items: [
         { label: "All Products", action: onShopAll },
         { label: "New In", action: onShopAll },
-        { label: "Best Sellers", action: onShopAll },
+        { label: "Featured Picks", action: onShopAll },
         { label: "Travel", action: onShopAll },
         { label: "Beauty", action: onShopAll },
       ],
@@ -57,18 +57,16 @@ export default function Footer({ onPage, onShopAll }: Props) {
               <button
                 key={item.label}
                 onClick={item.action}
-                style={
-                  {
-                    display: "block",
-                    background: "none",
-                    border: "none",
-                    padding: "4px 0",
-                    fontSize: 13,
-                    color: "#666",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }
-                }
+                style={{
+                  display: "block",
+                  background: "none",
+                  border: "none",
+                  padding: "4px 0",
+                  fontSize: 13,
+                  color: "#666",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
               >
                 {item.label}
               </button>
@@ -80,10 +78,10 @@ export default function Footer({ onPage, onShopAll }: Props) {
             Follow Us
           </div>
           <div style={{ display: "flex", gap: 12, fontSize: 18 }}>
-            <span style={{ cursor: "pointer" }}>📷</span>
-            <span style={{ cursor: "pointer" }}>📘</span>
-            <span style={{ cursor: "pointer" }}>▶️</span>
-            <span style={{ cursor: "pointer" }}>🎵</span>
+            <span aria-label="Instagram">📷</span>
+            <span aria-label="Facebook">📘</span>
+            <span aria-label="YouTube">▶️</span>
+            <span aria-label="TikTok">🎵</span>
           </div>
         </div>
       </div>
