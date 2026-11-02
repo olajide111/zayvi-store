@@ -1,9 +1,9 @@
 export default function TrustBar() {
   const items = [
-    { icon: "🚚", title: "Free Shipping", sub: "UK & worldwide" },
-    { icon: "🔄", title: "30-Day Returns", sub: "No questions asked" },
-    { icon: "🔒", title: "Secure Checkout", sub: "PayPal & card" },
-    { icon: "⭐", title: "4.8 Average", sub: "From real orders" },
+    { icon: "🔒", title: "PayPal checkout", sub: "Payment handled by PayPal" },
+    { icon: "✦", title: "Curated essentials", sub: "A focused product selection" },
+    { icon: "💬", title: "Need help?", sub: "hello@zayvi.store" },
+    { icon: "🛒", title: "Easy basket", sub: "Review items before checkout" },
   ];
 
   return (
