@@ -7,6 +7,7 @@ type PaymentResult = {
   success: boolean;
   orderId?: string;
   captureId?: string;
+  paymentId?: string;
   amount?: string;
   currency?: string;
   error?: string;
@@ -17,18 +18,27 @@ export default function Success() {
   const [payment, setPayment] = useState<PaymentResult | null>(null);
 
   useEffect(() => {
-    const orderId = new URLSearchParams(window.location.search).get("token");
-    if (!orderId) {
-      setPayment({ success: false, error: "We could not find a PayPal order reference. No payment confirmation is available." });
+    const params = new URLSearchParams(window.location.search);
+    const provider = params.get("provider");
+    const squarePaymentId = params.get("payment_id");
+    const paypalOrderId = params.get("token");
+
+    const endpoint = provider === "square" ? "/api/square/verify" : "/api/paypal/capture";
+    const payload = provider === "square"
+      ? { paymentId: squarePaymentId }
+      : { orderId: paypalOrderId };
+
+    if ((provider === "square" && !squarePaymentId) || (provider !== "square" && !paypalOrderId)) {
+      setPayment({ success: false, error: "We could not find a payment reference. No payment confirmation is available." });
       setState("failed");
       return;
     }
 
     let active = true;
-    fetch("/api/paypal/capture", {
+    fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
+      body: JSON.stringify(payload),
     })
       .then(async (response) => {
         const data = await response.json();
@@ -45,9 +55,7 @@ export default function Success() {
         }
       });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   const confirmed = state === "confirmed";
@@ -62,16 +70,17 @@ export default function Success() {
         </h1>
         <p style={{ fontSize: 15, color: "#666", lineHeight: 1.7, marginBottom: 22 }}>
           {checking
-            ? "Please wait while we confirm the payment directly with PayPal. Do not refresh or place another order yet."
+            ? "Please wait while we confirm the payment directly with your payment provider. Do not refresh or place another order yet."
             : confirmed
-              ? "PayPal has confirmed that your payment was completed. Keep the reference below if you need to contact us."
-              : payment?.error || "We could not verify the payment with PayPal. Please contact support before trying again."}
+              ? "Your payment provider has confirmed that your payment was completed. Keep the reference below if you need to contact us."
+              : payment?.error || "We could not verify the payment. Please contact support before trying again."}
         </p>
         {confirmed && payment && (
           <div style={{ background: "#f7f7f5", borderRadius: 12, padding: 16, marginBottom: 24, textAlign: "left", fontSize: 13, color: "#555", lineHeight: 1.8 }}>
-            <div><strong>PayPal order:</strong> {payment.orderId}</div>
+            {payment.orderId && <div><strong>PayPal order:</strong> {payment.orderId}</div>}
+            {payment.paymentId && <div><strong>Square payment:</strong> {payment.paymentId}</div>}
             <div><strong>Payment:</strong> £{payment.amount}</div>
-            <div><strong>Capture reference:</strong> {payment.captureId}</div>
+            {payment.captureId && <div><strong>Capture reference:</strong> {payment.captureId}</div>}
           </div>
         )}
         <Link href="/" style={{ display: "inline-block", background: "#111", color: "#fff", padding: "13px 28px", borderRadius: 10, textDecoration: "none", fontSize: 14, fontWeight: 700 }}>
