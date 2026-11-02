@@ -77,10 +77,6 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
             {product.name}
           </div>
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-          <span style={{ color: "#f59e0b", fontSize: 12 }}>★★★★★</span>
-          <span style={{ fontSize: 12, color: "#999" }}>(24)</span>
-        </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>£{product.price.toFixed(2)}</div>
           <button
