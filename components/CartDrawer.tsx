@@ -18,9 +18,10 @@ type Props = {
   onQty: (id: number, color: string | undefined, d: number) => void;
   onRemove: (id: number, color: string | undefined) => void;
   onCheckout: () => void;
+  checkoutLoading?: boolean;
 };
 
-export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout }: Props) {
+export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout, checkoutLoading = false }: Props) {
   const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -133,19 +134,21 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
             </div>
             <button
               onClick={onCheckout}
+              disabled={checkoutLoading}
+              aria-busy={checkoutLoading}
               style={{
                 width: "100%",
-                background: "#0070ba",
+                background: checkoutLoading ? "#6b91aa" : "#0070ba",
                 color: "#fff",
                 border: "none",
                 borderRadius: 12,
                 padding: "14px",
                 fontSize: 14,
                 fontWeight: 700,
-                cursor: "pointer",
+                cursor: checkoutLoading ? "wait" : "pointer",
               }}
             >
-              Continue with PayPal
+              {checkoutLoading ? "Connecting to PayPal…" : "Continue with PayPal"}
             </button>
             <p style={{ fontSize: 11, color: "#777", lineHeight: 1.5, marginTop: 10 }}>
               You will be redirected to PayPal to review and approve your payment.
