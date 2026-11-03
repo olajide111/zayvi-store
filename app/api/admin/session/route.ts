@@ -4,6 +4,11 @@ import { ADMIN_COOKIE, ADMIN_SESSION_MAX_AGE, createAdminSession } from "@/lib/a
 
 export const runtime = "nodejs";
 
+export async function GET(request: NextRequest) {
+  const { hasAdminSession } = await import("@/lib/admin-auth");
+  return NextResponse.json({ authenticated: hasAdminSession(request) });
+}
+
 export async function POST(request: NextRequest) {
   const configuredPassword = process.env.ZAYVI_ADMIN_PASSWORD;
   if (!configuredPassword) {
