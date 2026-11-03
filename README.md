@@ -109,3 +109,13 @@ Zayvi is being designed as one shared, multi-tenant platform with three commerci
 The architecture must support external business tenants from the foundation. Zayvi's own storefront is the first-party tenant; each external business must have isolated users, stores, catalogue, customer/order data, settings and entitlements. Tenant isolation is enforced server-side and tested. This is a target architecture, not a claim that multi-tenancy is already implemented.
 
 See `docs/strategy/zayvi-strategic-product-commercial-blueprint.md` for the approved product portfolio, commercial model, tenant architecture, data strategy, phased roadmap and investor validation plan.
+
+## Storefront rebuild
+
+The customer-facing storefront is a major product and may be substantially redesigned. The current prototype is not considered production-ready. The target experience is premium, mobile-first, accessible, market-aware and reusable for tenant-branded white-label stores.
+
+- [Storefront experience standard](docs/storefront/storefront-experience-standard.md)
+- [Current storefront audit and production blockers](docs/storefront/current-storefront-audit.md)
+- [Initial multi-tenant PostgreSQL migration](database/migrations/0001_multi_tenant_foundation.sql)
+
+The current catalogue, static GBP pricing, placeholder review counts and unsupported shipping/returns claims must not be treated as live commercial data.
