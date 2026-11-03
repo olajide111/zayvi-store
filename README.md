@@ -115,9 +115,12 @@ See `docs/strategy/zayvi-strategic-product-commercial-blueprint.md` for the appr
 The customer-facing storefront is a major product and may be substantially redesigned. The current prototype is not considered production-ready. The target experience is premium, mobile-first, accessible, market-aware and reusable for tenant-branded white-label stores.
 
 - [Storefront experience standard](docs/storefront/storefront-experience-standard.md)
+- [Configurable theme system and merchant customisation](docs/storefront/theme-system-and-merchant-customisation.md)
+- [Typed theme contracts and validation](lib/storefront-theme.ts)
+- [Tenant-isolated theme version migration](database/migrations/0002_storefront_theme_versions.sql)
 - [Current storefront audit and production blockers](docs/storefront/current-storefront-audit.md)
 - [Initial multi-tenant PostgreSQL migration](database/migrations/0001_multi_tenant_foundation.sql)
 - [Tenant context and API security contract](docs/architecture/tenant-context-and-api-security.md)
 - [Identity-to-tenant resolution and bootstrap](docs/architecture/identity-to-tenant-resolution.md)
 
-The current catalogue, static GBP pricing, placeholder review counts and unsupported shipping/returns claims must not be treated as live commercial data.
+The current catalogue and static GBP pricing are demonstration content, not live commercial data. Theme configuration contracts and a proposed migration are committed, but the database migration has not been executed and the merchant design studio is not yet implemented.
