@@ -161,6 +161,7 @@ CREATE TABLE supplier_offers (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, id),
+  UNIQUE (tenant_id, id, market_code),
   UNIQUE (tenant_id, supplier_id, market_code, supplier_sku),
   FOREIGN KEY (tenant_id, tenant_catalogue_product_id)
     REFERENCES tenant_catalogue_products(tenant_id, id) ON DELETE RESTRICT,
@@ -201,6 +202,7 @@ CREATE TABLE tenant_product_markets (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, id),
+  UNIQUE (tenant_id, id, market_code),
   UNIQUE (tenant_id, tenant_catalogue_product_id, market_code),
   FOREIGN KEY (tenant_id, tenant_catalogue_product_id)
     REFERENCES tenant_catalogue_products(tenant_id, id) ON DELETE RESTRICT,
@@ -228,7 +230,7 @@ CREATE TABLE commerce_evidence (
   source_name text NOT NULL,
   source_uri text,
   private_asset_key text,
-  market_code char(2) REFERENCES commerce_markets(code) ON DELETE RESTRICT,
+  market_code char(2) NOT NULL REFERENCES commerce_markets(code) ON DELETE RESTRICT,
   observed_at timestamptz,
   captured_at timestamptz NOT NULL DEFAULT now(),
   expires_at timestamptz,
@@ -239,13 +241,14 @@ CREATE TABLE commerce_evidence (
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb
     CHECK (jsonb_typeof(metadata) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now(),
-  FOREIGN KEY (tenant_id, supplier_offer_id)
-    REFERENCES supplier_offers(tenant_id, id) ON DELETE RESTRICT,
-  FOREIGN KEY (tenant_id, tenant_product_market_id)
-    REFERENCES tenant_product_markets(tenant_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_id, supplier_offer_id, market_code)
+    REFERENCES supplier_offers(tenant_id, id, market_code) ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_id, tenant_product_market_id, market_code)
+    REFERENCES tenant_product_markets(tenant_id, id, market_code) ON DELETE RESTRICT,
   FOREIGN KEY (tenant_id, verified_by)
     REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (verified_by),
-  CHECK (supplier_offer_id IS NOT NULL OR tenant_product_market_id IS NOT NULL),
+  CHECK ((supplier_offer_id IS NOT NULL)::integer +
+         (tenant_product_market_id IS NOT NULL)::integer = 1),
   CHECK (expires_at IS NULL OR expires_at > captured_at)
 );
 
