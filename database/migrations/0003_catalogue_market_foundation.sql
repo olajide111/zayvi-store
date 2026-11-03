@@ -62,7 +62,6 @@ CREATE TABLE catalogue_product_variants (
 CREATE TABLE catalogue_product_media (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id uuid NOT NULL REFERENCES catalogue_products(id) ON DELETE RESTRICT,
-  variant_id uuid,
   asset_key text NOT NULL,
   media_type text NOT NULL CHECK (media_type IN ('image','video','document')),
   alt_text text,
