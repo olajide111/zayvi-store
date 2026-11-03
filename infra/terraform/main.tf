@@ -177,7 +177,16 @@ resource "aws_security_group" "lambda" {
   description = "Zayvi API Lambda security group; database-only egress."
   vpc_id      = aws_vpc.main.id
 
-  egress = []
+  # Explicit empty egress revokes the provider/AWS default allow-all rule.
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = []
+    ipv6_cidr_blocks = []
+    prefix_list_ids = []
+    security_groups = []
+  }
 
   tags = {
     Name = "${local.common_name}-lambda-sg"
@@ -189,7 +198,16 @@ resource "aws_security_group" "database" {
   description = "Private PostgreSQL; ingress only from the Zayvi API Lambda."
   vpc_id      = aws_vpc.main.id
 
-  egress = []
+  # Database has no outbound network requirement in the initial baseline.
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = []
+    ipv6_cidr_blocks = []
+    prefix_list_ids  = []
+    security_groups  = []
+  }
 
   tags = {
     Name = "${local.common_name}-database-sg"
