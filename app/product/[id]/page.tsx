@@ -60,11 +60,6 @@ export default function ProductPage() {
 
         {/* Details */}
         <div>
-          {false && product.badge && (
-            <span style={{ display: "inline-block", background: "#111", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20, marginBottom: 12 }}>
-              {product.badge}
-            </span>
-          )}
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 8, lineHeight: 1.2 }}>{product.name}</h1>
           <p style={{ fontSize: 12, color: "#777", marginBottom: 16 }}>Preview catalogue · Ratings and customer reviews are not available yet.</p>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#111", marginBottom: 20 }}>£{product.price.toFixed(2)}</div>
