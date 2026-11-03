@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Terraform state, plans, provider cache and generated Lambda archive
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.plan
+*.tfvars
+!*.tfvars.example
+infra/terraform/zayvi-api-bootstrap.zip
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
