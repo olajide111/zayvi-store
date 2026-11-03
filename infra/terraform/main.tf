@@ -220,7 +220,6 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "postgres" {
   identifier                          = "${local.common_name}-postgres"
   engine                              = "postgres"
-  engine_version                      = "16"
   instance_class                      = var.db_instance_class
   allocated_storage                   = var.db_allocated_storage_gb
   max_allocated_storage               = 100
@@ -299,7 +298,10 @@ resource "aws_iam_role_policy" "lambda_vpc" {
         "ec2:DescribeNetworkInterfaces",
         "ec2:DeleteNetworkInterface",
         "ec2:AssignPrivateIpAddresses",
-        "ec2:UnassignPrivateIpAddresses"
+        "ec2:UnassignPrivateIpAddresses",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs"
       ]
       Resource = "*"
     }]
