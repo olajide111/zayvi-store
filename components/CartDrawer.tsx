@@ -79,7 +79,7 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
 
         <div style={{ padding: "12px 24px", background: "#fafafa", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ fontSize: 12, color: STORE_COLOR, fontWeight: 700 }}>
-            🎉 FREE worldwide shipping on every order
+            Preview catalogue — checkout is not enabled yet
           </div>
         </div>
 
@@ -145,8 +145,8 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
               onClick={onCheckout}
               style={{
                 width: "100%",
-                background: "#0070ba",
-                color: "#fff",
+                background: "#e8e7e2",
+                color: "#777",
                 border: "none",
                 borderRadius: 12,
                 padding: "14px",
@@ -176,7 +176,7 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
                 }
               }
             >
-              {showSquare ? "Hide card form" : "Pay with Card (Square)"}
+              Payments coming soon
             </button>
 
             {showSquare && (
