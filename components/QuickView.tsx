@@ -102,7 +102,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
               ✕
             </button>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{product.name}</h2>
-            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>£{product.price.toFixed(2)}</div><p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
+            <p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 1.6, marginBottom: 16 }}>{product.desc}</p>
 
             {product.colors.length > 0 && (
