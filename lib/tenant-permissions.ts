@@ -1,4 +1,4 @@
-import type { TenantPermissionPolicy, TenantRequestContext } from "@/lib/tenant-access";
+import type { TenantPermissionPolicy, TenantRequestContext } from "./tenant-access";
 
 /**
  * Versioned tenant role-to-permission policy.
