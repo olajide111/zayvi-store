@@ -20,7 +20,7 @@ Zayvi is being rebuilt as an AI-powered, multi-market commerce operating system.
 - `lib/` — shared application and domain logic.
 - `docs/global-commerce-data-model.md` — canonical commerce entities and market-isolation rules.
 - `docs/publication-and-approval-policy.md` — rating bands, mandatory gates and human controls.
-- `docs/` — architecture, operations, security and runbooks (being expanded).
+- `docs/` — architecture, operations, security and runbooks.
 
 ## Current technology
 
@@ -118,5 +118,6 @@ The customer-facing storefront is a major product and may be substantially redes
 - [Current storefront audit and production blockers](docs/storefront/current-storefront-audit.md)
 - [Initial multi-tenant PostgreSQL migration](database/migrations/0001_multi_tenant_foundation.sql)
 - [Tenant context and API security contract](docs/architecture/tenant-context-and-api-security.md)
+- [Identity-to-tenant resolution and bootstrap](docs/architecture/identity-to-tenant-resolution.md)
 
 The current catalogue, static GBP pricing, placeholder review counts and unsupported shipping/returns claims must not be treated as live commercial data.
