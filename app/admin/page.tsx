@@ -59,7 +59,10 @@ export default function AdminPage() {
         body: form,
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Upload failed.");
+      if (!response.ok) {
+        const detail = typeof data.diagnostic === "string" ? ` ${data.diagnostic}` : "";
+        throw new Error(`${data.error || "Upload failed."}${detail}`);
+      }
       setUploaded({ key: data.key });
       setMessage("Image uploaded successfully.");
       setFile(null);
