@@ -43,7 +43,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
             }}
           />
         </Link>
-        {product.badge && (
+        {false && product.badge && (
           <span style={{ position: "absolute", top: 12, left: 12, background: "#111", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>
             {product.badge}
           </span>
@@ -77,17 +77,17 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
             {product.name}
           </div>
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-          <span style={{ color: "#f59e0b", fontSize: 12 }}>★★★★★</span>
-          <span style={{ fontSize: 12, color: "#999" }}>(24)</span>
-        </div>
+        <p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>£{product.price.toFixed(2)}</div>
           <button
+            disabled
+            aria-disabled="true"
+            title="Purchasing will open when products and market availability are verified"
             onClick={() => onAdd(product, 1, product.colors[0]?.name)}
             style={{
-              background: STORE_COLOR,
-              color: "#fff",
+              background: "#e8e7e2",
+              color: "#777",
               border: "none",
               borderRadius: 8,
               padding: "8px 14px",
