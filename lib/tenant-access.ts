@@ -41,6 +41,8 @@ export interface TenantMembershipDirectory {
   /** Must query only memberships for this verified issuer + subject pair. */
   findMemberships(identity: Pick<VerifiedIdentity, "issuer" | "subject">):
     Promise<TenantMembershipCandidate[]>;
+  /** Re-check status inside the tenant transaction to close revocation races. */
+  isMembershipActive(context: TenantRequestContext): Promise<boolean>;
 }
 
 export interface TenantPermissionPolicy {
@@ -143,19 +145,29 @@ export async function withAuthorisedTenant<Token, T>(input: {
     role: membership.role,
   };
 
-  const allowed = await input.dependencies.permissions.hasPermission(
-    context,
-    input.requiredPermission,
-  );
-  if (!allowed) {
-    throw new TenantAccessError(
-      "PERMISSION_DENIED",
-      "Your organisation role does not permit this action.",
-    );
-  }
-
   return input.dependencies.transactions.withTenantTransaction(
     context.tenantId,
-    () => input.dependencies.execute(context),
+    async () => {
+      // Re-check membership and permissions in the same transaction as the
+      // protected work so a revoked role cannot rely on stale discovery data.
+      const stillActive = await input.dependencies.membershipDirectory.isMembershipActive(context);
+      if (!stillActive) {
+        throw new TenantAccessError(
+          "TENANT_ACCESS_DENIED",
+          "Organisation access is no longer active.",
+        );
+      }
+      const allowed = await input.dependencies.permissions.hasPermission(
+        context,
+        input.requiredPermission,
+      );
+      if (!allowed) {
+        throw new TenantAccessError(
+          "PERMISSION_DENIED",
+          "Your organisation role does not permit this action.",
+        );
+      }
+      return input.dependencies.execute(context);
+    },
   );
 }
