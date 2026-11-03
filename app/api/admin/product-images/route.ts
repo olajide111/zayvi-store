@@ -1,6 +1,7 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
+import { hasAdminSession } from "@/lib/admin-auth";
 import { s3BucketName, s3Client } from "@/lib/s3";
 
 export const runtime = "nodejs";
@@ -14,21 +15,9 @@ const ALLOWED_TYPES = new Map([
   ["image/avif", "avif"],
 ]);
 
-function hasValidUploadSecret(request: NextRequest): boolean {
-  const expected = process.env.ZAYVI_UPLOAD_SECRET;
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-
-  if (!expected || !supplied) return false;
-
-  const expectedBuffer = Buffer.from(expected);
-  const suppliedBuffer = Buffer.from(supplied);
-  return expectedBuffer.length === suppliedBuffer.length &&
-    timingSafeEqual(expectedBuffer, suppliedBuffer);
-}
-
 export async function POST(request: NextRequest) {
-  if (!hasValidUploadSecret(request)) {
-    return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
+  if (!hasAdminSession(request)) {
+    return NextResponse.json({ error: "Please sign in to upload images." }, { status: 401 });
   }
 
   try {
