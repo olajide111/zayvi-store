@@ -57,9 +57,25 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, key }, { status: 201 });
   } catch (error) {
-    console.error("Zayvi product image upload failed:", error);
+    const awsError = error as {
+      name?: string;
+      Code?: string;
+      code?: string;
+      $metadata?: { httpStatusCode?: number; requestId?: string };
+    };
+    const errorCode = awsError.Code || awsError.code || awsError.name || "UnknownError";
+    const statusCode = awsError.$metadata?.httpStatusCode;
+    console.error("Zayvi product image upload failed:", {
+      errorCode,
+      statusCode,
+      requestId: awsError.$metadata?.requestId,
+    });
+
     return NextResponse.json(
-      { error: "Image upload failed. Check the AWS role and bucket permissions." },
+      {
+        error: "AWS upload failed.",
+        diagnostic: statusCode ? `${errorCode} (HTTP ${statusCode})` : errorCode,
+      },
       { status: 500 },
     );
   }
