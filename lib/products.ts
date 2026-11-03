@@ -41,7 +41,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 2,
     name: "SoftPack Cubes Set",
-    image: "https://slimages.macysassets.com/is/image/MCY/products/4/optimized/29451524_fpx.tif?$filterlrg$&wid=600",
+    image: "https://d1a4ubvkp2b6va.cloudfront.net/products/71042d3a-a7e5-4f9e-b4c5-5374673b1e86.png",
     price: 28.0,
     category: "Travel",
     emoji: "🧳",
