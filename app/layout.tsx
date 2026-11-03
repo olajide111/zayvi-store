@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZAYVI — Travel & Daily Essentials",
+  title: "ZAYVI — Global Commerce",
   description:
-    "Pack light. Live better. Curated travel gear and daily tools. Free shipping. 30-day returns.",
+    "A market-aware commerce platform for retailers, suppliers and shoppers.",
   openGraph: {
     title: "ZAYVI — Travel & Daily Essentials",
-    description: "Travel gear and daily tools that earn their place. Free shipping worldwide.",
+    description: "Market-aware commerce, supplier intelligence and flexible storefronts.",
     type: "website",
   },
 };
