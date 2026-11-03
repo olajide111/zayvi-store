@@ -61,14 +61,24 @@ export async function POST(request: NextRequest) {
       name?: string;
       Code?: string;
       code?: string;
-      $metadata?: { httpStatusCode?: number; requestId?: string };
+      message?: string;
+      Message?: string;
+      $metadata?: {
+        httpStatusCode?: number;
+        requestId?: string;
+        extendedRequestId?: string;
+      };
     };
     const errorCode = awsError.Code || awsError.code || awsError.name || "UnknownError";
     const statusCode = awsError.$metadata?.httpStatusCode;
     console.error("Zayvi product image upload failed:", {
       errorCode,
+      errorMessage: awsError.message || awsError.Message || "No AWS error message supplied",
       statusCode,
       requestId: awsError.$metadata?.requestId,
+      extendedRequestId: awsError.$metadata?.extendedRequestId,
+      bucket: s3BucketName,
+      region: process.env.AWS_REGION,
     });
 
     return NextResponse.json(
