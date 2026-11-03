@@ -31,11 +31,12 @@ CREATE TABLE tenant_memberships (
   status text NOT NULL DEFAULT 'invited'
     CHECK (status IN ('invited','active','suspended','removed')),
   mfa_required boolean NOT NULL DEFAULT true,
-  invited_by uuid REFERENCES tenant_memberships(id) ON DELETE SET NULL,
+  invited_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, identity_subject),
-  UNIQUE (tenant_id, id)
+  UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, invited_by) REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (invited_by)
 );
 
 CREATE INDEX tenant_memberships_subject_idx
@@ -126,9 +127,10 @@ CREATE TABLE tenant_entitlement_overrides (
   config jsonb NOT NULL DEFAULT '{}'::jsonb,
   reason text NOT NULL,
   expires_at timestamptz,
-  created_by uuid REFERENCES tenant_memberships(id) ON DELETE SET NULL,
+  created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (tenant_id, feature_key)
+  UNIQUE (tenant_id, feature_key),
+  FOREIGN KEY (tenant_id, created_by) REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (created_by)
 );
 
 CREATE TABLE tenant_audit_events (
@@ -142,7 +144,8 @@ CREATE TABLE tenant_audit_events (
   before_state jsonb,
   after_state jsonb,
   request_id text,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (tenant_id, actor_membership_id) REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (actor_membership_id)
 );
 
 CREATE INDEX tenant_audit_events_tenant_created_idx
