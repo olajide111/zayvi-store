@@ -102,13 +102,13 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
               ✕
             </button>
 
-            {product.badge && (
-              <span style={{ fontSize: 11, fontWeight: 700, background: "#111", color: "#fff", padding: "3px 10px", borderRadius: 20, alignSelf: "flex-start", marginBottom: 8 }}>
+            {false && product.badge && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: "#111", color: "#777", padding: "3px 10px", borderRadius: 20, alignSelf: "flex-start", marginBottom: 8 }}>
                 {product.badge}
               </span>
             )}
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{product.name}</h2>
-            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>£{product.price.toFixed(2)}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>£{product.price.toFixed(2)}</div><p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 1.6, marginBottom: 16 }}>{product.desc}</p>
 
             {product.colors.length > 0 && (
@@ -146,7 +146,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
                 onClick={handleAdd}
                 style={{
                   flex: 1,
-                  background: added ? "#111" : STORE_COLOR,
+                  background: "#e8e7e2",
                   color: "#fff",
                   border: "none",
                   borderRadius: 10,
