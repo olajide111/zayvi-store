@@ -13,7 +13,7 @@ import QuickView from "@/components/QuickView";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
-const STORE_COLOR = "#16a34a";
+const STORE_COLOR = "#171714";
 
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
@@ -145,7 +145,7 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        FREE Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure PayPal & Card Checkout
+        ZAYVI STORE PREVIEW &nbsp;·&nbsp; Product range and market availability are being verified
       </div>
 
       <Header
@@ -165,13 +165,6 @@ export default function Home() {
 
       <div ref={bestRef}>
         <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
-      </div>
-
-      <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
-          “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
-        </p>
-        <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>— Verified buyer, UK</p>
       </div>
 
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
