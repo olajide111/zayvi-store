@@ -67,9 +67,14 @@ export function decideMarketPublication(
   input: MarketPublicationInputs,
 ): PublicationDecision {
   const reasons: string[] = [];
-  const evaluatedAt = validTimestamp(input.evaluatedAt) ?? Date.now();
+  const suppliedEvaluationTime = input.evaluatedAt;
+  const parsedEvaluationTime = validTimestamp(suppliedEvaluationTime);
+  if (suppliedEvaluationTime !== undefined && parsedEvaluationTime === null) {
+    throw new Error("Evaluation timestamp must be a valid date-time.");
+  }
+  const evaluatedAt = parsedEvaluationTime ?? Date.now();
 
-  if (!input.productId.trim() || !input.marketCode.trim()) {
+  if (!input.productId.trim() || !/^[A-Z]{2}$/.test(input.marketCode)) {
     throw new Error("Product ID and destination market are required.");
   }
   if (!Number.isFinite(input.rating) || input.rating < 0 || input.rating > 100) {
@@ -83,6 +88,15 @@ export function decideMarketPublication(
   }
   if (input.evidenceCount < 0 || !Number.isInteger(input.evidenceCount)) {
     throw new Error("Evidence count must be a non-negative integer.");
+  }
+  const verifiedEvidenceCount = input.verifiedEvidenceCount ?? 0;
+  if (!Number.isInteger(verifiedEvidenceCount) || verifiedEvidenceCount < 0 ||
+      verifiedEvidenceCount > input.evidenceCount) {
+    throw new Error("Verified evidence count must be an integer between zero and the total evidence count.");
+  }
+  if (input.maximumAcceptableDeliveryDays !== undefined &&
+      (!Number.isFinite(input.maximumAcceptableDeliveryDays) || input.maximumAcceptableDeliveryDays < 0)) {
+    throw new Error("Maximum acceptable delivery days must be a non-negative number.");
   }
 
   const blocked = input.complianceStatus === "blocked" ||
@@ -138,7 +152,7 @@ export function decideMarketPublication(
   if (input.evidenceCount < DEFAULT_PUBLICATION_THRESHOLDS.minimumEvidenceCount) {
     reasons.push("At least two supporting evidence records are required.");
   }
-  if ((input.verifiedEvidenceCount ?? 0) <
+  if (verifiedEvidenceCount <
       DEFAULT_PUBLICATION_THRESHOLDS.minimumEvidenceCount) {
     reasons.push("At least two supporting evidence records must be verified.");
   }
