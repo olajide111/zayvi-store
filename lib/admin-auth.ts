@@ -24,7 +24,7 @@ export function hasAdminSession(request: NextRequest) {
   if (!value) return false;
 
   const [timestamp, signature] = value.split(".");
-  if (!timestamp || !signature || !/^\\d+$/.test(timestamp)) return false;
+  if (!timestamp || !signature || !/^\d+$/.test(timestamp)) return false;
 
   const age = Math.floor(Date.now() / 1000) - Number(timestamp);
   if (age < 0 || age > SESSION_TTL_SECONDS) return false;
