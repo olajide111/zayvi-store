@@ -98,3 +98,14 @@ Architecture decisions, schema migrations, API contracts, scoring changes, polic
 - [Publication and approval policy](docs/publication-and-approval-policy.md)
 - [Vercel project](https://vercel.com/olajide111s-projects/zayvi-store)
 
+## Commercial product direction
+
+Zayvi is being designed as one shared, multi-tenant platform with three commercial divisions:
+
+- **Zayvi Commerce** — first-party retail, wholesale/sourcing and fulfilment coordination.
+- **Zayvi Intelligence** — product, supplier and market intelligence, profitability analysis, research and APIs.
+- **Zayvi Enterprise** — white-label stores, multi-store operations, integrations and enterprise services.
+
+The architecture must support external business tenants from the foundation. Zayvi's own storefront is the first-party tenant; each external business must have isolated users, stores, catalogue, customer/order data, settings and entitlements. Tenant isolation is enforced server-side and tested. This is a target architecture, not a claim that multi-tenancy is already implemented.
+
+See `docs/strategy/zayvi-strategic-product-commercial-blueprint.md` for the approved product portfolio, commercial model, tenant architecture, data strategy, phased roadmap and investor validation plan.
