@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type UploadResult = { key: string };
+type UploadResult = { key: string; url: string };
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -63,7 +63,7 @@ export default function AdminPage() {
         const detail = typeof data.diagnostic === "string" ? ` ${data.diagnostic}` : "";
         throw new Error(`${data.error || "Upload failed."}${detail}`);
       }
-      setUploaded({ key: data.key });
+      setUploaded({ key: data.key, url: data.url });
       setMessage("Image uploaded successfully.");
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
@@ -106,7 +106,7 @@ export default function AdminPage() {
             <div style={{ marginBottom: 24 }}>
               <p style={{ color: "#16a34a", fontSize: 12, fontWeight: 800, letterSpacing: 1.4 }}>STORE MANAGEMENT</p>
               <h1 style={{ fontSize: 32, margin: "8px 0" }}>Product images</h1>
-              <p style={{ color: "#666", lineHeight: 1.6 }}>Upload product photography to your private AWS storage. Accepted formats: JPEG, PNG, WebP and AVIF. Maximum size: 5 MB.</p>
+              <p style={{ color: "#666", lineHeight: 1.6 }}>Upload product photography to AWS storage. Images are delivered through CloudFront. Accepted formats: JPEG, PNG, WebP and AVIF. Maximum size: 5 MB.</p>
             </div>
             <section style={{ background: "#fff", border: "1px solid #e8e8e5", borderRadius: 18, padding: 26 }}>
               <form onSubmit={uploadImage}>
@@ -116,9 +116,14 @@ export default function AdminPage() {
                 <button disabled={busy || !file} type="submit" style={{ border: 0, borderRadius: 10, background: busy || !file ? "#9ca3af" : "#16a34a", color: "#fff", padding: "13px 20px", fontWeight: 800, fontSize: 14, cursor: busy || !file ? "not-allowed" : "pointer" }}>{busy ? "Uploading…" : "Upload image"}</button>
               </form>
               {message && <p role="status" style={{ color: uploaded ? "#16803d" : "#555", fontSize: 14, marginTop: 18 }}>{message}</p>}
-              {uploaded && <div style={{ marginTop: 14, padding: 14, background: "#f0fdf4", borderRadius: 10, overflowWrap: "anywhere" }}><p style={{ fontSize: 12, fontWeight: 800, margin: "0 0 6px" }}>S3 object key</p><code style={{ fontSize: 12 }}>{uploaded.key}</code></div>}
+              {uploaded && <div style={{ marginTop: 14, padding: 14, background: "#f0fdf4", borderRadius: 10, overflowWrap: "anywhere" }}>
+                <p style={{ fontSize: 12, fontWeight: 800, margin: "0 0 6px" }}>CloudFront image URL</p>
+                <a href={uploaded.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#166534" }}>{uploaded.url}</a>
+                <p style={{ fontSize: 12, fontWeight: 800, margin: "14px 0 6px" }}>S3 object key</p>
+                <code style={{ fontSize: 12 }}>{uploaded.key}</code>
+              </div>}
             </section>
-            <p style={{ color: "#888", fontSize: 12, lineHeight: 1.6, marginTop: 18 }}>This upload area is a first admin tool. Uploaded files remain private in AWS S3; a product image delivery method will be configured separately.</p>
+            <p style={{ color: "#888", fontSize: 12, lineHeight: 1.6, marginTop: 18 }}>Product image files are stored in the private S3 bucket and served through the CloudFront distribution.</p>
           </>
         )}
       </div>
