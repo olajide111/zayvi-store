@@ -22,11 +22,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   returns: {
     title: "Returns Policy",
-    body: "30-day returns on unused items in original packaging.\n\nEmail hello@zayvi.store with your order number. Damaged items: send a photo within 7 days for replacement or refund.\n\nRefunds processed within 5 business days of receiving the return.",
+    body: "Our returns terms are being finalised and will be published before purchasing is enabled. Please check back for the policy that applies to your destination market.",
   },
   shipping: {
     title: "Shipping Information",
-    body: "FREE shipping on every order.\n\nUK: 5–10 business days\nEurope: 7–14 business days\nRest of world: 10–21 business days\n\nTracking link sent by email once dispatched.",
+    body: "Shipping availability, delivery estimates and charges will be confirmed for each destination market before checkout is enabled. No delivery estimate is currently being offered.",
   },
   tracking: {
     title: "Track Your Order",
@@ -38,11 +38,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "FAQs",
-    body: "UK delivery usually takes 5–10 business days.\n\nYes — free shipping on every order.\n\n30-day returns on unused items. Payments are securely processed via PayPal or card.",
+    body: "The store is in preview while products, market availability, delivery terms and returns policies are being verified. Purchasing is not currently enabled.",
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI is focused on travel and daily essentials that earn their place — no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
+    body: "Zayvi is developing a considered retail experience for travel, everyday carry and daily living. The catalogue shown here is a design preview, not a live offer for sale.",
   },
   affiliate: {
     title: "Affiliate Programme",
