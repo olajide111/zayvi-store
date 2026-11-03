@@ -177,13 +177,7 @@ resource "aws_security_group" "lambda" {
   description = "Zayvi API Lambda security group; database-only egress."
   vpc_id      = aws_vpc.main.id
 
-  egress {
-    description     = "PostgreSQL only to the Zayvi database security group."
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.database.id]
-  }
+  egress = []
 
   tags = {
     Name = "${local.common_name}-lambda-sg"
@@ -195,17 +189,29 @@ resource "aws_security_group" "database" {
   description = "Private PostgreSQL; ingress only from the Zayvi API Lambda."
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    description     = "PostgreSQL from the Zayvi API Lambda only."
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-  }
+  egress = []
 
   tags = {
     Name = "${local.common_name}-database-sg"
   }
+}
+
+resource "aws_vpc_security_group_egress_rule" "lambda_to_database" {
+  security_group_id            = aws_security_group.lambda.id
+  referenced_security_group_id = aws_security_group.database.id
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  description                  = "Lambda to PostgreSQL only."
+}
+
+resource "aws_vpc_security_group_ingress_rule" "database_from_lambda" {
+  security_group_id            = aws_security_group.database.id
+  referenced_security_group_id = aws_security_group.lambda.id
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  description                  = "PostgreSQL accepts traffic from the Zayvi Lambda only."
 }
 
 resource "aws_db_subnet_group" "main" {
