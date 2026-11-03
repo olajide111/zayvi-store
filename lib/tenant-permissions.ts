@@ -1,3 +1,5 @@
+import type { TenantPermissionPolicy, TenantRequestContext } from "@/lib/tenant-access";
+
 /**
  * Versioned tenant role-to-permission policy.
  *
@@ -87,3 +89,10 @@ export function permissionsForTenantRole(role: string): readonly TenantPermissio
   if (!isTenantRole(role)) return [];
   return [...ROLE_PERMISSIONS[role]];
 }
+
+/** Adapter used by the tenant access pipeline; never grants platform support. */
+export const tenantPermissionPolicy: TenantPermissionPolicy = {
+  async hasPermission(context: TenantRequestContext, permission: string) {
+    return hasTenantPermission(context.role, permission);
+  },
+};
