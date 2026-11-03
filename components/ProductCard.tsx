@@ -79,7 +79,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
         </Link>
         <p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>£{product.price.toFixed(2)}</div>
+          <div style={{ fontSize: 12, color: "#777" }}>Market pricing pending verification</div>
           <button
             disabled
             aria-disabled="true"
