@@ -17,7 +17,8 @@ CREATE TABLE commerce_markets (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CHECK (code = upper(code)),
-  CHECK (currency_code = upper(currency_code))
+  CHECK (currency_code = upper(currency_code)),
+  UNIQUE (code, currency_code)
 );
 
 INSERT INTO commerce_markets
@@ -128,7 +129,6 @@ CREATE TABLE tenant_suppliers (
   UNIQUE (tenant_id, id),
   FOREIGN KEY (tenant_id, created_by)
     REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (created_by),
-  FOREIGN KEY (country_code) REFERENCES commerce_markets(code)
 );
 
 CREATE INDEX tenant_suppliers_status_idx
@@ -205,6 +205,8 @@ CREATE TABLE tenant_product_markets (
   UNIQUE (tenant_id, tenant_catalogue_product_id, market_code),
   FOREIGN KEY (tenant_id, tenant_catalogue_product_id)
     REFERENCES tenant_catalogue_products(tenant_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (market_code, currency_code)
+    REFERENCES commerce_markets(code, currency_code) ON DELETE RESTRICT,
   CHECK (currency_code = upper(currency_code)),
   CHECK (delivery_evidence_status <> 'verified' OR
     (delivery_min_days IS NOT NULL AND delivery_max_days IS NOT NULL))
