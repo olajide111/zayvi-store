@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type UploadResult = { key: string };
 
@@ -12,6 +12,13 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [uploaded, setUploaded] = useState<UploadResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/session")
+      .then((response) => response.json())
+      .then((data) => setAuthenticated(Boolean(data.authenticated)))
+      .catch(() => setAuthenticated(false));
+  }, []);
 
   async function signIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
