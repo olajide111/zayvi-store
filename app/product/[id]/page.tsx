@@ -62,7 +62,7 @@ export default function ProductPage() {
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 8, lineHeight: 1.2 }}>{product.name}</h1>
           <p style={{ fontSize: 12, color: "#777", marginBottom: 16 }}>Preview catalogue · Ratings and customer reviews are not available yet.</p>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#111", marginBottom: 20 }}>£{product.price.toFixed(2)}</div>
+          <p style={{ fontSize: 13, color: "#777", marginBottom: 20 }}>Market-specific pricing will appear after supplier costs, tax and delivery are verified.</p>
           <p style={{ fontSize: 15, color: "#555", lineHeight: 1.7, marginBottom: 24 }}>{product.longDesc}</p>
 
           {/* Colors */}
