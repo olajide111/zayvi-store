@@ -65,4 +65,4 @@ Record every automated assessment, automatic publication, admin approval/rejecti
 
 ## Initial code boundary
 
-The current policy module implements deterministic threshold and gate decisions. It is not connected to a live supplier feed, compliance authority, delivery service or production database. The defaults are test configuration, not evidence that any product is approved or that auto-publication is active.
+The current policy module implements deterministic threshold and gate decisions. Automatic publication additionally requires both the global and destination-market switches to be explicitly enabled, a supported assessment version, a recent stock check, and at least two current verified evidence records. Missing timestamps, unverified evidence and unset switches fail closed. The module is not connected to a live supplier feed, compliance authority, delivery service or production database. The defaults are test configuration, not evidence that any product is approved or that auto-publication is active.
