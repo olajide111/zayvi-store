@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { PRODUCTS } from "@/lib/products";
-import SquareCardForm from "./SquareCardForm";
 
 const STORE_COLOR = "#16a34a";
 
@@ -25,8 +24,6 @@ type Props = {
 };
 
 export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout }: Props) {
-  const [showSquare, setShowSquare] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
 
   const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
@@ -140,62 +137,9 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
               <span>£{sub.toFixed(2)}</span>
             </div>
 
-            {/* PayPal */}
-            <button
-              onClick={onCheckout}
-              style={{
-                width: "100%",
-                background: "#e8e7e2",
-                color: "#777",
-                border: "none",
-                borderRadius: 12,
-                padding: "14px",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                marginBottom: 10,
-              }}
-            >
-              Pay with PayPal
-            </button>
-
-            {/* Toggle Square card form */}
-            <button
-              onClick={() => setShowSquare((v) => !v)}
-              style={
-                {
-                  width: "100%",
-                  background: showSquare ? "#f5f5f5" : "#111",
-                  color: showSquare ? "#111" : "#fff",
-                  border: "1px solid #ddd",
-                  borderRadius: 12,
-                  padding: "14px",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }
-              }
-            >
-              Payments coming soon
-            </button>
-
-            {showSquare && (
-              <SquareCardForm
-                amount={sub}
-                items={cart.map((i) => ({ id: i.id, qty: i.qty }))}
-                onSuccess={() => {
-                  setMsg("Payment successful!");
-                  setTimeout(() => onClose(), 1500);
-                }}
-                onError={(m) => setMsg(m)}
-              />
-            )}
-
-            {msg && (
-              <div style={{ marginTop: 12, fontSize: 13, color: msg.includes("success") ? STORE_COLOR : "#dc2626", textAlign: "center" }}>
-                {msg}
-              </div>
-            )}
+            <p style={{ fontSize: 13, color: "#777", lineHeight: 1.6, textAlign: "center" }}>
+              Checkout is disabled while product details, pricing and destination-market fulfilment are being verified.
+            </p>
           </div>
         )}
       </div>
