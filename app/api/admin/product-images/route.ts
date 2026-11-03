@@ -43,6 +43,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN?.replace(/^https?:\\/\\//, "").replace(/\\/$/, "");
+    if (!cloudFrontDomain) {
+      return NextResponse.json(
+        { error: "Image delivery is not configured. Check CLOUDFRONT_DOMAIN." },
+        { status: 500 },
+      );
+    }
+
     const key = `products/${randomUUID()}.${extension}`;
     const body = Buffer.from(await file.arrayBuffer());
 
@@ -55,7 +63,11 @@ export async function POST(request: NextRequest) {
       ServerSideEncryption: "AES256",
     }));
 
-    return NextResponse.json({ success: true, key }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      key,
+      url: `https://${cloudFrontDomain}/${key}`,
+    }, { status: 201 });
   } catch (error) {
     const awsError = error as {
       name?: string;
