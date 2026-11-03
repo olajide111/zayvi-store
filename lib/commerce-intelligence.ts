@@ -93,7 +93,7 @@ export function calculateMarketEconomics(
   input: MarketCostInputs,
 ): MarketEconomics {
   for (const [name, value] of Object.entries(input)) {
-    if (!Number.isFinite(value) || value < 0) {
+    if (typeof value === "number" && (!Number.isFinite(value) || value < 0)) {
       throw new Error(name + " must be a finite, non-negative number.");
     }
   }
