@@ -23,7 +23,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 1,
     name: "AeroBottle Travel Bottle",
-    image: "https://www.nalno.com/cdn/shop/products/Primus_Steel_Ilus01.jpg?v=1595572143",
+    image: "https://d1a4ubvkp2b6va.cloudfront.net/products/31d53b39-59c2-4e7a-8763-0510105befa7.png",
     price: 34.0,
     category: "Travel",
     emoji: "🧴",
