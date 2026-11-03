@@ -62,6 +62,7 @@ CREATE TABLE catalogue_product_variants (
 CREATE TABLE catalogue_product_media (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id uuid NOT NULL REFERENCES catalogue_products(id) ON DELETE RESTRICT,
+  variant_id uuid,
   asset_key text NOT NULL,
   media_type text NOT NULL CHECK (media_type IN ('image','video','document')),
   alt_text text,
@@ -127,7 +128,7 @@ CREATE TABLE tenant_suppliers (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, id),
   FOREIGN KEY (tenant_id, created_by)
-    REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (created_by),
+    REFERENCES tenant_memberships(tenant_id, id) ON DELETE SET NULL (created_by)
 );
 
 CREATE INDEX tenant_suppliers_status_idx
@@ -138,7 +139,6 @@ CREATE TABLE supplier_offers (
   tenant_id uuid NOT NULL,
   tenant_catalogue_product_id uuid NOT NULL,
   supplier_id uuid NOT NULL,
-  variant_id uuid,
   market_code char(2) NOT NULL REFERENCES commerce_markets(code) ON DELETE RESTRICT,
   supplier_sku text NOT NULL,
   source_currency char(3) NOT NULL,
