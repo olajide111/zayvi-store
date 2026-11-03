@@ -117,5 +117,6 @@ The customer-facing storefront is a major product and may be substantially redes
 - [Storefront experience standard](docs/storefront/storefront-experience-standard.md)
 - [Current storefront audit and production blockers](docs/storefront/current-storefront-audit.md)
 - [Initial multi-tenant PostgreSQL migration](database/migrations/0001_multi_tenant_foundation.sql)
+- [Tenant context and API security contract](docs/architecture/tenant-context-and-api-security.md)
 
 The current catalogue, static GBP pricing, placeholder review counts and unsupported shipping/returns claims must not be treated as live commercial data.
