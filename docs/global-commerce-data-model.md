@@ -15,6 +15,18 @@ A product is a global identity. Supplier offers, availability, pricing, complian
 
 The market registry must remain extensible. Currency, locale, timezone, tax configuration, delivery targets and supported payment methods are market configuration, not hard-coded assumptions in UI components.
 
+## Database foundation migrations
+
+The current schema foundations are expressed as ordered SQL migrations:
+
+- `0001_multi_tenant_foundation.sql` — tenants, memberships, stores, plans and tenant isolation.
+- `0002_storefront_theme_versions.sql` — immutable tenant-owned theme versions and release history.
+- `0003_catalogue_market_foundation.sql` — platform canonical product identities and market registry, plus tenant-owned catalogue selections, suppliers, supplier offers, product-market readiness and evidence.
+
+Migration 0003 deliberately separates the shared canonical product identity from tenant-owned commercial records. Supplier verification belongs to the tenant that performed it; it is not a platform-wide endorsement. GB and NG market records are inserted disabled by default. A market record must be explicitly enabled after its configuration and operational controls are reviewed.
+
+The SQL files are design-stage migrations only. They have **not** been applied to a live database or validated against a running PostgreSQL instance. Before use, test all migrations in order against the chosen PostgreSQL version, validate RLS behaviour using the intended non-superuser application role, and add automated isolation, referential-integrity and rollback tests. The application must set `app.tenant_id` transaction-locally only after trusted server-side identity and membership resolution.
+
 ## Domain entities and responsibilities
 
 1. **Market** — country/market identity, currency, locale, timezone, enabled state and configuration version.
