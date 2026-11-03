@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN?.replace(/^https?:\\/\\//, "").replace(/\\/$/, "");
+    const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN?.replace(/^https?:\/\//, "").replace(/\/$/, "");
     if (!cloudFrontDomain) {
       return NextResponse.json(
         { error: "Image delivery is not configured. Check CLOUDFRONT_DOMAIN." },
