@@ -179,13 +179,13 @@ resource "aws_security_group" "lambda" {
 
   # Explicit empty egress revokes the provider/AWS default allow-all rule.
   egress {
-    from_port       = 0
-    to_port         = 0
-    protocol        = "-1"
-    cidr_blocks     = []
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = []
     ipv6_cidr_blocks = []
-    prefix_list_ids = []
-    security_groups = []
+    prefix_list_ids  = []
+    security_groups  = []
   }
 
   tags = {
