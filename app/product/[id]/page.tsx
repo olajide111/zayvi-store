@@ -41,8 +41,8 @@ export default function ProductPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12 }}>
-        FREE Worldwide Shipping • 30-Day Returns • Secure Checkout
+      <div style={{ background: "#111", color: "#777", textAlign: "center", padding: "10px 16px", fontSize: 12 }}>
+        Store preview · Product and market details are being verified
       </div>
 
       <header style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -60,17 +60,9 @@ export default function ProductPage() {
 
         {/* Details */}
         <div>
-          {product.badge && (
-            <span style={{ display: "inline-block", background: "#111", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20, marginBottom: 12 }}>
-              {product.badge}
-            </span>
-          )}
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 8, lineHeight: 1.2 }}>{product.name}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span style={{ color: "#f59e0b" }}>★★★★★</span>
-            <span style={{ fontSize: 13, color: "#888" }}>4.8 (124 reviews)</span>
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#111", marginBottom: 20 }}>£{product.price.toFixed(2)}</div>
+          <p style={{ fontSize: 12, color: "#777", marginBottom: 16 }}>Preview catalogue · Ratings and customer reviews are not available yet.</p>
+          <p style={{ fontSize: 13, color: "#777", marginBottom: 20 }}>Market-specific pricing will appear after supplier costs, tax and delivery are verified.</p>
           <p style={{ fontSize: 15, color: "#555", lineHeight: 1.7, marginBottom: 24 }}>{product.longDesc}</p>
 
           {/* Colors */}
@@ -133,20 +125,22 @@ export default function ProductPage() {
               <button onClick={() => setQty(qty + 1)} style={{ width: 40, height: 44, border: "none", background: "#fafafa", cursor: "pointer", fontSize: 18 }}>+</button>
             </div>
             <button
+              disabled
+              aria-disabled="true"
               onClick={handleAdd}
               style={{
                 flex: 1,
-                background: added ? "#111" : STORE_COLOR,
+                background: "#e8e7e2",
                 color: "#fff",
                 border: "none",
                 borderRadius: 12,
                 padding: "14px 24px",
                 fontSize: 15,
                 fontWeight: 700,
-                cursor: "pointer",
+                cursor: "not-allowed",
               }}
             >
-              {added ? "✓ Added to cart" : "Add to cart"}
+              Coming soon
             </button>
           </div>
 
@@ -161,7 +155,7 @@ export default function ProductPage() {
           </div>
 
           <div style={{ marginTop: 20, fontSize: 13, color: "#888" }}>
-            ✓ Free worldwide shipping &nbsp;•&nbsp; ✓ 30-day returns
+            Availability, delivery and returns information will be shown once verified for your market.
           </div>
         </div>
       </div>
