@@ -22,15 +22,18 @@ type DashboardData = {
     currency: string;
   }[];
   theme: {
-    templateFamily: string;
-    palette: string;
-    headingFont: string;
-    bodyFont: string;
+    template: { family: string; version: string };
+    brand: {
+      palette: string;
+      headingFont: string;
+      bodyFont: string;
+    };
   };
   availableTemplates: {
-    id: string;
+    family: string;
     name: string;
     description: string;
+    recommendedFor: string[];
   }[];
 };
 
@@ -109,7 +112,7 @@ function Status({ children }: { children: string }) {
           positive ? "bg-emerald-500" : "bg-amber-500"
         }`}
       />
-      {children.replaceAll("_", " ")}
+      {String(children ?? "unknown").replaceAll("_", " ")}
     </span>
   );
 }
@@ -442,24 +445,24 @@ export default function AdminDashboard() {
                   CURRENT THEME
                 </div>
                 <h3 className="mt-3 text-xl font-semibold capitalize">
-                  {data.theme.templateFamily.replaceAll("-", " ")}
+                  {String(data.theme?.template?.family ?? "editorial").replaceAll("-", " ")}
                 </h3>
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-500">Colour palette</span>
                     <span className="font-medium capitalize">
-                      {data.theme.palette.replaceAll("-", " ")}
+                      {String(data.theme?.brand?.palette ?? "warm-neutral").replaceAll("-", " ")}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-500">Heading font</span>
                     <span className="font-medium">
-                      {data.theme.headingFont}
+                      {data.theme?.brand?.headingFont ?? "modern-sans"}
                     </span>
                   </div>
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-500">Body font</span>
-                    <span className="font-medium">{data.theme.bodyFont}</span>
+                    <span className="font-medium">{data.theme?.brand?.bodyFont ?? "modern-sans"}</span>
                   </div>
                 </div>
                 <div className="mt-6 border-t border-gray-100 pt-5">
@@ -485,7 +488,7 @@ export default function AdminDashboard() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {data.availableTemplates.map((template) => (
                     <div
-                      key={template.id}
+                      key={template.family}
                       className="rounded-xl border border-gray-100 bg-[#fafbf9] p-4"
                     >
                       <div className="text-sm font-semibold">
@@ -493,6 +496,9 @@ export default function AdminDashboard() {
                       </div>
                       <p className="mt-2 text-xs leading-5 text-gray-500">
                         {template.description}
+                        <div className="mt-2 text-[11px] text-gray-400">
+                          {template.recommendedFor?.join(" · ") ?? ""}
+                        </div>
                       </p>
                     </div>
                   ))}
