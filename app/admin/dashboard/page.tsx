@@ -47,7 +47,7 @@ const navigation = [
     group: "COMMERCE",
     items: [
       ["Overview", "◫", "/admin/dashboard"],
-      ["Orders", "▤", "#"],
+      ["Orders", "▤", "/admin/orders"],
       ["Products & Catalogue", "◇", "/admin/products"],
       ["Inventory", "▦", "#"],
       ["Customers", "♙", "#"],
