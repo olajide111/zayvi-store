@@ -35,6 +35,11 @@ type DashboardData = {
     description: string;
     recommendedFor: string[];
   }[];
+  backend: {
+    status: string;
+    database: boolean;
+    httpStatus: number;
+  };
 };
 
 const navigation = [
@@ -43,7 +48,7 @@ const navigation = [
     items: [
       ["Overview", "◫", "/admin/dashboard"],
       ["Orders", "▤", "#"],
-      ["Products & Catalogue", "◇", "#"],
+      ["Products & Catalogue", "◇", "/admin/products"],
       ["Inventory", "▦", "#"],
       ["Customers", "♙", "#"],
       ["Suppliers", "⌑", "#"],
@@ -277,9 +282,12 @@ export default function AdminDashboard() {
                 international markets from one workspace.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Status>preview</Status>
-              <span className="text-xs text-gray-400">Store environment</span>
+              <Status>{data.backend?.status ?? "unavailable"}</Status>
+              <span className="text-xs text-gray-400">
+                Store environment · AWS backend {data.backend?.database ? "database ready" : "checking"}
+              </span>
             </div>
           </div>
 
@@ -307,9 +315,12 @@ export default function AdminDashboard() {
           <div className="mt-9">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold">Store at a glance</h2>
-              <span className="text-xs text-gray-400">
-                Current configuration
-              </span>
+              <a
+                href="/admin/products"
+                className="text-xs font-semibold text-[#31543b] hover:underline"
+              >
+                Manage catalogue →
+              </a>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
