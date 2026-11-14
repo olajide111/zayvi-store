@@ -549,6 +549,86 @@ async function updateProduct(productId, input) {
   }
 }
 
+
+async function listInventory() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            cp.id,
+            cp.canonical_code,
+            cp.name,
+            cp.attributes,
+            tcp.status AS product_status,
+            tpm.availability_status,
+            tpm.customer_price,
+            tpm.currency_code,
+            tcp.updated_at
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          LEFT JOIN tenant_product_markets tpm
+            ON tpm.tenant_id = tcp.tenant_id
+           AND tpm.tenant_catalogue_product_id = tcp.id
+           AND tpm.market_code = 'GB'
+          WHERE tcp.tenant_id = $1
+            AND tcp.status <> 'archived'
+          ORDER BY cp.name ASC
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        sku: row.canonical_code,
+        name: row.name,
+        image: row.attributes?.image || "",
+        status: row.product_status,
+        availabilityStatus: row.availability_status || "unknown",
+        quantity: null,
+        inventoryManaged: false,
+        price: row.customer_price === null ? null : Number(row.customer_price),
+        currency: row.currency_code || "GBP",
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function listMarkets() {
+  const result = await getPool().query(
+    `
+      SELECT
+        code,
+        name,
+        currency_code,
+        default_locale,
+        timezone_name,
+        enabled,
+        configuration_version,
+        updated_at
+      FROM commerce_markets
+      ORDER BY code ASC
+    `
+  );
+
+  return result.rows.map((row) => ({
+    code: row.code,
+    name: row.name,
+    currency: row.currency_code,
+    locale: row.default_locale,
+    timezone: row.timezone_name,
+    enabled: row.enabled,
+    configurationVersion: row.configuration_version,
+    updatedAt: row.updated_at
+  }));
+}
+
 exports.handler = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
@@ -582,6 +662,66 @@ exports.handler = async (event, context) => {
     }
   }
 
+
+
+  if (method === "GET" && routePath.endsWith("/inventory")) {
+    try {
+      const items = await listInventory();
+      return response(200, {
+        source: "postgresql",
+        total: items.length,
+        inventoryTrackingEnabled: false,
+        items
+      });
+    } catch (error) {
+      console.error("Inventory list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "inventory_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/customers")) {
+    return response(200, {
+      source: "preview_checkout_disabled",
+      total: 0,
+      customers: [],
+      message:
+        "Customer records will be created from real storefront orders once checkout is enabled."
+    });
+  }
+
+  if (method === "GET" && routePath.endsWith("/suppliers")) {
+    return response(200, {
+      source: "preview_supplier_setup_pending",
+      total: 0,
+      suppliers: [],
+      message:
+        "Supplier management is ready for configuration; no supplier records are currently active."
+    });
+  }
+
+  if (method === "GET" && routePath.endsWith("/markets")) {
+    try {
+      const markets = await listMarkets();
+      return response(200, {
+        source: "postgresql",
+        total: markets.length,
+        markets
+      });
+    } catch (error) {
+      console.error("Market list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "markets_unavailable"
+      });
+    }
+  }
 
   if (method === "GET" && routePath.endsWith("/orders")) {
     return response(200, {
