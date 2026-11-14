@@ -352,6 +352,7 @@ resource "aws_lambda_function" "api" {
       DB_NAME      = "zayvi"
       DB_USER      = local.database_username
       DB_AUTH_MODE = "iam"
+      TENANT_SLUG  = "zayvi"
     }
   }
 
