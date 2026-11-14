@@ -8,6 +8,11 @@ type AwsApiResult = {
   error?: string;
 };
 
+type AwsApiOptions = {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  body?: unknown;
+};
+
 function sha256(value: string) {
   return crypto.createHash("sha256").update(value, "utf8").digest("hex");
 }
@@ -35,10 +40,16 @@ function canonicalQuery(url: URL) {
     .join("&");
 }
 
-export async function callZayviAwsApi(path: string): Promise<AwsApiResult> {
+export async function callZayviAwsApi(
+  path: string,
+  options: AwsApiOptions = {}
+): Promise<AwsApiResult> {
   const endpoint = process.env.ZAYVI_AWS_API_URL;
   const roleArn = process.env.AWS_ROLE_ARN;
   const region = process.env.AWS_REGION || "eu-west-2";
+  const method = options.method || "GET";
+  const requestBody =
+    options.body === undefined ? "" : JSON.stringify(options.body);
 
   if (!endpoint || !roleArn) {
     return {
@@ -56,13 +67,18 @@ export async function callZayviAwsApi(path: string): Promise<AwsApiResult> {
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
     const dateStamp = amzDate.slice(0, 8);
     const service = "execute-api";
-    const payloadHash = sha256("");
+    const payloadHash = sha256(requestBody);
 
     const signedHeaderNames = ["host", "x-amz-date"];
     const canonicalHeaderValues: Record<string, string> = {
       host: url.host,
       "x-amz-date": amzDate,
     };
+
+    if (requestBody) {
+      signedHeaderNames.push("content-type");
+      canonicalHeaderValues["content-type"] = "application/json";
+    }
 
     if (credentials.sessionToken) {
       signedHeaderNames.push("x-amz-security-token");
@@ -77,7 +93,7 @@ export async function callZayviAwsApi(path: string): Promise<AwsApiResult> {
         .join("");
 
     const canonicalRequest = [
-      "GET",
+      method,
       url.pathname || "/",
       canonicalQuery(url),
       canonicalHeaders,
@@ -110,13 +126,18 @@ export async function callZayviAwsApi(path: string): Promise<AwsApiResult> {
       authorization,
     };
 
+    if (requestBody) {
+      headers["content-type"] = "application/json";
+    }
+
     if (credentials.sessionToken) {
       headers["x-amz-security-token"] = credentials.sessionToken;
     }
 
     const response = await fetch(url, {
-      method: "GET",
+      method,
       headers,
+      body: requestBody || undefined,
       cache: "no-store",
     });
 
