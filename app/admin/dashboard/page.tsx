@@ -49,9 +49,9 @@ const navigation = [
       ["Overview", "◫", "/admin/dashboard"],
       ["Orders", "▤", "/admin/orders"],
       ["Products & Catalogue", "◇", "/admin/products"],
-      ["Inventory", "▦", "#"],
-      ["Customers", "♙", "#"],
-      ["Suppliers", "⌑", "#"],
+      ["Inventory", "▦", "/admin/inventory"],
+      ["Customers", "♙", "/admin/customers"],
+      ["Suppliers", "⌑", "/admin/suppliers"],
     ],
   },
   {
@@ -91,7 +91,7 @@ const navigation = [
   {
     group: "PLATFORM",
     items: [
-      ["Markets & Currencies", "◎", "#"],
+      ["Markets & Currencies", "◎", "/admin/markets"],
       ["Integrations Hub", "⌘", "#"],
       ["Team & Permissions", "♧", "#"],
       ["Settings", "⚙", "#"],
