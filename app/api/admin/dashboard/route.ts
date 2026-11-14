@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { PRODUCTS } from "@/lib/products";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import {
   DEFAULT_THEME_CONFIG,
@@ -18,11 +17,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const backendResult = await callZayviAwsApi("/ready");
+    const [backendResult, catalogueResult, marketsResult] = await Promise.all([
+      callZayviAwsApi("/ready"),
+      callZayviAwsApi("/products"),
+      callZayviAwsApi("/markets"),
+    ]);
+
     const backendPayload =
       backendResult.data && typeof backendResult.data === "object"
         ? (backendResult.data as { status?: string; database?: boolean })
         : {};
+
+    const cataloguePayload =
+      catalogueResult.data && typeof catalogueResult.data === "object"
+        ? (catalogueResult.data as {
+            total?: number;
+            products?: Array<{ category?: string }>;
+          })
+        : {};
+
+    const catalogueProducts = Array.isArray(cataloguePayload.products)
+      ? cataloguePayload.products
+      : [];
+
+    const marketPayload =
+      marketsResult.data && typeof marketsResult.data === "object"
+        ? (marketsResult.data as {
+            markets?: Array<{ code: string; name: string; currency: string }>;
+          })
+        : {};
+
+    const markets = Array.isArray(marketPayload.markets)
+      ? marketPayload.markets
+      : [];
 
     return NextResponse.json({
       store: {
@@ -31,8 +58,14 @@ export async function GET(request: NextRequest) {
         purchasingEnabled: false,
       },
       catalogue: {
-        totalProducts: PRODUCTS.length,
-        categories: [...new Set(PRODUCTS.map((p) => p.category))],
+        totalProducts: cataloguePayload.total ?? catalogueProducts.length,
+        categories: [
+          ...new Set(
+            catalogueProducts
+              .map((product) => product.category)
+              .filter((category): category is string => Boolean(category))
+          ),
+        ],
       },
       payments: {
         status: "disabled",
@@ -42,10 +75,7 @@ export async function GET(request: NextRequest) {
           { name: "Stripe", status: "not_configured" },
         ],
       },
-      markets: [
-        { code: "GB", name: "United Kingdom", currency: "GBP" },
-        { code: "NG", name: "Nigeria", currency: "NGN" },
-      ],
+      markets,
       theme: DEFAULT_THEME_CONFIG,
       availableTemplates: TEMPLATE_CATALOGUE,
       backend: {
