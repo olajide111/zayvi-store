@@ -340,6 +340,215 @@ async function createProduct(input) {
   }
 }
 
+
+async function updateProduct(productId, input) {
+  const allowedStatuses = new Set(["draft", "active", "paused", "archived"]);
+  const allowedPublicationStatuses = new Set([
+    "not_listed",
+    "pending_review",
+    "published",
+    "held",
+    "rejected",
+    "withdrawn"
+  ]);
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const existing = await tx.query(
+        `
+          SELECT
+            cp.id,
+            cp.slug,
+            cp.name,
+            cp.product_type,
+            cp.attributes,
+            tcp.id AS tenant_product_id,
+            tcp.status AS tenant_status,
+            tpm.id AS market_id,
+            tpm.customer_price,
+            tpm.publication_status
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          LEFT JOIN tenant_product_markets tpm
+            ON tpm.tenant_id = tcp.tenant_id
+           AND tpm.tenant_catalogue_product_id = tcp.id
+           AND tpm.market_code = 'GB'
+          WHERE tcp.tenant_id = $1
+            AND cp.id = $2
+          LIMIT 1
+        `,
+        [tenantId, productId]
+      );
+
+      if (existing.rowCount === 0) {
+        const error = new Error("Product not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const row = existing.rows[0];
+      const currentAttributes = row.attributes || {};
+      const name =
+        input?.name === undefined ? row.name : String(input.name || "").trim();
+      const category =
+        input?.category === undefined
+          ? currentAttributes.category || row.product_type || "Uncategorised"
+          : String(input.category || "").trim();
+      const image =
+        input?.image === undefined
+          ? currentAttributes.image || ""
+          : String(input.image || "").trim();
+      const desc =
+        input?.desc === undefined
+          ? currentAttributes.desc || ""
+          : String(input.desc || "").trim();
+      const longDesc =
+        input?.longDesc === undefined
+          ? currentAttributes.longDesc || desc
+          : String(input.longDesc || "").trim();
+      const price =
+        input?.price === undefined ? Number(row.customer_price) : Number(input.price);
+      const status =
+        input?.status === undefined ? row.tenant_status : String(input.status);
+      const publicationStatus =
+        input?.publicationStatus === undefined
+          ? row.publication_status
+          : String(input.publicationStatus);
+
+      if (!name || !category) {
+        const error = new Error("Name and category are required.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (!Number.isFinite(price) || price < 0) {
+        const error = new Error("Price must be a non-negative number.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (!allowedStatuses.has(status)) {
+        const error = new Error("Invalid product status.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (!allowedPublicationStatuses.has(publicationStatus)) {
+        const error = new Error("Invalid publication status.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const nextAttributes = {
+        ...currentAttributes,
+        category,
+        image,
+        desc,
+        longDesc
+      };
+
+      if (input?.emoji !== undefined) {
+        nextAttributes.emoji = String(input.emoji || "").trim();
+      }
+
+      if (input?.badge !== undefined) {
+        nextAttributes.badge = input.badge ? String(input.badge).trim() : null;
+      }
+
+      if (Array.isArray(input?.features)) nextAttributes.features = input.features;
+      if (Array.isArray(input?.colors)) nextAttributes.colors = input.colors;
+      if (Array.isArray(input?.sizes)) nextAttributes.sizes = input.sizes;
+
+      const slug =
+        input?.slug === undefined ? row.slug : slugify(input.slug || name);
+
+      if (!slug) {
+        const error = new Error("A valid product slug is required.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE catalogue_products
+          SET
+            slug = $1,
+            name = $2,
+            product_type = $3,
+            attributes = $4::jsonb,
+            updated_at = now()
+          WHERE id = $5
+        `,
+        [slug, name, category, JSON.stringify(nextAttributes), productId]
+      );
+
+      await tx.query(
+        `
+          UPDATE tenant_catalogue_products
+          SET
+            status = $1,
+            updated_at = now()
+          WHERE tenant_id = $2
+            AND id = $3
+        `,
+        [status, tenantId, row.tenant_product_id]
+      );
+
+      if (row.market_id) {
+        await tx.query(
+          `
+            UPDATE tenant_product_markets
+            SET
+              customer_price = $1,
+              publication_status = $2,
+              price_observed_at = now(),
+              updated_at = now()
+            WHERE tenant_id = $3
+              AND id = $4
+          `,
+          [price, publicationStatus, tenantId, row.market_id]
+        );
+      }
+
+      const result = await tx.query(
+        `
+          SELECT
+            cp.id,
+            cp.canonical_code,
+            cp.slug,
+            cp.name,
+            cp.product_type,
+            cp.lifecycle_status,
+            cp.attributes,
+            tcp.status AS tenant_status,
+            tpm.customer_price,
+            tpm.currency_code,
+            tpm.publication_status,
+            tpm.availability_status,
+            tcp.updated_at
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp ON cp.id = tcp.product_id
+          LEFT JOIN tenant_product_markets tpm
+            ON tpm.tenant_id = tcp.tenant_id
+           AND tpm.tenant_catalogue_product_id = tcp.id
+           AND tpm.market_code = 'GB'
+          WHERE tcp.tenant_id = $1
+            AND cp.id = $2
+          LIMIT 1
+        `,
+        [tenantId, productId]
+      );
+
+      return normalizeProduct(result.rows[0]);
+    });
+  } finally {
+    client.release();
+  }
+}
+
 exports.handler = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
@@ -409,6 +618,29 @@ exports.handler = async (event, context) => {
           error?.statusCode === 400
             ? error.message
             : "catalogue_create_failed"
+      });
+    }
+  }
+
+
+  if (method === "PATCH" && /\/products\/[0-9a-f-]{36}$/i.test(routePath)) {
+    try {
+      const productId = routePath.split("/").filter(Boolean).pop();
+      const product = await updateProduct(productId, parseBody(event));
+      return response(200, {
+        product
+      });
+    } catch (error) {
+      console.error("Catalogue update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "catalogue_update_failed"
       });
     }
   }
