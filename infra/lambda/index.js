@@ -582,6 +582,18 @@ exports.handler = async (event, context) => {
     }
   }
 
+
+  if (method === "GET" && routePath.endsWith("/orders")) {
+    return response(200, {
+      source: "preview_checkout_disabled",
+      total: 0,
+      orders: [],
+      purchasingEnabled: false,
+      message:
+        "Checkout is disabled in Preview, so no customer orders can be created yet."
+    });
+  }
+
   if (method === "GET" && routePath.endsWith("/products")) {
     try {
       const products = await listProducts();
