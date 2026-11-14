@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zayvi Store
 
-## Getting Started
+Zayvi is being rebuilt as an AI-powered, multi-market commerce operating system. It supports a hybrid fulfilment model: Zayvi-owned inventory and approved supplier-fulfilled offers. The initial markets are the United Kingdom (GBP) and Nigeria (NGN), with an extensible market model.
 
-First, run the development server:
+> **Rebuild status:** foundational commerce types and market publication policy are implemented. The latest Vercel Preview build passed. The database/API and full admin operations console are still under development. This repository is not yet production-ready.
+
+## Product principles
+
+1. A product's global identity is separate from its offer and eligibility in each destination market.
+2. Missing market data means unknown/not assessed, never available.
+3. Supplier, stock, delivery, compliance, FX and profitability claims require dated evidence.
+4. All monetary calculations use explicit currencies and timestamped FX evidence.
+5. AI recommendations are explainable, confidence-aware and auditable.
+6. A high AI rating cannot override a failed safety, compliance, delivery, evidence or contribution gate.
+7. Customer-facing production changes require testing and release approval.
+
+## Repository guide
+
+- `app/` — Next.js application routes and user interface.
+- `lib/` — shared application and domain logic.
+- `docs/global-commerce-data-model.md` — canonical commerce entities and market-isolation rules.
+- `docs/publication-and-approval-policy.md` — rating bands, mandatory gates and human controls.
+- `docs/` — architecture, operations, security and runbooks.
+
+## Current technology
+
+- Next.js 16 and React 19 for the web application.
+- Vercel for Preview deployments and web delivery.
+- AWS S3 and CloudFront for private-origin media delivery.
+- AWS is the selected direction for the commerce database and backend. The intended design is a private Amazon RDS for PostgreSQL database behind authenticated AWS API services; no database is provisioned yet.
+
+## Local development
+
+Requirements: the Node.js version supported by the current Vercel project and npm.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Before submitting a change:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+Run the relevant automated tests as they are added. Do not use production secrets or real customer data locally.
 
-To learn more about Next.js, take a look at the following resources:
+## Environments and release safety
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Work on the agreed feature branch and verify changes in Vercel Preview.
+- Preview must use test credentials and isolated non-production data.
+- Do not merge to the production branch or deploy to Production without explicit approval.
+- New Vercel environment variables require a new deployment before they take effect.
+- Never commit credentials, tokens, private keys, customer exports or supplier secrets.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Market model
 
-## Deploy on Vercel
+The initial market registry includes:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Market | Country | Currency | Locale |
+|---|---|---|---|
+| GB | United Kingdom | GBP | en-GB |
+| NG | Nigeria | NGN | en-NG |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+A product can be viable in one market and unavailable or unassessed in another. Do not infer cross-market availability, prices, supplier offers or compliance.
+
+## AI publication policy
+
+Initial configurable defaults:
+
+- 85–100: eligible for auto-publication only when every hard gate passes.
+- 65–84: administrator review.
+- 0–64: hold.
+
+Hard gates include verified market-specific availability, approved compliance, verified suitable delivery, positive contribution meeting the market minimum, at least two evidence records and no explicit human-approval requirement. A failed gate blocks automatic publication. Production auto-publication remains disabled until the scoring pipeline and controls have passed the release test plan.
+
+## Security and data handling
+
+- Keep database and supplier evidence private.
+- Use role-based access and MFA for privileged users.
+- Store secrets in managed secret storage, never in Git or browser code.
+- Store timestamps in UTC and render in the relevant market timezone.
+- Use idempotency for payment, supplier and fulfilment events.
+- Do not store raw payment card data.
+- Audit sensitive administrative and automated decisions.
+
+## Documentation and change control
+
+Architecture decisions, schema migrations, API contracts, scoring changes, policy thresholds, security exceptions and operational procedures must be documented and reviewed. Keep documentation aligned with the implementation; do not describe a planned service as deployed.
+
+## Important links
+
+- [Global commerce data model](docs/global-commerce-data-model.md)
+- [Publication and approval policy](docs/publication-and-approval-policy.md)
+- [Vercel project](https://vercel.com/olajide111s-projects/zayvi-store)
+
+## Commercial product direction
+
+Zayvi is being designed as one shared, multi-tenant platform with three commercial divisions:
+
+- **Zayvi Commerce** — first-party retail, wholesale/sourcing and fulfilment coordination.
+- **Zayvi Intelligence** — product, supplier and market intelligence, profitability analysis, research and APIs.
+- **Zayvi Enterprise** — white-label stores, multi-store operations, integrations and enterprise services.
+
+The architecture must support external business tenants from the foundation. Zayvi's own storefront is the first-party tenant; each external business must have isolated users, stores, catalogue, customer/order data, settings and entitlements. Tenant isolation is enforced server-side and tested. This is a target architecture, not a claim that multi-tenancy is already implemented.
+
+See `docs/strategy/zayvi-strategic-product-commercial-blueprint.md` for the approved product portfolio, commercial model, tenant architecture, data strategy, phased roadmap and investor validation plan.
+
+## Storefront rebuild
+
+The customer-facing storefront is a major product and may be substantially redesigned. The current prototype is not considered production-ready. The target experience is premium, mobile-first, accessible, market-aware and reusable for tenant-branded white-label stores.
+
+- [Storefront experience standard](docs/storefront/storefront-experience-standard.md)
+- [Configurable theme system and merchant customisation](docs/storefront/theme-system-and-merchant-customisation.md)
+- [Typed theme contracts and validation](lib/storefront-theme.ts)
+- [Tenant-isolated theme version migration](database/migrations/0002_storefront_theme_versions.sql)
+- [Current storefront audit and production blockers](docs/storefront/current-storefront-audit.md)
+- [Initial multi-tenant PostgreSQL migration](database/migrations/0001_multi_tenant_foundation.sql)
+- [Tenant context and API security contract](docs/architecture/tenant-context-and-api-security.md)
+- [Identity-to-tenant resolution and bootstrap](docs/architecture/identity-to-tenant-resolution.md)
+
+The current catalogue and static GBP pricing are demonstration content, not live commercial data. Theme configuration contracts and a proposed migration are committed, but the database migration has not been executed and the merchant design studio is not yet implemented.
