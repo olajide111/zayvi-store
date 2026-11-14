@@ -10,12 +10,40 @@ type Product = {
   category: string;
   desc: string;
   badge?: string;
+  status: "draft" | "active" | "paused" | "archived";
+  publicationStatus:
+    | "not_listed"
+    | "pending_review"
+    | "published"
+    | "held"
+    | "rejected"
+    | "withdrawn";
 };
 
 type ProductsResponse = {
   total: number;
   categories: string[];
   products: Product[];
+};
+
+type ProductForm = {
+  name: string;
+  category: string;
+  price: string;
+  image: string;
+  desc: string;
+  status: Product["status"];
+  publicationStatus: Product["publicationStatus"];
+};
+
+const emptyForm: ProductForm = {
+  name: "",
+  category: "Travel",
+  price: "",
+  image: "",
+  desc: "",
+  status: "active",
+  publicationStatus: "pending_review",
 };
 
 export default function AdminProductsPage() {
@@ -25,14 +53,9 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    category: "Travel",
-    price: "",
-    image: "",
-    desc: "",
-  });
+  const [form, setForm] = useState<ProductForm>(emptyForm);
 
   async function loadCatalogue() {
     try {
@@ -64,17 +87,44 @@ export default function AdminProductsPage() {
     loadCatalogue();
   }, []);
 
-  async function createProduct(event: React.FormEvent<HTMLFormElement>) {
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setCreating(true);
+  }
+
+  function openEdit(product: Product) {
+    setCreating(false);
+    setEditing(product);
+    setForm({
+      name: product.name,
+      category: product.category,
+      price: String(product.price),
+      image: product.image,
+      desc: product.desc,
+      status: product.status,
+      publicationStatus: product.publicationStatus,
+    });
+  }
+
+  function closeForm() {
+    setCreating(false);
+    setEditing(null);
+    setForm(emptyForm);
+  }
+
+  async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError("");
 
     try {
       const response = await fetch("/api/admin/products", {
-        method: "POST",
+        method: editing ? "PATCH" : "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          ...(editing ? { id: editing.id } : {}),
           ...form,
           price: Number(form.price),
         }),
@@ -83,21 +133,23 @@ export default function AdminProductsPage() {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(payload?.error || "Unable to create product.");
+        throw new Error(
+          payload?.error ||
+            (editing ? "Unable to update product." : "Unable to create product.")
+        );
       }
 
-      setForm({
-        name: "",
-        category: "Travel",
-        price: "",
-        image: "",
-        desc: "",
-      });
-      setCreating(false);
+      closeForm();
       setLoading(true);
       await loadCatalogue();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create product.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : editing
+            ? "Unable to update product."
+            : "Unable to create product."
+      );
     } finally {
       setSaving(false);
     }
@@ -118,6 +170,8 @@ export default function AdminProductsPage() {
     });
   }, [data, query, category]);
 
+  const formOpen = creating || Boolean(editing);
+
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
       <header className="border-b border-gray-200 bg-white">
@@ -137,10 +191,10 @@ export default function AdminProductsPage() {
             </a>
             <button
               type="button"
-              onClick={() => setCreating((value) => !value)}
+              onClick={formOpen ? closeForm : openCreate}
               className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
             >
-              {creating ? "Close form" : "Add product"}
+              {formOpen ? "Close form" : "Add product"}
             </button>
           </div>
         </div>
@@ -149,23 +203,27 @@ export default function AdminProductsPage() {
       <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
         <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
           <div className="text-sm font-semibold text-[#23432d]">
-            Catalogue management is now active in Preview
+            Catalogue management is active in Preview
           </div>
           <p className="mt-1 text-xs leading-5 text-[#55705b]">
-            This page is wired to the Zayvi AWS Preview API and PostgreSQL catalogue.
-            Product creation remains Preview-only and does not affect Production.
+            Products now read from PostgreSQL. Create and edit actions write through
+            the signed Zayvi AWS Preview API and do not affect Production.
           </p>
         </div>
 
-        {creating && (
+        {formOpen && (
           <form
-            onSubmit={createProduct}
+            onSubmit={saveProduct}
             className="mt-6 rounded-2xl border border-gray-200 bg-white p-5"
           >
             <div className="mb-4">
-              <h2 className="text-sm font-semibold">Add product</h2>
+              <h2 className="text-sm font-semibold">
+                {editing ? `Edit ${editing.name}` : "Add product"}
+              </h2>
               <p className="mt-1 text-xs text-gray-400">
-                Creates the product in the Zayvi Preview PostgreSQL catalogue.
+                {editing
+                  ? "Update catalogue, pricing and publication state."
+                  : "Create a new product in the Preview PostgreSQL catalogue."}
               </p>
             </div>
 
@@ -214,6 +272,39 @@ export default function AdminProductsPage() {
                 placeholder="Image URL"
                 className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               />
+              <select
+                value={form.status}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    status: event.target.value as Product["status"],
+                  }))
+                }
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                <option value="draft">Draft</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="archived">Archived</option>
+              </select>
+              <select
+                value={form.publicationStatus}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    publicationStatus: event.target
+                      .value as Product["publicationStatus"],
+                  }))
+                }
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                <option value="not_listed">Not listed</option>
+                <option value="pending_review">Pending review</option>
+                <option value="published">Published</option>
+                <option value="held">Held</option>
+                <option value="rejected">Rejected</option>
+                <option value="withdrawn">Withdrawn</option>
+              </select>
               <textarea
                 value={form.desc}
                 onChange={(event) =>
@@ -231,7 +322,11 @@ export default function AdminProductsPage() {
                 type="submit"
                 className="rounded-lg bg-[#17251e] px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Create product"}
+                {saving
+                  ? "Saving..."
+                  : editing
+                    ? "Save changes"
+                    : "Create product"}
               </button>
             </div>
           </form>
@@ -287,17 +382,18 @@ export default function AdminProductsPage() {
 
         {!loading && !error && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_auto] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1.4fr)_160px_120px_110px]">
+            <div className="grid grid-cols-[1fr_auto] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1.4fr)_130px_110px_130px_90px]">
               <span>Product</span>
               <span className="hidden md:block">Category</span>
               <span className="hidden md:block">Price</span>
-              <span>Status</span>
+              <span className="hidden md:block">Publication</span>
+              <span>Action</span>
             </div>
 
             {visibleProducts.map((product) => (
               <div
                 key={product.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1.4fr)_160px_120px_110px]"
+                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1.4fr)_130px_110px_130px_90px]"
               >
                 <div className="flex min-w-0 items-center gap-4">
                   <img
@@ -312,17 +408,27 @@ export default function AdminProductsPage() {
                     <div className="mt-1 truncate text-xs text-gray-400">
                       {product.desc}
                     </div>
+                    <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                      {product.status}
+                    </div>
                   </div>
                 </div>
                 <div className="hidden text-sm text-gray-500 md:block">
                   {product.category}
                 </div>
                 <div className="hidden text-sm font-semibold md:block">
-                  £{product.price.toFixed(2)}
+                  £{Number(product.price).toFixed(2)}
                 </div>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-center text-xs font-medium text-emerald-700">
-                  Active
-                </span>
+                <div className="hidden text-xs text-gray-500 md:block">
+                  {product.publicationStatus.replaceAll("_", " ")}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openEdit(product)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
               </div>
             ))}
 
