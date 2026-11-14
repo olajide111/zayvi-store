@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminSession } from "@/lib/admin-auth";
 import { PRODUCTS } from "@/lib/products";
+import { callZayviAwsApi } from "@/lib/aws-api";
 import {
   DEFAULT_THEME_CONFIG,
   TEMPLATE_CATALOGUE,
@@ -16,6 +17,12 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    const backendResult = await callZayviAwsApi("/ready");
+    const backendPayload =
+      backendResult.data && typeof backendResult.data === "object"
+        ? (backendResult.data as { status?: string; database?: boolean })
+        : {};
 
     return NextResponse.json({
       store: {
@@ -41,6 +48,11 @@ export async function GET(request: NextRequest) {
       ],
       theme: DEFAULT_THEME_CONFIG,
       availableTemplates: TEMPLATE_CATALOGUE,
+      backend: {
+        status: backendResult.ok ? backendPayload.status || "ready" : "unavailable",
+        database: backendPayload.database === true,
+        httpStatus: backendResult.status,
+      },
     });
   } catch {
     return NextResponse.json(
