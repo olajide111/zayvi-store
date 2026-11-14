@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   image: string;
   price: number;
@@ -24,25 +24,84 @@ export default function AdminProductsPage() {
   const [category, setCategory] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    category: "Travel",
+    price: "",
+    image: "",
+    desc: "",
+  });
+
+  async function loadCatalogue() {
+    try {
+      const response = await fetch("/api/admin/products", {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "Unable to load catalogue.");
+      }
+
+      setData(await response.json());
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load catalogue.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    fetch("/api/admin/products", { credentials: "include", cache: "no-store" })
-      .then(async (response) => {
-        if (response.status === 401) {
-          window.location.href = "/admin";
-          return null;
-        }
-        if (!response.ok) throw new Error("Unable to load catalogue.");
-        return response.json();
-      })
-      .then((result) => {
-        if (result) setData(result);
-      })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Unable to load catalogue.")
-      )
-      .finally(() => setLoading(false));
+    loadCatalogue();
   }, []);
+
+  async function createProduct(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to create product.");
+      }
+
+      setForm({
+        name: "",
+        category: "Travel",
+        price: "",
+        image: "",
+        desc: "",
+      });
+      setCreating(false);
+      setLoading(true);
+      await loadCatalogue();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create product.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const visibleProducts = useMemo(() => {
     if (!data) return [];
@@ -76,12 +135,13 @@ export default function AdminProductsPage() {
             >
               Back to overview
             </a>
-            <a
-              href="/admin"
+            <button
+              type="button"
+              onClick={() => setCreating((value) => !value)}
               className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
             >
-              Upload images
-            </a>
+              {creating ? "Close form" : "Add product"}
+            </button>
           </div>
         </div>
       </header>
@@ -92,12 +152,90 @@ export default function AdminProductsPage() {
             Catalogue management is now active in Preview
           </div>
           <p className="mt-1 text-xs leading-5 text-[#55705b]">
-            This page reads the catalogue currently powering the Zayvi storefront.
-            The AWS catalogue tables are live; create/edit persistence is the next
-            backend step before we switch this page from the current catalogue file
-            to PostgreSQL.
+            This page is wired to the Zayvi AWS Preview API and PostgreSQL catalogue.
+            Product creation remains Preview-only and does not affect Production.
           </p>
         </div>
+
+        {creating && (
+          <form
+            onSubmit={createProduct}
+            className="mt-6 rounded-2xl border border-gray-200 bg-white p-5"
+          >
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold">Add product</h2>
+              <p className="mt-1 text-xs text-gray-400">
+                Creates the product in the Zayvi Preview PostgreSQL catalogue.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                required
+                value={form.name}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, name: event.target.value }))
+                }
+                placeholder="Product name"
+                className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+              />
+              <select
+                value={form.category}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    category: event.target.value,
+                  }))
+                }
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
+              >
+                <option>Travel</option>
+                <option>Carry</option>
+                <option>Recovery</option>
+                <option>Daily</option>
+              </select>
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, price: event.target.value }))
+                }
+                placeholder="Price in GBP"
+                className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+              />
+              <input
+                value={form.image}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, image: event.target.value }))
+                }
+                placeholder="Image URL"
+                className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+              />
+              <textarea
+                value={form.desc}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, desc: event.target.value }))
+                }
+                placeholder="Short description"
+                rows={3}
+                className="md:col-span-2 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+              />
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                disabled={saving}
+                type="submit"
+                className="rounded-lg bg-[#17251e] px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Create product"}
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
