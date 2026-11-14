@@ -1,4 +1,11 @@
 terraform {
+  backend "s3" {
+    bucket       = "zayvi-terraform-state-001961766018-eu-west-2"
+    key          = "zayvi/preview/terraform.tfstate"
+    region       = "eu-west-2"
+    encrypt      = true
+    use_lockfile = true
+  }
   required_version = ">= 1.6.0"
 
   required_providers {
@@ -100,27 +107,7 @@ resource "aws_vpc" "main" {
   }
 }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
 
-  tags = {
-    Name = "${local.common_name}-igw"
-  }
-}
-
-resource "aws_subnet" "public" {
-  count = 2
-
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
-  availability_zone       = local.availability_zones[count.index]
-  map_public_ip_on_launch = false
-
-  tags = {
-    Name = "${local.common_name}-public-${count.index + 1}"
-    Tier = "public"
-  }
-}
 
 resource "aws_subnet" "private" {
   count = 2
@@ -135,25 +122,7 @@ resource "aws_subnet" "private" {
   }
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-
-  tags = {
-    Name = "${local.common_name}-public-rt"
-  }
-}
-
-resource "aws_route_table_association" "public" {
-  count = 2
-
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
 
 resource "aws_route_table" "private" {
   count  = 2
@@ -177,16 +146,8 @@ resource "aws_security_group" "lambda" {
   description = "Zayvi API Lambda security group; database-only egress."
   vpc_id      = aws_vpc.main.id
 
-  # Explicit empty egress revokes the provider/AWS default allow-all rule.
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = []
-    ipv6_cidr_blocks = []
-    prefix_list_ids  = []
-    security_groups  = []
-  }
+
+
 
   tags = {
     Name = "${local.common_name}-lambda-sg"
@@ -198,16 +159,8 @@ resource "aws_security_group" "database" {
   description = "Private PostgreSQL; ingress only from the Zayvi API Lambda."
   vpc_id      = aws_vpc.main.id
 
-  # Database has no outbound network requirement in the initial baseline.
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = []
-    ipv6_cidr_blocks = []
-    prefix_list_ids  = []
-    security_groups  = []
-  }
+
+
 
   tags = {
     Name = "${local.common_name}-database-sg"
@@ -244,6 +197,7 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "postgres" {
   identifier                          = "${local.common_name}-postgres"
   engine                              = "postgres"
+  engine_version                      = "17.11"
   instance_class                      = var.db_instance_class
   allocated_storage                   = var.db_allocated_storage_gb
   max_allocated_storage               = 100
@@ -346,6 +300,25 @@ resource "aws_iam_role_policy" "lambda_database_auth" {
   })
 }
 
+
+data "aws_iam_role" "vercel_api" {
+  name = "ZayviVercelBackendRole"
+}
+
+resource "aws_iam_role_policy" "vercel_api_invoke" {
+  name = "${local.common_name}-vercel-api-invoke"
+  role = data.aws_iam_role.vercel_api.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["execute-api:Invoke"]
+      Resource = "${aws_apigatewayv2_api.http.execution_arn}/*/*/*"
+    }]
+  })
+}
+
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${local.common_name}-api"
   retention_in_days = 30
@@ -356,35 +329,13 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = 30
 }
 
-data "archive_file" "lambda" {
-  type        = "zip"
-  output_path = "${path.module}/zayvi-api-bootstrap.zip"
-
-  source {
-    filename = "index.js"
-    content  = <<-JS
-      exports.handler = async (event) => {
-        const response = {
-          statusCode: 503,
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            error: "backend_not_ready",
-            message: "The Zayvi API infrastructure bootstrap is running; application routes are not yet enabled."
-          })
-        };
-        return response;
-      };
-    JS
-  }
-}
-
 resource "aws_lambda_function" "api" {
   function_name    = "${local.common_name}-api"
   role             = aws_iam_role.lambda.arn
   runtime          = "nodejs22.x"
   handler          = "index.handler"
-  filename         = data.archive_file.lambda.output_path
-  source_code_hash = data.archive_file.lambda.output_base64sha256
+  filename         = "${path.module}/zayvi-api-bootstrap.zip"
+  source_code_hash = filebase64sha256("${path.module}/zayvi-api-bootstrap.zip")
   timeout          = var.lambda_timeout_seconds
   memory_size      = var.lambda_memory_mb
   publish          = false
@@ -401,7 +352,6 @@ resource "aws_lambda_function" "api" {
       DB_NAME      = "zayvi"
       DB_USER      = local.database_username
       DB_AUTH_MODE = "iam"
-      AWS_REGION   = var.aws_region
     }
   }
 
@@ -443,9 +393,10 @@ resource "aws_apigatewayv2_integration" "lambda" {
 }
 
 resource "aws_apigatewayv2_route" "default" {
-  api_id    = aws_apigatewayv2_api.http.id
-  route_key = "$default"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "$default"
+  authorization_type = "AWS_IAM"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_stage" "default" {

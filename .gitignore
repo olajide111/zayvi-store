@@ -54,3 +54,15 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+/public/uploads/
+
+# Zayvi AWS Preview generated build artifacts
+**/node_modules/
+**/dist/
+infra/db-bootstrap/package/
+infra/terraform/zayvi-db-bootstrap.zip
+infra/terraform/zayvi-api-bootstrap-test.zip
+infra/terraform/zayvi-test.zip
+infra/terraform/main.tf.backup*
+infra/terraform/main.tf.before-*
+infra/terraform/lambda-package/
