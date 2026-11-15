@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import {
   decideMarketPublication,
 } from "../lib/market-publication-policy";
@@ -12,6 +13,10 @@ import {
   TenantAccessError,
   type TenantAccessDependencies,
 } from "../lib/tenant-access";
+import {
+  parseKredalSignatureHeader,
+  verifyKredalWebhookSignature,
+} from "../lib/kredal-signature";
 
 const basePublication = {
   productId: "product-1",
@@ -185,5 +190,71 @@ test("revoked membership inside transaction is denied", async () => {
     }),
     (error: unknown) => error instanceof TenantAccessError &&
       error.code === "TENANT_ACCESS_DENIED",
+  );
+});
+
+
+test("Kredal webhook signature accepts a valid fresh event", () => {
+  const secret = "test_kredal_webhook_secret";
+  const timestamp = 1794781800;
+  const rawBody = JSON.stringify({
+    id: "evt_123",
+    type: "payment.paid",
+    data: { reference: "ZV-20261115-ABC123" },
+  });
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(String(timestamp) + "." + rawBody, "utf8")
+    .digest("hex");
+
+  assert.equal(
+    verifyKredalWebhookSignature({
+      rawBody,
+      signatureHeader: `t=${timestamp},v1=${signature}`,
+      secret,
+      nowSeconds: timestamp + 30,
+    }),
+    true,
+  );
+});
+
+test("Kredal webhook signature rejects stale, malformed and tampered events", () => {
+  const secret = "test_kredal_webhook_secret";
+  const timestamp = 1794781800;
+  const rawBody = '{"id":"evt_123","type":"payment.paid"}';
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(String(timestamp) + "." + rawBody, "utf8")
+    .digest("hex");
+
+  assert.equal(
+    verifyKredalWebhookSignature({
+      rawBody,
+      signatureHeader: `t=${timestamp},v1=${signature}`,
+      secret,
+      nowSeconds: timestamp + 301,
+    }),
+    false,
+  );
+
+  assert.equal(
+    verifyKredalWebhookSignature({
+      rawBody: rawBody + " ",
+      signatureHeader: `t=${timestamp},v1=${signature}`,
+      secret,
+      nowSeconds: timestamp,
+    }),
+    false,
+  );
+
+  assert.equal(parseKredalSignatureHeader("invalid"), null);
+  assert.equal(
+    verifyKredalWebhookSignature({
+      rawBody,
+      signatureHeader: `t=${timestamp},v1=abcd`,
+      secret,
+      nowSeconds: timestamp,
+    }),
+    false,
   );
 });
