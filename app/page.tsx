@@ -274,19 +274,49 @@ export default function Home() {
   const filtered =
     cat === "All" ? products : products.filter((p) => p.category === cat);
 
-  const handlePayPal = async () => {
-    try {
-      const res = await fetch("/api/paypal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart.map((i) => ({ id: i.id, qty: i.qty })) }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else showToast("PayPal checkout unavailable");
-    } catch {
-      showToast("Checkout failed — try again");
+  const createPreviewDraftOrder = async (details: {
+    customerName: string;
+    customerEmail: string;
+    phone?: string;
+  }) => {
+    if (!details.customerName.trim() || !details.customerEmail.trim()) {
+      throw new Error("Name and email are required.");
     }
+
+    if (pricingState !== "verified") {
+      throw new Error("Cart prices must be verified before saving an order.");
+    }
+
+    const response = await fetch("/api/storefront/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...details,
+        items: cart.map((item) => ({
+          id: item.id,
+          qty: item.qty,
+          selectedColor: item.selectedColor,
+        })),
+      }),
+    });
+
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload?.error || "Unable to create Preview draft order.");
+    }
+
+    const orderNumber = String(payload?.order?.orderNumber || "");
+
+    if (!orderNumber) {
+      throw new Error("Draft order was created without an order number.");
+    }
+
+    setCart([]);
+    window.localStorage.removeItem(CART_STORAGE_KEY);
+    showToast(`Draft order ${orderNumber} created`);
+
+    return { orderNumber };
   };
 
   return (
@@ -375,7 +405,7 @@ export default function Home() {
         onClose={() => setCartOpen(false)}
         onQty={updateQty}
         onRemove={removeFromCart}
-        onCheckout={handlePayPal}
+        onCreateDraftOrder={createPreviewDraftOrder}
         verifiedSubtotal={verifiedSubtotal}
         pricingState={pricingState}
       />
