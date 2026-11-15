@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { s3BucketName, s3Client } from "@/lib/s3";
+import { getS3Storage } from "@/lib/s3";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { client: s3Client, bucketName: s3BucketName } = getS3Storage();
     const key = `products/${randomUUID()}.${extension}`;
     const body = Buffer.from(await file.arrayBuffer());
 
@@ -89,8 +90,8 @@ export async function POST(request: NextRequest) {
       statusCode,
       requestId: awsError.$metadata?.requestId,
       extendedRequestId: awsError.$metadata?.extendedRequestId,
-      bucket: s3BucketName,
-      region: process.env.AWS_REGION,
+      bucket: process.env.S3_BUCKET_NAME || null,
+      region: process.env.AWS_REGION || null,
     });
 
     return NextResponse.json(
