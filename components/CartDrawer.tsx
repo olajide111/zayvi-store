@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 
 const STORE_COLOR = "#16a34a";
 
@@ -19,7 +20,11 @@ type Props = {
   onClose: () => void;
   onQty: (id: string, color: string | undefined, d: number) => void;
   onRemove: (id: string, color: string | undefined) => void;
-  onCheckout: () => void; // PayPal
+  onCreateDraftOrder: (details: {
+    customerName: string;
+    customerEmail: string;
+    phone?: string;
+  }) => Promise<{ orderNumber: string }>;
   verifiedSubtotal: number | null;
   pricingState: "idle" | "checking" | "verified" | "error";
 };
@@ -30,10 +35,15 @@ export default function CartDrawer({
   onClose,
   onQty,
   onRemove,
-  onCheckout,
+  onCreateDraftOrder,
   verifiedSubtotal,
   pricingState,
 }: Props) {
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [draftMessage, setDraftMessage] = useState("");
 
   const browserSubtotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const sub = verifiedSubtotal ?? browserSubtotal;
@@ -156,8 +166,77 @@ export default function CartDrawer({
                     ? "Price verification temporarily unavailable"
                     : "Preview cart"}
             </div>
-            <p style={{ fontSize: 13, color: "#777", lineHeight: 1.6, textAlign: "center" }}>
-              Checkout is disabled while order, fulfilment and payment controls are being completed.
+            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+              <input
+                value={customerName}
+                onChange={(event) => setCustomerName(event.target.value)}
+                placeholder="Your name"
+                autoComplete="name"
+                style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "11px 12px", fontSize: 13 }}
+              />
+              <input
+                value={customerEmail}
+                onChange={(event) => setCustomerEmail(event.target.value)}
+                placeholder="Email address"
+                type="email"
+                autoComplete="email"
+                style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "11px 12px", fontSize: 13 }}
+              />
+              <input
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="Phone (optional)"
+                autoComplete="tel"
+                style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "11px 12px", fontSize: 13 }}
+              />
+              <button
+                type="button"
+                disabled={draftState === "saving" || pricingState !== "verified"}
+                onClick={async () => {
+                  setDraftMessage("");
+                  setDraftState("saving");
+                  try {
+                    const result = await onCreateDraftOrder({
+                      customerName,
+                      customerEmail,
+                      phone: phone || undefined,
+                    });
+                    setDraftState("saved");
+                    setDraftMessage(`Draft order ${result.orderNumber} created.`);
+                  } catch (error) {
+                    setDraftState("error");
+                    setDraftMessage(error instanceof Error ? error.message : "Unable to create draft order.");
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  background: pricingState === "verified" ? "#17251e" : "#d8d8d3",
+                  color: "#fff",
+                  cursor: draftState === "saving" || pricingState !== "verified" ? "not-allowed" : "pointer",
+                }}
+              >
+                {draftState === "saving" ? "Saving draft order..." : "Save Preview draft order"}
+              </button>
+              {draftMessage && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    textAlign: "center",
+                    color: draftState === "saved" ? "#15803d" : "#b45309",
+                  }}
+                >
+                  {draftMessage}
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: 12, color: "#777", lineHeight: 1.6, textAlign: "center", marginTop: 12 }}>
+              This only saves an unpaid Preview draft. No payment is taken and no fulfilment begins.
             </p>
           </div>
         )}
