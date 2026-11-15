@@ -9,6 +9,7 @@ import type {
 } from "@/lib/storefront-products";
 
 const STORE_COLOR = "#16a34a";
+const CART_STORAGE_KEY = "zayvi-cart-v2";
 
 export default function ProductPage() {
   const params = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [colorIdx, setColorIdx] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(0);
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +59,45 @@ export default function ProductPage() {
       cancelled = true;
     };
   }, [id]);
+
+  const addToPreviewCart = () => {
+    if (!product) return;
+
+    try {
+      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) : [];
+      const cart = Array.isArray(existing) ? existing : [];
+      const selectedColor = product.colors[colorIdx]?.name;
+      const match = cart.find(
+        (item: any) =>
+          item?.id === product.id && item?.selectedColor === selectedColor
+      );
+
+      if (match) {
+        match.qty = Math.min(20, Number(match.qty || 0) + qty);
+        match.price = product.price;
+        match.name = product.name;
+        match.image = product.image;
+        match.emoji = product.emoji;
+      } else {
+        cart.push({
+          id: product.id,
+          image: product.image,
+          name: product.name,
+          emoji: product.emoji,
+          price: product.price,
+          qty,
+          selectedColor,
+        });
+      }
+
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+      setAdded(true);
+      window.setTimeout(() => setAdded(false), 1800);
+    } catch {
+      setAdded(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -167,21 +208,20 @@ export default function ProductPage() {
               <button onClick={() => setQty(qty + 1)} style={{ width: 40, height: 44, border: "none", background: "#fafafa", cursor: "pointer", fontSize: 18 }}>+</button>
             </div>
             <button
-              disabled
-              aria-disabled="true"
+              onClick={addToPreviewCart}
               style={{
                 flex: 1,
-                background: "#e8e7e2",
-                color: "#777",
+                background: "#17251e",
+                color: "#fff",
                 border: "none",
                 borderRadius: 12,
                 padding: "14px 24px",
                 fontSize: 15,
                 fontWeight: 700,
-                cursor: "not-allowed",
+                cursor: "pointer",
               }}
             >
-              Coming soon
+              {added ? "Added to cart" : "Add to preview cart"}
             </button>
           </div>
 
