@@ -13,12 +13,21 @@ type CartRequestLine = {
 };
 
 export async function POST(request: NextRequest) {
-  let body: { items?: unknown };
+  let body: { items?: unknown; marketCode?: unknown };
 
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid cart request." }, { status: 400 });
+  }
+
+  const marketCode =
+    typeof body.marketCode === "string"
+      ? body.marketCode.trim().toUpperCase()
+      : "GB";
+
+  if (!["GB", "NG"].includes(marketCode)) {
+    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
   }
 
   if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
@@ -50,7 +59,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid cart line." }, { status: 400 });
   }
 
-  const result = await callZayviAwsApi("/products");
+  const result = await callZayviAwsApi(
+    "/products?market=" + encodeURIComponent(marketCode)
+  );
 
   if (!result.ok) {
     return NextResponse.json(
@@ -117,7 +128,7 @@ export async function POST(request: NextRequest) {
       qty: line.qty,
       selectedColor: line.selectedColor,
       selectedSize: line.selectedSize,
-      currency: product.currency || "GBP",
+      currency: product.currency || (marketCode === "NG" ? "NGN" : "GBP"),
       lineTotal: lineTotalPence / 100,
     });
   }
@@ -130,7 +141,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       source: "postgresql",
-      currency: "GBP",
+      marketCode,
+      currency: marketCode === "NG" ? "NGN" : "GBP",
       lines,
       subtotal: subtotalPence / 100,
       purchasingEnabled: false,

@@ -31,6 +31,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Validate AWS Lambda syntax
+        run: node --check infra/lambda/index.js
+
       - name: Build Next.js application
         run: npm run build
         env:
