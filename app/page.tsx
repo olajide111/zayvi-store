@@ -14,6 +14,7 @@ import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
 const STORE_COLOR = "#171714";
+const CART_STORAGE_KEY = "zayvi-cart-v2";
 
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
@@ -78,6 +79,9 @@ export default function Home() {
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
+  const [verifiedSubtotal, setVerifiedSubtotal] = useState<number | null>(null);
+  const [pricingState, setPricingState] = useState<"idle" | "checking" | "verified" | "error">("idle");
   const [cartOpen, setCartOpen] = useState(false);
   const [qv, setQv] = useState<StorefrontProduct | null>(null);
   const [cat, setCat] = useState("All");
@@ -129,6 +133,107 @@ export default function Home() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const restored = parsed.filter(
+            (item): item is CartItem =>
+              item &&
+              typeof item.id === "string" &&
+              typeof item.name === "string" &&
+              typeof item.image === "string" &&
+              typeof item.emoji === "string" &&
+              Number.isFinite(Number(item.price)) &&
+              Number.isInteger(Number(item.qty)) &&
+              Number(item.qty) > 0
+          );
+          setCart(restored.map((item) => ({ ...item, qty: Number(item.qty), price: Number(item.price) })));
+        }
+      }
+    } catch {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    } finally {
+      setCartHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated) return;
+
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+
+    if (cart.length === 0) {
+      setVerifiedSubtotal(0);
+      setPricingState("idle");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function verifyCart() {
+      setPricingState("checking");
+
+      try {
+        const response = await fetch("/api/storefront/cart/price", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cart.map((item) => ({
+              id: item.id,
+              qty: item.qty,
+              selectedColor: item.selectedColor,
+            })),
+          }),
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error || "Unable to verify cart pricing.");
+        }
+
+        const nextCart: CartItem[] = Array.isArray(payload.lines)
+          ? payload.lines.map((line: any) => ({
+              id: String(line.id),
+              image: String(line.image || ""),
+              name: String(line.name || ""),
+              emoji: String(line.emoji || ""),
+              price: Number(line.unitPrice),
+              qty: Number(line.qty),
+              selectedColor:
+                typeof line.selectedColor === "string"
+                  ? line.selectedColor
+                  : undefined,
+            }))
+          : [];
+
+        if (!cancelled) {
+          setVerifiedSubtotal(Number(payload.subtotal || 0));
+          setPricingState("verified");
+          setCart((current) =>
+            JSON.stringify(current) === JSON.stringify(nextCart)
+              ? current
+              : nextCart
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setVerifiedSubtotal(null);
+          setPricingState("error");
+        }
+      }
+    }
+
+    verifyCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cart, cartHydrated]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -271,6 +376,8 @@ export default function Home() {
         onQty={updateQty}
         onRemove={removeFromCart}
         onCheckout={handlePayPal}
+        verifiedSubtotal={verifiedSubtotal}
+        pricingState={pricingState}
       />
 
       <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />
