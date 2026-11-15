@@ -8,6 +8,7 @@ export type StorefrontProduct = {
   image: string;
   price: number;
   currency: string;
+  marketCode?: string;
   category: string;
   emoji: string;
   desc: string;
