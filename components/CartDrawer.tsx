@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { PRODUCTS } from "@/lib/products";
-import SquareCardForm from "@/components/SquareCardForm";
 
 export type CartItem = {
   id: number;
@@ -20,11 +18,9 @@ type Props = {
   onQty: (id: number, color: string | undefined, d: number) => void;
   onRemove: (id: number, color: string | undefined) => void;
   onCheckout: () => void;
-  checkoutLoading?: boolean;
 };
 
-export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout, checkoutLoading = false }: Props) {
-  const [squareError, setSquareError] = useState<string | null>(null);
+export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout }: Props) {
   const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -111,58 +107,25 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
                     )}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                       <div style={{ display: "flex", border: "1px solid #e5e5e5", borderRadius: 6 }}>
-                        <button aria-label={`Decrease ${item.name} quantity`} onClick={() => onQty(item.id, item.selectedColor, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
-                        <span style={{ width: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600 }}>{item.qty}</span>
-                        <button aria-label={`Increase ${item.name} quantity`} onClick={() => onQty(item.id, item.selectedColor, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>£{(item.price * item.qty).toFixed(2)}</div>
-                        <button onClick={() => onRemove(item.id, item.selectedColor)} style={{ fontSize: 11, color: "#777", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {cart.length > 0 && (
-          <div style={{ padding: 24, borderTop: "1px solid #f0f0f0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16, fontWeight: 800 }}>
-              <span>Subtotal</span>
-              <span>£{sub.toFixed(2)}</span>
-            </div>
-            <button
+                        <button
               onClick={onCheckout}
-              disabled={checkoutLoading}
-              aria-busy={checkoutLoading}
               style={{
                 width: "100%",
-                background: checkoutLoading ? "#6b91aa" : "#0070ba",
+                background: "#111",
                 color: "#fff",
                 border: "none",
                 borderRadius: 12,
                 padding: "14px",
                 fontSize: 14,
                 fontWeight: 700,
-                cursor: checkoutLoading ? "wait" : "pointer",
+                cursor: "pointer",
               }}
             >
-              {checkoutLoading ? "Connecting to PayPal…" : "Continue with PayPal"}
+              Secure checkout
             </button>
             <p style={{ fontSize: 11, color: "#777", lineHeight: 1.5, marginTop: 10 }}>
-              You will be redirected to PayPal to review and approve your payment.
+              Enter delivery details, create your ZAYVI order, then choose an available payment method.
             </p>
-            {squareError && <p role="alert" style={{ fontSize: 12, color: "#b42318", marginTop: 12 }}>{squareError}</p>}
-            <SquareCardForm
-              amount={sub}
-              items={cart.map((item) => ({ id: item.id, qty: item.qty }))}
-              onSuccess={() => { setSquareError(null); onClose(); }}
-              onError={setSquareError}
-            />
           </div>
         )}
       </aside>
