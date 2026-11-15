@@ -26,9 +26,9 @@ export default function Success() {
     const endpoint = provider === "square" ? "/api/square/verify" : "/api/paypal/capture";
     const payload = provider === "square"
       ? { paymentId: squarePaymentId }
-      : { orderId: paypalOrderId };
+      : { orderId: paypalOrderId, zayviOrderId };
 
-    if ((provider === "square" && !squarePaymentId) || (provider !== "square" && !paypalOrderId)) {
+    if ((provider === "square" && !squarePaymentId) || (provider !== "square" && (!paypalOrderId || !zayviOrderId))) {
       setPayment({ success: false, error: "We could not find a payment reference. No payment confirmation is available." });
       setState("failed");
       return;
@@ -77,7 +77,7 @@ export default function Success() {
         </p>
         {confirmed && payment && (
           <div style={{ background: "#f7f7f5", borderRadius: 12, padding: 16, marginBottom: 24, textAlign: "left", fontSize: 13, color: "#555", lineHeight: 1.8 }}>
-            {payment.orderId && <div><strong>PayPal order:</strong> {payment.orderId}</div>}
+            {payment.zayviOrderNumber && <div><strong>ZAYVI order:</strong> {payment.zayviOrderNumber}</div>}\n            {payment.orderId && <div><strong>PayPal order:</strong> {payment.orderId}</div>}
             {payment.paymentId && <div><strong>Square payment:</strong> {payment.paymentId}</div>}
             <div><strong>Payment:</strong> £{payment.amount}</div>
             {payment.captureId && <div><strong>Capture reference:</strong> {payment.captureId}</div>}
