@@ -57,7 +57,7 @@ const navigation = [
   {
     group: "STOREFRONT",
     items: [
-      ["Themes & Layouts", "▧", "#"],
+      ["Themes & Layouts", "▧", "/admin/themes"],
       ["Page Builder", "▤", "#"],
       ["Navigation & Menus", "☷", "#"],
       ["Banners & Media", "▧", "/admin"],
@@ -67,7 +67,7 @@ const navigation = [
   {
     group: "FINANCE",
     items: [
-      ["Payments", "◉", "#"],
+      ["Payments", "◉", "/admin/payments"],
       ["Payouts & Settlements", "⇄", "#"],
       ["Financial Reports", "▥", "#"],
     ],
@@ -77,7 +77,7 @@ const navigation = [
     items: [
       ["Marketing", "↗", "#"],
       ["Promotions & Discounts", "%", "#"],
-      ["Shipping & Returns", "⇢", "#"],
+      ["Shipping & Returns", "⇢", "/admin/shipping"],
     ],
   },
   {
@@ -94,7 +94,7 @@ const navigation = [
       ["Markets & Currencies", "◎", "/admin/markets"],
       ["Integrations Hub", "⌘", "#"],
       ["Team & Permissions", "♧", "#"],
-      ["Settings", "⚙", "#"],
+      ["Settings", "⚙", "/admin/settings"],
     ],
   },
 ];
