@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { Pool } = require("pg");
 const { Signer } = require("@aws-sdk/rds-signer");
 
@@ -550,6 +551,378 @@ async function updateProduct(productId, input) {
 }
 
 
+
+async function listOrders() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            o.id,
+            o.order_number,
+            o.customer_name,
+            o.customer_email,
+            o.total,
+            o.currency_code,
+            o.payment_status,
+            o.fulfilment_status,
+            o.order_status,
+            o.created_at
+          FROM commerce_orders o
+          WHERE o.tenant_id = $1
+          ORDER BY o.created_at DESC
+          LIMIT 250
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        orderNumber: row.order_number,
+        customerName: row.customer_name,
+        customerEmail: row.customer_email,
+        total: Number(row.total),
+        currency: row.currency_code,
+        paymentStatus: row.payment_status,
+        fulfilmentStatus: row.fulfilment_status,
+        orderStatus: row.order_status,
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function listCustomers() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            c.id,
+            c.display_name,
+            c.email,
+            c.phone,
+            c.status,
+            c.first_order_at,
+            c.last_order_at,
+            c.created_at,
+            COUNT(o.id)::int AS order_count,
+            COALESCE(SUM(o.total), 0)::numeric AS lifetime_value
+          FROM commerce_customers c
+          LEFT JOIN commerce_orders o
+            ON o.tenant_id = c.tenant_id
+           AND o.customer_id = c.id
+          WHERE c.tenant_id = $1
+          GROUP BY
+            c.id,
+            c.display_name,
+            c.email,
+            c.phone,
+            c.status,
+            c.first_order_at,
+            c.last_order_at,
+            c.created_at
+          ORDER BY c.updated_at DESC
+          LIMIT 250
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        name: row.display_name,
+        email: row.email,
+        phone: row.phone,
+        status: row.status,
+        orderCount: Number(row.order_count || 0),
+        lifetimeValue: Number(row.lifetime_value || 0),
+        firstOrderAt: row.first_order_at,
+        lastOrderAt: row.last_order_at,
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+function createOrderNumber() {
+  const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return `ZV-${stamp}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+async function createOrder(input) {
+  const customerName = String(input?.customerName || "").trim();
+  const customerEmail = String(input?.customerEmail || "").trim().toLowerCase();
+  const phone = input?.phone ? String(input.phone).trim() : null;
+  const items = Array.isArray(input?.items) ? input.items : [];
+
+  if (!customerName || !customerEmail || !customerEmail.includes("@")) {
+    const error = new Error("Customer name and a valid email are required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (items.length === 0 || items.length > 50) {
+    const error = new Error("Order must contain between 1 and 50 items.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedItems = items.map((item) => {
+    const id = String(item?.id || "").trim();
+    const quantity = Number(item?.qty);
+    const selectedColor =
+      item?.selectedColor === undefined
+        ? undefined
+        : String(item.selectedColor || "").trim();
+
+    if (!/^[0-9a-f-]{36}$/i.test(id)) {
+      const error = new Error("Invalid product identifier.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
+      const error = new Error("Each item quantity must be between 1 and 20.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return { id, quantity, selectedColor };
+  });
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const storeResult = await tx.query(
+        "SELECT id FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active' LIMIT 1",
+        [tenantId]
+      );
+
+      if (storeResult.rowCount === 0) {
+        throw new Error("Active main store not found.");
+      }
+
+      const storeId = storeResult.rows[0].id;
+      const productIds = normalizedItems.map((item) => item.id);
+
+      const productResult = await tx.query(
+        `
+          SELECT
+            cp.id AS product_id,
+            cp.name,
+            tcp.id AS tenant_product_id,
+            tcp.merchant_sku,
+            tcp.status AS tenant_status,
+            cp.lifecycle_status,
+            tpm.customer_price,
+            tpm.currency_code,
+            tpm.availability_status
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          JOIN tenant_product_markets tpm
+            ON tpm.tenant_id = tcp.tenant_id
+           AND tpm.tenant_catalogue_product_id = tcp.id
+           AND tpm.market_code = 'GB'
+          WHERE tcp.tenant_id = $1
+            AND cp.id = ANY($2::uuid[])
+        `,
+        [tenantId, productIds]
+      );
+
+      const productMap = new Map(
+        productResult.rows.map((row) => [row.product_id, row])
+      );
+
+      const pricedLines = normalizedItems.map((item) => {
+        const row = productMap.get(item.id);
+
+        if (
+          !row ||
+          row.tenant_status !== "active" ||
+          row.lifecycle_status !== "active" ||
+          row.availability_status !== "available" ||
+          row.customer_price === null
+        ) {
+          const error = new Error("A product in the order is no longer available.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        const unitPrice = Number(row.customer_price);
+
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          const error = new Error("A product has invalid pricing.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        return {
+          ...item,
+          product: row,
+          unitPrice,
+          lineTotal: Math.round(unitPrice * 100) * item.quantity / 100
+        };
+      });
+
+      const currencySet = new Set(
+        pricedLines.map((line) => line.product.currency_code || "GBP")
+      );
+
+      if (currencySet.size !== 1 || !currencySet.has("GBP")) {
+        const error = new Error("Preview orders currently support GBP only.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const subtotal =
+        pricedLines.reduce(
+          (sum, line) => sum + Math.round(line.unitPrice * 100) * line.quantity,
+          0
+        ) / 100;
+
+      const customer = await tx.query(
+        `
+          INSERT INTO commerce_customers (
+            tenant_id,
+            store_id,
+            email,
+            display_name,
+            phone,
+            first_order_at,
+            last_order_at
+          )
+          VALUES ($1, $2, $3, $4, $5, now(), now())
+          ON CONFLICT (tenant_id, store_id, email) DO UPDATE
+          SET
+            display_name = EXCLUDED.display_name,
+            phone = COALESCE(EXCLUDED.phone, commerce_customers.phone),
+            first_order_at = COALESCE(commerce_customers.first_order_at, now()),
+            last_order_at = now(),
+            updated_at = now()
+          RETURNING id
+        `,
+        [tenantId, storeId, customerEmail, customerName, phone]
+      );
+
+      let order;
+      let attempts = 0;
+
+      while (!order && attempts < 3) {
+        attempts += 1;
+        try {
+          const orderResult = await tx.query(
+            `
+              INSERT INTO commerce_orders (
+                tenant_id,
+                store_id,
+                customer_id,
+                order_number,
+                market_code,
+                currency_code,
+                order_status,
+                payment_status,
+                fulfilment_status,
+                customer_name,
+                customer_email,
+                subtotal,
+                shipping_total,
+                tax_total,
+                total,
+                source
+              )
+              VALUES (
+                $1, $2, $3, $4, 'GB', 'GBP',
+                'draft', 'unpaid', 'unfulfilled',
+                $5, $6, $7, 0, 0, $7, 'preview'
+              )
+              RETURNING *
+            `,
+            [
+              tenantId,
+              storeId,
+              customer.rows[0].id,
+              createOrderNumber(),
+              customerName,
+              customerEmail,
+              subtotal
+            ]
+          );
+          order = orderResult.rows[0];
+        } catch (error) {
+          if (error?.code !== "23505" || attempts >= 3) throw error;
+        }
+      }
+
+      for (const line of pricedLines) {
+        await tx.query(
+          `
+            INSERT INTO commerce_order_items (
+              tenant_id,
+              order_id,
+              tenant_catalogue_product_id,
+              product_id,
+              product_name,
+              merchant_sku,
+              quantity,
+              unit_price,
+              line_total,
+              currency_code,
+              selected_options
+            )
+            VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, $8, $9, 'GBP', $10::jsonb
+            )
+          `,
+          [
+            tenantId,
+            order.id,
+            line.product.tenant_product_id,
+            line.product.product_id,
+            line.product.name,
+            line.product.merchant_sku,
+            line.quantity,
+            line.unitPrice,
+            line.lineTotal,
+            JSON.stringify(
+              line.selectedColor
+                ? { color: line.selectedColor }
+                : {}
+            )
+          ]
+        );
+      }
+
+      return {
+        id: order.id,
+        orderNumber: order.order_number,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+        total: Number(order.total),
+        currency: order.currency_code,
+        orderStatus: order.order_status,
+        paymentStatus: order.payment_status,
+        fulfilmentStatus: order.fulfilment_status,
+        createdAt: order.created_at,
+        purchasingEnabled: false
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function listInventory() {
   const client = await getPool().connect();
 
@@ -685,13 +1058,22 @@ exports.handler = async (event, context) => {
   }
 
   if (method === "GET" && routePath.endsWith("/customers")) {
-    return response(200, {
-      source: "preview_checkout_disabled",
-      total: 0,
-      customers: [],
-      message:
-        "Customer records will be created from real storefront orders once checkout is enabled."
-    });
+    try {
+      const customers = await listCustomers();
+      return response(200, {
+        source: "postgresql",
+        total: customers.length,
+        customers
+      });
+    } catch (error) {
+      console.error("Customer list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "customers_unavailable"
+      });
+    }
   }
 
   if (method === "GET" && routePath.endsWith("/suppliers")) {
@@ -724,14 +1106,45 @@ exports.handler = async (event, context) => {
   }
 
   if (method === "GET" && routePath.endsWith("/orders")) {
-    return response(200, {
-      source: "preview_checkout_disabled",
-      total: 0,
-      orders: [],
-      purchasingEnabled: false,
-      message:
-        "Checkout is disabled in Preview, so no customer orders can be created yet."
-    });
+    try {
+      const orders = await listOrders();
+      return response(200, {
+        source: "postgresql",
+        total: orders.length,
+        orders,
+        purchasingEnabled: false
+      });
+    } catch (error) {
+      console.error("Order list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "orders_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/orders")) {
+    try {
+      const order = await createOrder(parseBody(event));
+      return response(201, {
+        order,
+        purchasingEnabled: false
+      });
+    } catch (error) {
+      console.error("Order create failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "order_create_failed"
+      });
+    }
   }
 
   if (method === "GET" && routePath.endsWith("/products")) {
