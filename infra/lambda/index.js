@@ -1526,6 +1526,309 @@ async function listInventory() {
   }
 }
 
+async function getKredalConnection() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            s.id AS store_id,
+            s.name AS store_name,
+            c.id,
+            c.external_connection_id,
+            c.status,
+            c.approved_at,
+            c.revoked_at,
+            c.metadata,
+            c.created_at,
+            c.updated_at
+          FROM stores s
+          LEFT JOIN commerce_payment_connections c
+            ON c.tenant_id = s.tenant_id
+           AND c.store_id = s.id
+           AND c.platform = 'kredal'
+          WHERE s.tenant_id = $1
+            AND s.slug = 'main'
+            AND s.status = 'active'
+          LIMIT 1
+        `,
+        [tenantId]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Active main store not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const row = result.rows[0];
+
+      return {
+        storeId: row.store_id,
+        storeName: row.store_name,
+        connection: row.id
+          ? {
+              id: row.id,
+              externalConnectionId: row.external_connection_id,
+              status: row.status,
+              approvedAt: row.approved_at,
+              revokedAt: row.revoked_at,
+              metadata: row.metadata || {},
+              createdAt: row.created_at,
+              updatedAt: row.updated_at
+            }
+          : null
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function saveKredalConnection(input) {
+  const externalConnectionId = String(
+    input?.externalConnectionId || ""
+  ).trim();
+  const status = String(input?.status || "pending").trim();
+  const metadata =
+    input?.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
+      ? input.metadata
+      : {};
+
+  if (!/^kc_[A-Za-z0-9._:-]{1,180}$/.test(externalConnectionId)) {
+    const error = new Error("A valid Kredal connection id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["pending", "active", "revoked"].includes(status)) {
+    const error = new Error("Invalid Kredal connection status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const store = await tx.query(
+        `
+          SELECT id
+          FROM stores
+          WHERE tenant_id = $1
+            AND slug = 'main'
+            AND status = 'active'
+          LIMIT 1
+        `,
+        [tenantId]
+      );
+
+      if (store.rowCount === 0) {
+        const error = new Error("Active main store not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          INSERT INTO commerce_payment_connections (
+            tenant_id,
+            store_id,
+            platform,
+            external_connection_id,
+            status,
+            approved_at,
+            revoked_at,
+            metadata
+          )
+          VALUES (
+            $1,
+            $2,
+            'kredal',
+            $3,
+            $4,
+            CASE WHEN $4 = 'active' THEN now() ELSE NULL END,
+            CASE WHEN $4 = 'revoked' THEN now() ELSE NULL END,
+            $5::jsonb
+          )
+          ON CONFLICT (tenant_id, store_id, platform)
+          DO UPDATE SET
+            external_connection_id = EXCLUDED.external_connection_id,
+            status = EXCLUDED.status,
+            approved_at =
+              CASE
+                WHEN EXCLUDED.status = 'active'
+                  THEN COALESCE(commerce_payment_connections.approved_at, now())
+                ELSE commerce_payment_connections.approved_at
+              END,
+            revoked_at =
+              CASE
+                WHEN EXCLUDED.status = 'revoked' THEN now()
+                WHEN EXCLUDED.status IN ('pending','active') THEN NULL
+                ELSE commerce_payment_connections.revoked_at
+              END,
+            metadata = EXCLUDED.metadata,
+            updated_at = now()
+        `,
+        [
+          tenantId,
+          store.rows[0].id,
+          externalConnectionId,
+          status,
+          JSON.stringify(metadata)
+        ]
+      );
+
+      return await getKredalConnection();
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function storeKredalEvent(input) {
+  const externalEventId = String(input?.eventId || "").trim();
+  const eventType = String(input?.eventType || "").trim();
+  const payload =
+    input?.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : null;
+
+  const allowedEvents = new Set([
+    "payment.paid",
+    "payment.held",
+    "payment.released",
+    "payment.refunded",
+    "payment.cancelled",
+    "payment.failed",
+    "payment.arrival_chosen",
+    "settlement.updated",
+    "transfer.received",
+    "connection.approved",
+    "connection.revoked"
+  ]);
+
+  if (!/^[A-Za-z0-9._:-]{1,180}$/.test(externalEventId)) {
+    const error = new Error("A valid Kredal event id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!allowedEvents.has(eventType) || !payload) {
+    const error = new Error("Unsupported or malformed Kredal event.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const inserted = await tx.query(
+        `
+          INSERT INTO commerce_payment_events (
+            tenant_id,
+            platform,
+            external_event_id,
+            event_type,
+            payload,
+            processing_status,
+            processing_note
+          )
+          VALUES (
+            $1,
+            'kredal',
+            $2,
+            $3,
+            $4::jsonb,
+            'stored',
+            'Signed webhook stored. Awaiting verified provider lookup before money-state mutation.'
+          )
+          ON CONFLICT (tenant_id, platform, external_event_id)
+          DO NOTHING
+          RETURNING id, received_at
+        `,
+        [
+          tenantId,
+          externalEventId,
+          eventType,
+          JSON.stringify(payload)
+        ]
+      );
+
+      if (inserted.rowCount > 0) {
+        return {
+          eventId: externalEventId,
+          eventType,
+          duplicate: false,
+          storedAt: inserted.rows[0].received_at
+        };
+      }
+
+      const existing = await tx.query(
+        `
+          SELECT event_type, received_at, processing_status
+          FROM commerce_payment_events
+          WHERE tenant_id = $1
+            AND platform = 'kredal'
+            AND external_event_id = $2
+          LIMIT 1
+        `,
+        [tenantId, externalEventId]
+      );
+
+      return {
+        eventId: externalEventId,
+        eventType: existing.rows[0]?.event_type || eventType,
+        duplicate: true,
+        storedAt: existing.rows[0]?.received_at || null,
+        processingStatus: existing.rows[0]?.processing_status || "stored"
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function listKredalEvents() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            external_event_id,
+            event_type,
+            processing_status,
+            processing_note,
+            received_at,
+            processed_at
+          FROM commerce_payment_events
+          WHERE tenant_id = $1
+            AND platform = 'kredal'
+          ORDER BY received_at DESC
+          LIMIT 100
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        eventId: row.external_event_id,
+        eventType: row.event_type,
+        processingStatus: row.processing_status,
+        processingNote: row.processing_note,
+        receivedAt: row.received_at,
+        processedAt: row.processed_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
 async function listMarkets() {
   const result = await getPool().query(
     `
@@ -1637,6 +1940,88 @@ exports.handler = async (event, context) => {
       message:
         "Supplier management is ready for configuration; no supplier records are currently active."
     });
+  }
+
+  if (method === "GET" && routePath.endsWith("/payment-connections/kredal")) {
+    try {
+      const connection = await getKredalConnection();
+      return response(200, {
+        source: "postgresql",
+        ...connection
+      });
+    } catch (error) {
+      console.error("Kredal connection read failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "kredal_connection_unavailable"
+      });
+    }
+  }
+
+  if (method === "PUT" && routePath.endsWith("/payment-connections/kredal")) {
+    try {
+      const connection = await saveKredalConnection(parseBody(event));
+      return response(200, {
+        source: "postgresql",
+        ...connection
+      });
+    } catch (error) {
+      console.error("Kredal connection write failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "kredal_connection_update_failed"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/payment-events/kredal")) {
+    try {
+      const eventResult = await storeKredalEvent(parseBody(event));
+      return response(200, {
+        source: "postgresql",
+        ...eventResult
+      });
+    } catch (error) {
+      console.error("Kredal event storage failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "kredal_event_storage_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/payment-events/kredal")) {
+    try {
+      const events = await listKredalEvents();
+      return response(200, {
+        source: "postgresql",
+        total: events.length,
+        events
+      });
+    } catch (error) {
+      console.error("Kredal event list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "kredal_events_unavailable"
+      });
+    }
   }
 
   if (method === "GET" && routePath.endsWith("/markets")) {
