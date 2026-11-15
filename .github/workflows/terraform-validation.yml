@@ -37,6 +37,15 @@ jobs:
       - name: Check formatting
         run: terraform fmt -check -recursive
 
+      - name: Create validation-only Lambda package placeholders
+        run: |
+          # terraform validate evaluates filebase64sha256() even though no
+          # infrastructure is created. Deployment packaging is handled
+          # separately; these empty files exist only so static validation can
+          # evaluate the configuration in CI.
+          : > zayvi-api-bootstrap.zip
+          : > zayvi-db-bootstrap.zip
+
       - name: Initialise providers without a backend
         run: terraform init -backend=false -input=false
 
