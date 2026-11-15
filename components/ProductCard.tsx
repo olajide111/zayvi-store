@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Product } from "@/lib/products";
+import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
 
 const STORE_COLOR = "#16a34a";
 
 type Props = {
-  product: Product;
-  onView: (p: Product) => void;
-  onAdd: (p: Product, qty?: number, color?: string) => void;
+  product: StorefrontProduct;
+  onView: (p: StorefrontProduct) => void;
+  onAdd: (p: StorefrontProduct, qty?: number, color?: string, size?: string) => void;
 };
 
 export default function ProductCard({ product, onView, onAdd }: Props) {
@@ -43,7 +43,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
             }}
           />
         </Link>
-        {product.badge && (
+        {false && product.badge && (
           <span style={{ position: "absolute", top: 12, left: 12, background: "#111", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>
             {product.badge}
           </span>
@@ -77,16 +77,15 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
             {product.name}
           </div>
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-          <span style={{ color: "#f59e0b", fontSize: 12 }}>★★★★★</span>
-          <span style={{ fontSize: 12, color: "#999" }}>(24)</span>
-        </div>
+        <p style={{ fontSize: 12, color: "#777", marginBottom: 8 }}>Preview catalogue · Not yet available to purchase</p>
+        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>£{Number(product.price).toFixed(2)}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>£{product.price.toFixed(2)}</div>
+          <div style={{ fontSize: 12, color: "#777" }}>Preview GB price</div>
           <button
-            onClick={() => onAdd(product, 1, product.colors[0]?.name)}
+            title="Add this product to your Preview cart"
+            onClick={() => onAdd(product, 1, product.colors[0]?.name, product.sizes[0])}
             style={{
-              background: STORE_COLOR,
+              background: "#17251e",
               color: "#fff",
               border: "none",
               borderRadius: 8,

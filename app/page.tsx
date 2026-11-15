@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { PRODUCTS } from "@/lib/products";
+import type { StorefrontProduct, StorefrontProductsResponse } from "@/lib/storefront-products";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -13,7 +13,9 @@ import QuickView from "@/components/QuickView";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
-const STORE_COLOR = "#16a34a";
+const STORE_COLOR = "#171714";
+const CART_STORAGE_KEY = "zayvi-cart-v2";
+const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v1";
 
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
@@ -22,11 +24,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   returns: {
     title: "Returns Policy",
-    body: "30-day returns on unused items in original packaging.\n\nEmail hello@zayvi.store with your order number. Damaged items: send a photo within 7 days for replacement or refund.\n\nRefunds processed within 5 business days of receiving the return.",
+    body: "Our returns terms are being finalised and will be published before purchasing is enabled. Please check back for the policy that applies to your destination market.",
   },
   shipping: {
     title: "Shipping Information",
-    body: "FREE shipping on every order.\n\nUK: 5–10 business days\nEurope: 7–14 business days\nRest of world: 10–21 business days\n\nTracking link sent by email once dispatched.",
+    body: "Shipping availability, delivery estimates and charges will be confirmed for each destination market before checkout is enabled. No delivery estimate is currently being offered.",
   },
   tracking: {
     title: "Track Your Order",
@@ -38,11 +40,11 @@ const PAGES: Record<string, { title: string; body: string }> = {
   },
   faqs: {
     title: "FAQs",
-    body: "UK delivery usually takes 5–10 business days.\n\nYes — free shipping on every order.\n\n30-day returns on unused items. Payments are securely processed via PayPal or card.",
+    body: "The store is in preview while products, market availability, delivery terms and returns policies are being verified. Purchasing is not currently enabled.",
   },
   about: {
     title: "About ZAYVI",
-    body: "ZAYVI is focused on travel and daily essentials that earn their place — no clutter.\n\nFree shipping. 30-day returns. Straightforward.",
+    body: "Zayvi is developing a considered retail experience for travel, everyday carry and daily living. The catalogue shown here is a design preview, not a live offer for sale.",
   },
   affiliate: {
     title: "Affiliate Programme",
@@ -74,9 +76,15 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
 }
 
 export default function Home() {
+  const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(true);
+  const [catalogueError, setCatalogueError] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
+  const [verifiedSubtotal, setVerifiedSubtotal] = useState<number | null>(null);
+  const [pricingState, setPricingState] = useState<"idle" | "checking" | "verified" | "error">("idle");
   const [cartOpen, setCartOpen] = useState(false);
-  const [qv, setQv] = useState<(typeof PRODUCTS)[0] | null>(null);
+  const [qv, setQv] = useState<StorefrontProduct | null>(null);
   const [cat, setCat] = useState("All");
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -90,6 +98,149 @@ export default function Home() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/storefront/products", {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as StorefrontProductsResponse & {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to load the catalogue.");
+        }
+
+        if (!cancelled) {
+          setProducts(Array.isArray(payload.products) ? payload.products : []);
+          setCatalogueError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogueError(
+            error instanceof Error ? error.message : "Unable to load the catalogue."
+          );
+        }
+      } finally {
+        if (!cancelled) setCatalogueLoading(false);
+      }
+    }
+
+    loadProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const restored = parsed.filter(
+            (item): item is CartItem =>
+              item &&
+              typeof item.id === "string" &&
+              typeof item.name === "string" &&
+              typeof item.image === "string" &&
+              typeof item.emoji === "string" &&
+              Number.isFinite(Number(item.price)) &&
+              Number.isInteger(Number(item.qty)) &&
+              Number(item.qty) > 0
+          );
+          setCart(restored.map((item) => ({ ...item, qty: Number(item.qty), price: Number(item.price) })));
+        }
+      }
+    } catch {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    } finally {
+      setCartHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated) return;
+
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+
+    if (cart.length === 0) {
+      setVerifiedSubtotal(0);
+      setPricingState("idle");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function verifyCart() {
+      setPricingState("checking");
+
+      try {
+        const response = await fetch("/api/storefront/cart/price", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cart.map((item) => ({
+              id: item.id,
+              qty: item.qty,
+              selectedColor: item.selectedColor,
+              selectedSize: item.selectedSize,
+            })),
+          }),
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error || "Unable to verify cart pricing.");
+        }
+
+        const nextCart: CartItem[] = Array.isArray(payload.lines)
+          ? payload.lines.map((line: any) => ({
+              id: String(line.id),
+              image: String(line.image || ""),
+              name: String(line.name || ""),
+              emoji: String(line.emoji || ""),
+              price: Number(line.unitPrice),
+              qty: Number(line.qty),
+              selectedColor:
+                typeof line.selectedColor === "string"
+                  ? line.selectedColor
+                  : undefined,
+              selectedSize:
+                typeof line.selectedSize === "string"
+                  ? line.selectedSize
+                  : undefined,
+            }))
+          : [];
+
+        if (!cancelled) {
+          setVerifiedSubtotal(Number(payload.subtotal || 0));
+          setPricingState("verified");
+          setCart((current) =>
+            JSON.stringify(current) === JSON.stringify(nextCart)
+              ? current
+              : nextCart
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setVerifiedSubtotal(null);
+          setPricingState("error");
+        }
+      }
+    }
+
+    verifyCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cart, cartHydrated]);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
@@ -98,54 +249,128 @@ export default function Home() {
   const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: "smooth" });
   const scrollToBest = () => bestRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const addToCart = (product: (typeof PRODUCTS)[0], qty = 1, color?: string) => {
+  const addToCart = (product: StorefrontProduct, qty = 1, color?: string, size?: string) => {
     setCart((prev) => {
-      const ex = prev.find((i) => i.id === product.id && i.selectedColor === color);
+      const ex = prev.find((i) => i.id === product.id && i.selectedColor === color && i.selectedSize === size);
       if (ex)
         return prev.map((i) =>
-          i.id === product.id && i.selectedColor === color ? { ...i, qty: i.qty + qty } : i
+          i.id === product.id && i.selectedColor === color && i.selectedSize === size ? { ...i, qty: Math.min(20, i.qty + qty) } : i
         );
       return [
         ...prev,
-        { id: product.id, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color },
+        { id: product.id, image: product.image, name: product.name, emoji: product.emoji, price: product.price, qty: Math.min(20, qty), selectedColor: color, selectedSize: size },
       ];
     });
     showToast(`✓ ${product.name} added`);
     setCartOpen(true);
   };
 
-  const removeFromCart = (id: number, color: string | undefined) =>
-    setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === color)));
+  const removeFromCart = (id: string, color: string | undefined, size: string | undefined) =>
+    setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === color && i.selectedSize === size)));
 
-  const updateQty = (id: number, color: string | undefined, delta: number) =>
+  const updateQty = (id: string, color: string | undefined, size: string | undefined, delta: number) =>
     setCart((p) =>
       p.map((i) =>
-        i.id === id && i.selectedColor === color ? { ...i, qty: Math.max(1, i.qty + delta) } : i
+        i.id === id && i.selectedColor === color && i.selectedSize === size ? { ...i, qty: Math.min(20, Math.max(1, i.qty + delta)) } : i
       )
     );
 
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
-  const filtered = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
+  const categories = ["All", ...new Set(products.map((p) => p.category))];
+  const filtered =
+    cat === "All" ? products : products.filter((p) => p.category === cat);
 
-  const handlePayPal = async () => {
+  const createPreviewDraftOrder = async (details: {
+    customerName: string;
+    customerEmail: string;
+    phone?: string;
+  }) => {
+    const requestFingerprint = JSON.stringify({
+      customerName: details.customerName.trim(),
+      customerEmail: details.customerEmail.trim().toLowerCase(),
+      phone: details.phone?.trim() || null,
+      items: cart.map((item) => ({
+        id: item.id,
+        qty: item.qty,
+        selectedColor: item.selectedColor || null,
+        selectedSize: item.selectedSize || null,
+      })),
+    });
+
+    let idempotencyKey = "";
+
     try {
-      const res = await fetch("/api/paypal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart.map((i) => ({ id: i.id, qty: i.qty })) }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else showToast("PayPal checkout unavailable");
+      const saved = window.localStorage.getItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : null;
+
+      if (
+        parsed &&
+        parsed.fingerprint === requestFingerprint &&
+        typeof parsed.key === "string"
+      ) {
+        idempotencyKey = parsed.key;
+      }
     } catch {
-      showToast("Checkout failed — try again");
+      window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
     }
+
+    if (!idempotencyKey) {
+      idempotencyKey = crypto.randomUUID();
+      window.localStorage.setItem(
+        ORDER_IDEMPOTENCY_STORAGE_KEY,
+        JSON.stringify({
+          fingerprint: requestFingerprint,
+          key: idempotencyKey,
+        })
+      );
+    }
+    if (!details.customerName.trim() || !details.customerEmail.trim()) {
+      throw new Error("Name and email are required.");
+    }
+
+    if (pricingState !== "verified") {
+      throw new Error("Cart prices must be verified before saving an order.");
+    }
+
+    const response = await fetch("/api/storefront/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...details,
+        idempotencyKey,
+        items: cart.map((item) => ({
+          id: item.id,
+          qty: item.qty,
+          selectedColor: item.selectedColor,
+          selectedSize: item.selectedSize,
+        })),
+      }),
+    });
+
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload?.error || "Unable to create Preview draft order.");
+    }
+
+    const orderNumber = String(payload?.order?.orderNumber || "");
+
+    if (!orderNumber) {
+      throw new Error("Draft order was created without an order number.");
+    }
+
+    setCart([]);
+    window.localStorage.removeItem(CART_STORAGE_KEY);
+    window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
+    showToast(`Draft order ${orderNumber} created`);
+
+    return { orderNumber };
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        FREE Shipping on Every Order &nbsp;•&nbsp; 30-Day Returns &nbsp;•&nbsp; Secure PayPal & Card Checkout
+        ZAYVI STORE PREVIEW &nbsp;·&nbsp; Product range and market availability are being verified
       </div>
 
       <Header
@@ -164,14 +389,7 @@ export default function Home() {
       <TrustBar />
 
       <div ref={bestRef}>
-        <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
-      </div>
-
-      <div style={{ background: "#fff", borderTop: "1px solid #eee", borderBottom: "1px solid #eee", padding: "28px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: 15, color: "#444", maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
-          “Finally a store that doesn’t sell junk. The bottle and packing cubes are in daily use.”
-        </p>
-        <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>— Verified buyer, UK</p>
+        <BestSellers products={products} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
@@ -180,7 +398,7 @@ export default function Home() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "All Products" : cat}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["All", "Travel", "Carry", "Recovery", "Daily"].map((c) => (
+            {categories.map((c) => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
@@ -201,14 +419,28 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
-          {filtered.map((p) => (
-            <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
-          ))}
-        </div>
+        {catalogueLoading ? (
+          <div style={{ textAlign: "center", padding: 60, color: "#777" }}>
+            Loading the Zayvi catalogue...
+          </div>
+        ) : catalogueError ? (
+          <div style={{ textAlign: "center", padding: 60, color: "#9a3412" }}>
+            {catalogueError}
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
+              ))}
+            </div>
 
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>No products in this category yet.</div>
+            {filtered.length === 0 && (
+              <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
+                No products in this category yet.
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -221,7 +453,9 @@ export default function Home() {
         onClose={() => setCartOpen(false)}
         onQty={updateQty}
         onRemove={removeFromCart}
-        onCheckout={handlePayPal}
+        onCreateDraftOrder={createPreviewDraftOrder}
+        verifiedSubtotal={verifiedSubtotal}
+        pricingState={pricingState}
       />
 
       <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />

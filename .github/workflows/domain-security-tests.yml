@@ -1,0 +1,19 @@
+name: Domain security tests
+
+on:
+  push:
+    branches: [zayvi-aws-integration]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-domain-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx --yes tsx --test tests/security-domain.test.ts
