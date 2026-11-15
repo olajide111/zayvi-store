@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Product } from "@/lib/products";
+import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
 
 const STORE_COLOR = "#16a34a";
 
 type Props = {
-  product: Product | null;
+  product: StorefrontProduct | null;
   open: boolean;
   onClose: () => void;
-  onAdd: (p: Product, qty: number, color?: string) => void;
+  onAdd: (p: StorefrontProduct, qty: number, color?: string) => void;
 };
 
 export default function QuickView({ product, open, onClose, onAdd }: Props) {
