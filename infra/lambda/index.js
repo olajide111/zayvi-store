@@ -612,8 +612,13 @@ async function listCustomers() {
             c.first_order_at,
             c.last_order_at,
             c.created_at,
-            COUNT(o.id)::int AS order_count,
-            COALESCE(SUM(o.total), 0)::numeric AS lifetime_value
+            COUNT(o.id) FILTER (
+              WHERE o.order_status <> 'cancelled'
+            )::int AS order_count,
+            COALESCE(
+              SUM(o.total) FILTER (WHERE o.payment_status = 'paid'),
+              0
+            )::numeric AS lifetime_value
           FROM commerce_customers c
           LEFT JOIN commerce_orders o
             ON o.tenant_id = c.tenant_id
@@ -814,54 +819,45 @@ async function createOrder(input) {
         [tenantId, storeId, customerEmail, customerName, phone]
       );
 
-      let order;
-      let attempts = 0;
+      const orderResult = await tx.query(
+        `
+          INSERT INTO commerce_orders (
+            tenant_id,
+            store_id,
+            customer_id,
+            order_number,
+            market_code,
+            currency_code,
+            order_status,
+            payment_status,
+            fulfilment_status,
+            customer_name,
+            customer_email,
+            subtotal,
+            shipping_total,
+            tax_total,
+            total,
+            source
+          )
+          VALUES (
+            $1, $2, $3, $4, 'GB', 'GBP',
+            'draft', 'unpaid', 'unfulfilled',
+            $5, $6, $7, 0, 0, $7, 'preview'
+          )
+          RETURNING *
+        `,
+        [
+          tenantId,
+          storeId,
+          customer.rows[0].id,
+          createOrderNumber(),
+          customerName,
+          customerEmail,
+          subtotal
+        ]
+      );
 
-      while (!order && attempts < 3) {
-        attempts += 1;
-        try {
-          const orderResult = await tx.query(
-            `
-              INSERT INTO commerce_orders (
-                tenant_id,
-                store_id,
-                customer_id,
-                order_number,
-                market_code,
-                currency_code,
-                order_status,
-                payment_status,
-                fulfilment_status,
-                customer_name,
-                customer_email,
-                subtotal,
-                shipping_total,
-                tax_total,
-                total,
-                source
-              )
-              VALUES (
-                $1, $2, $3, $4, 'GB', 'GBP',
-                'draft', 'unpaid', 'unfulfilled',
-                $5, $6, $7, 0, 0, $7, 'preview'
-              )
-              RETURNING *
-            `,
-            [
-              tenantId,
-              storeId,
-              customer.rows[0].id,
-              createOrderNumber(),
-              customerName,
-              customerEmail,
-              subtotal
-            ]
-          );
-          order = orderResult.rows[0];
-        } catch (error) {
-          if (error?.code !== "23505" || attempts >= 3) throw error;
-        }
-      }
+      const order = orderResult.rows[0];
 
       for (const line of pricedLines) {
         await tx.query(
