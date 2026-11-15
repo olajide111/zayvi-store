@@ -8,22 +8,21 @@ create table if not exists commerce.orders (
   id uuid primary key default gen_random_uuid(),
   order_number text not null unique,
   source text not null default 'storefront',
+  store_ref text,
   customer_email text not null,
   customer_name text,
   shipping_address jsonb not null,
   billing_address jsonb,
+  country_code char(2),
   currency char(3) not null default 'GBP',
-  subtotal_pence integer not null check (subtotal_pence >= 0),
-  shipping_pence integer not null default 0 check (shipping_pence >= 0),
-  tax_pence integer not null default 0 check (tax_pence >= 0),
-  total_pence integer not null check (total_pence >= 0),
+  subtotal_minor bigint not null check (subtotal_minor >= 0),
+  shipping_minor bigint not null default 0 check (shipping_minor >= 0),
+  tax_minor bigint not null default 0 check (tax_minor >= 0),
+  total_minor bigint not null check (total_minor >= 0),
   order_status text not null default 'awaiting_payment'
     check (order_status in ('awaiting_payment','paid','processing','part_fulfilled','fulfilled','cancelled','refunded')),
   payment_status text not null default 'pending'
-    check (payment_status in ('pending','authorized','captured','failed','partially_refunded','refunded')),
-  payment_provider text not null default 'paypal',
-  provider_order_id text unique,
-  provider_capture_id text unique,
+    check (payment_status in ('pending','authorized','paid','failed','held','partially_refunded','refunded','cancelled')),
   paid_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -38,16 +37,53 @@ create table if not exists commerce.order_items (
   selected_color text,
   selected_size text,
   quantity integer not null check (quantity > 0),
-  unit_price_pence integer not null check (unit_price_pence >= 0),
-  line_total_pence integer not null check (line_total_pence >= 0),
+  unit_price_minor bigint not null check (unit_price_minor >= 0),
+  line_total_minor bigint not null check (line_total_minor >= 0),
   fulfilment_source text not null default 'unassigned'
     check (fulfilment_source in ('unassigned','own_stock','supplier','dropship')),
   created_at timestamptz not null default now()
 );
 
+create table if not exists commerce.payments (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references commerce.orders(id) on delete restrict,
+  platform text not null check (platform in ('kredal','square','paypal')),
+  external_payment_id text,
+  external_reference text,
+  amount_minor bigint not null check (amount_minor > 0),
+  currency char(3) not null,
+  status text not null default 'pending'
+    check (status in ('pending','authorized','paid','failed','held','partially_refunded','refunded','cancelled')),
+  idempotency_key text,
+  checkout_url text,
+  metadata jsonb not null default '{}'::jsonb,
+  paid_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (platform, external_payment_id),
+  unique (platform, external_reference)
+);
+
+create table if not exists commerce.payment_connections (
+  id uuid primary key default gen_random_uuid(),
+  store_ref text not null,
+  platform text not null check (platform in ('kredal','square','paypal')),
+  external_connection_id text not null,
+  status text not null default 'pending'
+    check (status in ('pending','active','revoked')),
+  metadata jsonb not null default '{}'::jsonb,
+  connected_at timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (platform, store_ref),
+  unique (platform, external_connection_id)
+);
+
 create table if not exists commerce.payment_events (
   id uuid primary key default gen_random_uuid(),
   order_id uuid references commerce.orders(id) on delete restrict,
+  payment_id uuid references commerce.payments(id) on delete restrict,
   provider text not null,
   provider_event_id text not null,
   event_type text not null,
@@ -74,12 +110,19 @@ create table if not exists commerce.fulfilments (
 
 create index if not exists orders_created_at_idx on commerce.orders (created_at desc);
 create index if not exists orders_status_idx on commerce.orders (order_status, payment_status);
+create index if not exists orders_store_ref_idx on commerce.orders (store_ref);
 create index if not exists order_items_order_id_idx on commerce.order_items (order_id);
+create index if not exists payments_order_id_idx on commerce.payments (order_id);
+create index if not exists payments_status_idx on commerce.payments (platform, status);
+create index if not exists payment_connections_store_idx on commerce.payment_connections (store_ref, platform);
 create index if not exists payment_events_order_id_idx on commerce.payment_events (order_id);
+create index if not exists payment_events_payment_id_idx on commerce.payment_events (payment_id);
 create index if not exists fulfilments_order_id_idx on commerce.fulfilments (order_id);
 
 alter table commerce.orders enable row level security;
 alter table commerce.order_items enable row level security;
+alter table commerce.payments enable row level security;
+alter table commerce.payment_connections enable row level security;
 alter table commerce.payment_events enable row level security;
 alter table commerce.fulfilments enable row level security;
 
