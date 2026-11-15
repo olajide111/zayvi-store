@@ -5,6 +5,7 @@ import { callZayviAwsApi } from "@/lib/aws-api";
 import {
   createKredalStoreConnection,
   disconnectKredalStore,
+  getKredalStoreConnection,
 } from "@/lib/kredal-pay";
 
 export const runtime = "nodejs";
@@ -34,7 +35,59 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json(result.data, {
+  const data = result.data as {
+    storeId?: string;
+    storeName?: string;
+    connection?: {
+      externalConnectionId?: string;
+      status?: "pending" | "active" | "revoked";
+      metadata?: Record<string, unknown>;
+    } | null;
+  };
+
+  if (
+    process.env.VERCEL_ENV !== "production" &&
+    process.env.KREDAL_MODE === "test" &&
+    process.env.KREDAL_PLATFORM_KEY &&
+    data.connection?.externalConnectionId
+  ) {
+    try {
+      const provider = await getKredalStoreConnection(
+        data.connection.externalConnectionId
+      );
+
+      if (
+        provider.status &&
+        provider.status !== data.connection.status
+      ) {
+        const synced = await callZayviAwsApi(
+          "/payment-connections/kredal",
+          {
+            method: "PUT",
+            body: {
+              externalConnectionId: data.connection.externalConnectionId,
+              status: provider.status,
+              metadata: {
+                ...(data.connection.metadata || {}),
+                mode: "test",
+                lastProviderRefreshAt: new Date().toISOString(),
+              },
+            },
+          }
+        );
+
+        if (synced.ok) {
+          return NextResponse.json(synced.data, {
+            headers: { "cache-control": "no-store" },
+          });
+        }
+      }
+    } catch (error) {
+      console.warn("Kredal connection refresh failed", error);
+    }
+  }
+
+  return NextResponse.json(data, {
     headers: { "cache-control": "no-store" },
   });
 }
