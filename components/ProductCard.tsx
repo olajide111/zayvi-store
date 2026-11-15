@@ -7,7 +7,7 @@ import Link from "next/link";
 const STORE_COLOR = "#16a34a";
 
 type Props = {
-  product: Product;
+  product: StorefrontProduct;
   onView: (p: StorefrontProduct) => void;
   onAdd: (p: StorefrontProduct, qty?: number, color?: string) => void;
 };
