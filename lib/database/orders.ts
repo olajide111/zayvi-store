@@ -64,3 +64,59 @@ export function assertOrderReadyForPayment(order: StoredOrder | undefined) {
     throw new Error("This order has an invalid total.");
   }
 }
+
+
+export type StoredPayment = {
+  id: string;
+  order_id: string;
+  platform: "kredal" | "square" | "paypal";
+  external_payment_id: string | null;
+  external_reference: string | null;
+  amount_minor: number;
+  currency: string;
+  status: string;
+};
+
+export async function getPaymentByExternalId(
+  platform: "kredal" | "square" | "paypal",
+  externalPaymentId: string
+) {
+  const query =
+    "platform=eq." +
+    encodeURIComponent(platform) +
+    "&external_payment_id=eq." +
+    encodeURIComponent(externalPaymentId) +
+    "&select=id,order_id,platform,external_payment_id,external_reference,amount_minor,currency,status&limit=1";
+
+  const rows = await zayviCommerceRequest<StoredPayment[]>("payments", { query });
+  return Array.isArray(rows) ? rows[0] : undefined;
+}
+
+export async function markPaymentAndOrderPaid(input: {
+  paymentId: string;
+  orderId: string;
+  paidAt: string;
+}) {
+  await zayviCommerceRequest("payments", {
+    method: "PATCH",
+    query: "id=eq." + encodeURIComponent(input.paymentId),
+    prefer: "return=minimal",
+    body: {
+      status: "paid",
+      paid_at: input.paidAt,
+      updated_at: input.paidAt,
+    },
+  });
+
+  await zayviCommerceRequest("orders", {
+    method: "PATCH",
+    query: "id=eq." + encodeURIComponent(input.orderId),
+    prefer: "return=minimal",
+    body: {
+      payment_status: "paid",
+      order_status: "paid",
+      paid_at: input.paidAt,
+      updated_at: input.paidAt,
+    },
+  });
+}
