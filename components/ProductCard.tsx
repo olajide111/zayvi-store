@@ -39,7 +39,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
               objectFit: "cover",
               transform: hov ? "scale(1.06)" : "scale(1)",
               transition: "transform .35s ease",
-              cursor: "pointer",
+              cursor: "not-allowed",
             }}
           />
         </Link>
@@ -77,9 +77,9 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
             {product.name}
           </div>
         </Link>
-        <p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
+        <p style={{ fontSize: 12, color: "#777", marginBottom: 8 }}>Preview catalogue · Not yet available to purchase</p>\n        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>£{Number(product.price).toFixed(2)}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 12, color: "#777" }}>Market pricing pending verification</div>
+          <div style={{ fontSize: 12, color: "#777" }}>Preview GB price</div>
           <button
             disabled
             aria-disabled="true"
