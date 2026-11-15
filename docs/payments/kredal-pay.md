@@ -84,3 +84,64 @@ Kredal checkout remains disabled until all of the following are true:
 - create-payment, signed-webhook, verify, cancel and refund flows pass end to end;
 - duplicate webhook and idempotency tests pass;
 - live credentials are issued through Kredal's licensed-partner go-live process.
+
+
+## Test-mode implementation
+
+The current Zayvi test lifecycle uses these server-only environment variables:
+
+- `KREDAL_MODE=test`
+- `KREDAL_API_URL` (optional; defaults to `https://api.kredal.africa`)
+- `KREDAL_PLATFORM_KEY`
+- `KREDAL_WEBHOOK_SECRET`
+
+Do not prefix any secret with `NEXT_PUBLIC_`.
+
+### Test connection
+
+Admin can create the main store's test connection from the Payments page. Zayvi:
+
+1. reads the main store id from the AWS commerce API;
+2. calls Kredal `POST /v1/platform/connections`;
+3. stores the returned `kc_...` connection id;
+4. opens the returned approval URL;
+5. refreshes the connection against Kredal until it becomes `active`.
+
+### Test payment lifecycle
+
+A test payment can be created only for an existing Zayvi order where:
+
+- market is `NG`;
+- currency is `NGN`;
+- payment state is unpaid/pending;
+- the store's Kredal connection is active.
+
+The amount is loaded from PostgreSQL and converted to kobo on the server. The browser cannot choose or override the charge amount.
+
+Zayvi then:
+
+1. calls `POST /v1/kpay/payments` with the Zayvi order number as reference;
+2. persists a `commerce_payment_attempts` row;
+3. sends the administrator/buyer to Kredal's hosted test checkout;
+4. verifies state through `GET /v1/kpay/payments/{id-or-reference}`;
+5. applies only supported verified statuses to Zayvi's payment/order state.
+
+Cancel and refund actions are also server-only and followed by a fresh Kredal lookup before Zayvi changes local state.
+
+### Signed webhook ledger
+
+`POST /api/payments/kredal/webhook`:
+
+- reads the raw request body;
+- verifies `X-Kredal-Signature` with HMAC-SHA256;
+- rejects signatures older than five minutes;
+- accepts only the documented Kredal event types;
+- stores the full JSON envelope once using the external event id.
+
+The original integration note does not define the exact nested data shape for every webhook event. Zayvi therefore stores signed events but does not guess payment references or mutate money state from undocumented fields. Payment state is reconciled through Kredal's payment lookup.
+
+### Preview fulfilment safety
+
+A simulated paid result may set a Preview order's payment state to paid for lifecycle testing, but Preview orders are hard-blocked from entering real processing or fulfilment.
+
+This is independent of the UI. The restriction is enforced by the AWS commerce API.
