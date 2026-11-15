@@ -186,6 +186,7 @@ export default function Home() {
               id: item.id,
               qty: item.qty,
               selectedColor: item.selectedColor,
+              selectedSize: item.selectedSize,
             })),
           }),
         });
@@ -207,6 +208,10 @@ export default function Home() {
               selectedColor:
                 typeof line.selectedColor === "string"
                   ? line.selectedColor
+                  : undefined,
+              selectedSize:
+                typeof line.selectedSize === "string"
+                  ? line.selectedSize
                   : undefined,
             }))
           : [];
@@ -243,29 +248,29 @@ export default function Home() {
   const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: "smooth" });
   const scrollToBest = () => bestRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const addToCart = (product: StorefrontProduct, qty = 1, color?: string) => {
+  const addToCart = (product: StorefrontProduct, qty = 1, color?: string, size?: string) => {
     setCart((prev) => {
-      const ex = prev.find((i) => i.id === product.id && i.selectedColor === color);
+      const ex = prev.find((i) => i.id === product.id && i.selectedColor === color && i.selectedSize === size);
       if (ex)
         return prev.map((i) =>
-          i.id === product.id && i.selectedColor === color ? { ...i, qty: i.qty + qty } : i
+          i.id === product.id && i.selectedColor === color && i.selectedSize === size ? { ...i, qty: Math.min(20, i.qty + qty) } : i
         );
       return [
         ...prev,
-        { id: product.id, image: product.image, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color },
+        { id: product.id, image: product.image, name: product.name, emoji: product.emoji, price: product.price, qty: Math.min(20, qty), selectedColor: color, selectedSize: size },
       ];
     });
     showToast(`✓ ${product.name} added`);
     setCartOpen(true);
   };
 
-  const removeFromCart = (id: string, color: string | undefined) =>
-    setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === color)));
+  const removeFromCart = (id: string, color: string | undefined, size: string | undefined) =>
+    setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === color && i.selectedSize === size)));
 
-  const updateQty = (id: string, color: string | undefined, delta: number) =>
+  const updateQty = (id: string, color: string | undefined, size: string | undefined, delta: number) =>
     setCart((p) =>
       p.map((i) =>
-        i.id === id && i.selectedColor === color ? { ...i, qty: Math.max(1, i.qty + delta) } : i
+        i.id === id && i.selectedColor === color && i.selectedSize === size ? { ...i, qty: Math.min(20, Math.max(1, i.qty + delta)) } : i
       )
     );
 
@@ -296,6 +301,7 @@ export default function Home() {
           id: item.id,
           qty: item.qty,
           selectedColor: item.selectedColor,
+          selectedSize: item.selectedSize,
         })),
       }),
     });

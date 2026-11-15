@@ -70,7 +70,7 @@ export default function ProductPage() {
       const selectedColor = product.colors[colorIdx]?.name;
       const match = cart.find(
         (item: any) =>
-          item?.id === product.id && item?.selectedColor === selectedColor
+          item?.id === product.id && item?.selectedColor === selectedColor && item?.selectedSize === product.sizes[sizeIdx]
       );
 
       if (match) {
@@ -88,6 +88,7 @@ export default function ProductPage() {
           price: product.price,
           qty,
           selectedColor,
+          selectedSize: product.sizes[sizeIdx],
         });
       }
 
@@ -205,7 +206,7 @@ export default function ProductPage() {
             <div style={{ display: "flex", border: "1px solid #ddd", borderRadius: 10, overflow: "hidden" }}>
               <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 40, height: 44, border: "none", background: "#fafafa", cursor: "pointer", fontSize: 18 }}>−</button>
               <span style={{ width: 44, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{qty}</span>
-              <button onClick={() => setQty(qty + 1)} style={{ width: 40, height: 44, border: "none", background: "#fafafa", cursor: "pointer", fontSize: 18 }}>+</button>
+              <button onClick={() => setQty(Math.min(20, qty + 1))} style={{ width: 40, height: 44, border: "none", background: "#fafafa", cursor: "pointer", fontSize: 18 }}>+</button>
             </div>
             <button
               onClick={addToPreviewCart}

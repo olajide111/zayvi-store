@@ -12,14 +12,15 @@ export type CartItem = {
   price: number;
   qty: number;
   selectedColor?: string;
+  selectedSize?: string;
 };
 
 type Props = {
   cart: CartItem[];
   open: boolean;
   onClose: () => void;
-  onQty: (id: string, color: string | undefined, d: number) => void;
-  onRemove: (id: string, color: string | undefined) => void;
+  onQty: (id: string, color: string | undefined, size: string | undefined, d: number) => void;
+  onRemove: (id: string, color: string | undefined, size: string | undefined) => void;
   onCreateDraftOrder: (details: {
     customerName: string;
     customerEmail: string;
@@ -111,7 +112,7 @@ export default function CartDrawer({
             cart.map((item) => {
               return (
                 <div
-                  key={`${item.id}-${item.selectedColor}`}
+                  key={`${item.id}-${item.selectedColor || ""}-${item.selectedSize || ""}`}
                   style={{ display: "flex", gap: 14, paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f5f5f5" }}
                 >
                   <div style={{ width: 68, height: 68, background: "#f9f9f9", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
@@ -127,18 +128,20 @@ export default function CartDrawer({
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.name}
                     </div>
-                    {item.selectedColor && (
-                      <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{item.selectedColor}</div>
+                    {(item.selectedColor || item.selectedSize) && (
+                      <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                        {[item.selectedColor, item.selectedSize].filter(Boolean).join(" · ")}
+                      </div>
                     )}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                       <div style={{ display: "flex", border: "1px solid #e5e5e5", borderRadius: 6 }}>
-                        <button onClick={() => onQty(item.id, item.selectedColor, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
+                        <button onClick={() => onQty(item.id, item.selectedColor, item.selectedSize, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
                         <span style={{ width: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600 }}>{item.qty}</span>
-                        <button onClick={() => onQty(item.id, item.selectedColor, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
+                        <button onClick={() => onQty(item.id, item.selectedColor, item.selectedSize, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 14, fontWeight: 800 }}>£{(item.price * item.qty).toFixed(2)}</div>
-                        <button onClick={() => onRemove(item.id, item.selectedColor)} style={{ fontSize: 10, color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>
+                        <button onClick={() => onRemove(item.id, item.selectedColor, item.selectedSize)} style={{ fontSize: 10, color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>
                           Remove
                         </button>
                       </div>

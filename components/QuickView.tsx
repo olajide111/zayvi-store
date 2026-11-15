@@ -10,18 +10,20 @@ type Props = {
   product: StorefrontProduct | null;
   open: boolean;
   onClose: () => void;
-  onAdd: (p: StorefrontProduct, qty: number, color?: string) => void;
+  onAdd: (p: StorefrontProduct, qty: number, color?: string, size?: string) => void;
 };
 
 export default function QuickView({ product, open, onClose, onAdd }: Props) {
   const [qty, setQty] = useState(1);
   const [col, setCol] = useState(0);
+  const [sizeIdx, setSizeIdx] = useState(0);
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
     if (open) {
       setQty(1);
       setCol(0);
+      setSizeIdx(0);
       setAdded(false);
     }
   }, [open, product]);
@@ -29,7 +31,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
   if (!product) return null;
 
   const handleAdd = () => {
-    onAdd(product, qty, product.colors[col]?.name);
+    onAdd(product, Math.min(20, qty), product.colors[col]?.name, product.sizes[sizeIdx]);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -130,11 +132,36 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
               </div>
             )}
 
+            {product.sizes.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Size</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {product.sizes.map((size, i) => (
+                    <button
+                      key={size}
+                      onClick={() => setSizeIdx(i)}
+                      style={{
+                        padding: "7px 12px",
+                        borderRadius: 8,
+                        border: sizeIdx === i ? "2px solid #17251e" : "1px solid #ddd",
+                        background: sizeIdx === i ? "#f0fdf4" : "#fff",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 10, marginTop: "auto" }}>
               <div style={{ display: "flex", border: "1px solid #ddd", borderRadius: 10 }}>
                 <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>−</button>
                 <span style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{qty}</span>
-                <button onClick={() => setQty(qty + 1)} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>+</button>
+                <button onClick={() => setQty(Math.min(20, qty + 1))} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>+</button>
               </div>
               <button
                 onClick={handleAdd}
