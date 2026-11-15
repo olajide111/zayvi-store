@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     customerEmail?: unknown;
     phone?: unknown;
     idempotencyKey?: unknown;
+    marketCode?: unknown;
     items?: unknown;
   };
 
@@ -38,6 +39,15 @@ export async function POST(request: NextRequest) {
     typeof payload.phone === "string" && payload.phone.trim()
       ? payload.phone.trim()
       : undefined;
+  const marketCode =
+    typeof payload.marketCode === "string"
+      ? payload.marketCode.trim().toUpperCase()
+      : "GB";
+
+  if (!["GB", "NG"].includes(marketCode)) {
+    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
+  }
+
   const idempotencyKey =
     typeof payload.idempotencyKey === "string"
       ? payload.idempotencyKey.trim()
@@ -90,6 +100,7 @@ export async function POST(request: NextRequest) {
       customerEmail,
       phone,
       idempotencyKey,
+      marketCode,
       items,
     },
   });
