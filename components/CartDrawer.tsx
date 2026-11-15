@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { PRODUCTS } from "@/lib/products";
 
 const STORE_COLOR = "#16a34a";
 
 export type CartItem = {
-  id: number;
+  id: string;
+  image: string;
   name: string;
   emoji: string;
   price: number;
@@ -18,8 +18,8 @@ type Props = {
   cart: CartItem[];
   open: boolean;
   onClose: () => void;
-  onQty: (id: number, color: string | undefined, d: number) => void;
-  onRemove: (id: number, color: string | undefined) => void;
+  onQty: (id: string, color: string | undefined, d: number) => void;
+  onRemove: (id: string, color: string | undefined) => void;
   onCheckout: () => void; // PayPal
 };
 
@@ -88,15 +88,14 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
             </div>
           ) : (
             cart.map((item) => {
-              const product = PRODUCTS.find((p) => p.id === item.id);
               return (
                 <div
                   key={`${item.id}-${item.selectedColor}`}
                   style={{ display: "flex", gap: 14, paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid #f5f5f5" }}
                 >
                   <div style={{ width: 68, height: 68, background: "#f9f9f9", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
-                    {product?.image ? (
-                      <img src={product.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
                         {item.emoji}
