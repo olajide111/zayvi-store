@@ -25,10 +25,10 @@ export default function Success() {
 
     const endpoint = provider === "square" ? "/api/square/verify" : "/api/paypal/capture";
     const payload = provider === "square"
-      ? { paymentId: squarePaymentId }
+      ? { paymentId: squarePaymentId, zayviOrderId }
       : { orderId: paypalOrderId, zayviOrderId };
 
-    if ((provider === "square" && !squarePaymentId) || (provider !== "square" && (!paypalOrderId || !zayviOrderId))) {
+    if ((provider === "square" && (!squarePaymentId || !zayviOrderId)) || (provider !== "square" && (!paypalOrderId || !zayviOrderId))) {
       setPayment({ success: false, error: "We could not find a payment reference. No payment confirmation is available." });
       setState("failed");
       return;
