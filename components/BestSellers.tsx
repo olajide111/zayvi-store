@@ -1,12 +1,12 @@
 "use client";
 
-import type { Product } from "@/lib/products";
+import type { StorefrontProduct } from "@/lib/storefront-products";
 import ProductCard from "./ProductCard";
 
 type Props = {
-  products: Product[];
-  onView: (p: Product) => void;
-  onAdd: (p: Product, qty?: number, color?: string) => void;
+  products: StorefrontProduct[];
+  onView: (p: StorefrontProduct) => void;
+  onAdd: (p: StorefrontProduct, qty?: number, color?: string) => void;
 };
 
 export default function BestSellers({ products, onView, onAdd }: Props) {
