@@ -6,7 +6,7 @@ import ProductCard from "./ProductCard";
 type Props = {
   products: StorefrontProduct[];
   onView: (p: StorefrontProduct) => void;
-  onAdd: (p: StorefrontProduct, qty?: number, color?: string) => void;
+  onAdd: (p: StorefrontProduct, qty?: number, color?: string, size?: string) => void;
 };
 
 export default function BestSellers({ products, onView, onAdd }: Props) {

@@ -687,6 +687,10 @@ async function createOrder(input) {
       item?.selectedColor === undefined
         ? undefined
         : String(item.selectedColor || "").trim();
+    const selectedSize =
+      item?.selectedSize === undefined
+        ? undefined
+        : String(item.selectedSize || "").trim();
 
     if (!/^[0-9a-f-]{36}$/i.test(id)) {
       const error = new Error("Invalid product identifier.");
@@ -700,7 +704,7 @@ async function createOrder(input) {
       throw error;
     }
 
-    return { id, quantity, selectedColor };
+    return { id, quantity, selectedColor, selectedSize };
   });
 
   const client = await getPool().connect();
@@ -728,6 +732,7 @@ async function createOrder(input) {
             tcp.merchant_sku,
             tcp.status AS tenant_status,
             cp.lifecycle_status,
+            cp.attributes,
             tpm.customer_price,
             tpm.currency_code,
             tpm.availability_status
@@ -759,6 +764,31 @@ async function createOrder(input) {
           row.customer_price === null
         ) {
           const error = new Error("A product in the order is no longer available.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        const colors = Array.isArray(row.attributes?.colors)
+          ? row.attributes.colors.map((colour) => colour?.name).filter(Boolean)
+          : [];
+        const sizes = Array.isArray(row.attributes?.sizes)
+          ? row.attributes.sizes.filter((size) => typeof size === "string")
+          : [];
+
+        if (item.selectedColor && !colors.includes(item.selectedColor)) {
+          const error = new Error("A selected colour is not available for this product.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (sizes.length > 0 && !item.selectedSize) {
+          const error = new Error("A size selection is required for this product.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (item.selectedSize && !sizes.includes(item.selectedSize)) {
+          const error = new Error("A selected size is not available for this product.");
           error.statusCode = 409;
           throw error;
         }
@@ -891,9 +921,10 @@ async function createOrder(input) {
             line.unitPrice,
             line.lineTotal,
             JSON.stringify(
-              line.selectedColor
-                ? { color: line.selectedColor }
-                : {}
+              {
+                ...(line.selectedColor ? { color: line.selectedColor } : {}),
+                ...(line.selectedSize ? { size: line.selectedSize } : {})
+              }
             )
           ]
         );

@@ -9,6 +9,7 @@ type CartRequestLine = {
   id?: unknown;
   qty?: unknown;
   selectedColor?: unknown;
+  selectedSize?: unknown;
 };
 
 export async function POST(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let requested: Array<{ id: string; qty: number; selectedColor?: string }>;
+  let requested: Array<{ id: string; qty: number; selectedColor?: string; selectedSize?: string }>;
 
   try {
     requested = body.items.map((raw) => {
@@ -36,12 +37,14 @@ export async function POST(request: NextRequest) {
       const qty = Number(item.qty);
       const selectedColor =
         typeof item.selectedColor === "string" ? item.selectedColor : undefined;
+      const selectedSize =
+        typeof item.selectedSize === "string" ? item.selectedSize : undefined;
 
       if (!id || !Number.isInteger(qty) || qty < 1 || qty > 20) {
         throw new Error("Invalid cart line.");
       }
 
-      return { id, qty, selectedColor };
+      return { id, qty, selectedColor, selectedSize };
     });
   } catch {
     return NextResponse.json({ error: "Invalid cart line." }, { status: 400 });
@@ -78,6 +81,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (
+      line.selectedColor &&
+      !product.colors.some((colour) => colour.name === line.selectedColor)
+    ) {
+      return NextResponse.json(
+        { error: "A selected colour is not available for this product." },
+        { status: 409 }
+      );
+    }
+
+    if (product.sizes.length > 0 && !line.selectedSize) {
+      return NextResponse.json(
+        { error: "Please select a size for this product." },
+        { status: 409 }
+      );
+    }
+
+    if (line.selectedSize && !product.sizes.includes(line.selectedSize)) {
+      return NextResponse.json(
+        { error: "A selected size is not available for this product." },
+        { status: 409 }
+      );
+    }
+
     const unitPrice = Number(product.price);
     const lineTotalPence = Math.round(unitPrice * 100) * line.qty;
 
@@ -89,6 +116,7 @@ export async function POST(request: NextRequest) {
       unitPrice,
       qty: line.qty,
       selectedColor: line.selectedColor,
+      selectedSize: line.selectedSize,
       currency: product.currency || "GBP",
       lineTotal: lineTotalPence / 100,
     });

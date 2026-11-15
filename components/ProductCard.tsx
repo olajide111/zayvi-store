@@ -9,7 +9,7 @@ const STORE_COLOR = "#16a34a";
 type Props = {
   product: StorefrontProduct;
   onView: (p: StorefrontProduct) => void;
-  onAdd: (p: StorefrontProduct, qty?: number, color?: string) => void;
+  onAdd: (p: StorefrontProduct, qty?: number, color?: string, size?: string) => void;
 };
 
 export default function ProductCard({ product, onView, onAdd }: Props) {
@@ -83,7 +83,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
           <div style={{ fontSize: 12, color: "#777" }}>Preview GB price</div>
           <button
             title="Add this product to your Preview cart"
-            onClick={() => onAdd(product, 1, product.colors[0]?.name)}
+            onClick={() => onAdd(product, 1, product.colors[0]?.name, product.sizes[0])}
             style={{
               background: "#17251e",
               color: "#fff",

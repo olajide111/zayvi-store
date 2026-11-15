@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       id?: unknown;
       qty?: unknown;
       selectedColor?: unknown;
+      selectedSize?: unknown;
     };
 
     return {
@@ -62,6 +63,10 @@ export async function POST(request: NextRequest) {
       selectedColor:
         typeof item.selectedColor === "string"
           ? item.selectedColor
+          : undefined,
+      selectedSize:
+        typeof item.selectedSize === "string"
+          ? item.selectedSize
           : undefined,
     };
   });
