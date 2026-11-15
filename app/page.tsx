@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { PRODUCTS } from "@/lib/products";
+import type { StorefrontProduct, StorefrontProductsResponse } from "@/lib/storefront-products";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -74,9 +74,12 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
 }
 
 export default function Home() {
+  const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(true);
+  const [catalogueError, setCatalogueError] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [qv, setQv] = useState<(typeof PRODUCTS)[0] | null>(null);
+  const [qv, setQv] = useState<StorefrontProduct | null>(null);
   const [cat, setCat] = useState("All");
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -90,6 +93,43 @@ export default function Home() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/storefront/products", {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as StorefrontProductsResponse & {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to load the catalogue.");
+        }
+
+        if (!cancelled) {
+          setProducts(Array.isArray(payload.products) ? payload.products : []);
+          setCatalogueError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogueError(
+            error instanceof Error ? error.message : "Unable to load the catalogue."
+          );
+        }
+      } finally {
+        if (!cancelled) setCatalogueLoading(false);
+      }
+    }
+
+    loadProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
@@ -98,7 +138,7 @@ export default function Home() {
   const scrollToGrid = () => gridRef.current?.scrollIntoView({ behavior: "smooth" });
   const scrollToBest = () => bestRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const addToCart = (product: (typeof PRODUCTS)[0], qty = 1, color?: string) => {
+  const addToCart = (product: StorefrontProduct, qty = 1, color?: string) => {
     setCart((prev) => {
       const ex = prev.find((i) => i.id === product.id && i.selectedColor === color);
       if (ex)
@@ -107,17 +147,17 @@ export default function Home() {
         );
       return [
         ...prev,
-        { id: product.id, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color },
+        { id: product.id, image: product.image, name: product.name, emoji: product.emoji, price: product.price, qty, selectedColor: color },
       ];
     });
     showToast(`✓ ${product.name} added`);
     setCartOpen(true);
   };
 
-  const removeFromCart = (id: number, color: string | undefined) =>
+  const removeFromCart = (id: string, color: string | undefined) =>
     setCart((p) => p.filter((i) => !(i.id === id && i.selectedColor === color)));
 
-  const updateQty = (id: number, color: string | undefined, delta: number) =>
+  const updateQty = (id: string, color: string | undefined, delta: number) =>
     setCart((p) =>
       p.map((i) =>
         i.id === id && i.selectedColor === color ? { ...i, qty: Math.max(1, i.qty + delta) } : i
@@ -125,7 +165,9 @@ export default function Home() {
     );
 
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
-  const filtered = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
+  const categories = ["All", ...new Set(products.map((p) => p.category))];
+  const filtered =
+    cat === "All" ? products : products.filter((p) => p.category === cat);
 
   const handlePayPal = async () => {
     try {
@@ -164,7 +206,7 @@ export default function Home() {
       <TrustBar />
 
       <div ref={bestRef}>
-        <BestSellers products={PRODUCTS} onView={(p) => setQv(p)} onAdd={addToCart} />
+        <BestSellers products={products} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
       <CategoryGrid onSelect={(c) => { setCat(c); scrollToGrid(); }} />
@@ -173,7 +215,7 @@ export default function Home() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h2 style={{ fontSize: 22, fontWeight: 800 }}>{cat === "All" ? "All Products" : cat}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["All", "Travel", "Carry", "Recovery", "Daily"].map((c) => (
+            {categories.map((c) => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
@@ -194,14 +236,28 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
-          {filtered.map((p) => (
-            <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
-          ))}
-        </div>
+        {catalogueLoading ? (
+          <div style={{ textAlign: "center", padding: 60, color: "#777" }}>
+            Loading the Zayvi catalogue...
+          </div>
+        ) : catalogueError ? (
+          <div style={{ textAlign: "center", padding: 60, color: "#9a3412" }}>
+            {catalogueError}
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
+              ))}
+            </div>
 
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>No products in this category yet.</div>
+            {filtered.length === 0 && (
+              <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
+                No products in this category yet.
+              </div>
+            )}
+          </>
         )}
       </section>
 
