@@ -2039,8 +2039,8 @@ async function applyVerifiedKredalPayment(input) {
 
       const state = current.rows[0];
       const terminalRefund =
-        state.payment_status === "refunded" ||
-        state.attempt_status === "refunded";
+        ["refunded", "partially_refunded"].includes(state.payment_status) ||
+        ["refunded", "partially_refunded"].includes(state.attempt_status);
 
       if (
         terminalRefund &&
