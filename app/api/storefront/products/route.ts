@@ -5,8 +5,17 @@ import type { StorefrontProduct } from "@/lib/storefront-products";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const result = await callZayviAwsApi("/products");
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const market = (url.searchParams.get("market") || "GB").toUpperCase();
+
+  if (!["GB", "NG"].includes(market)) {
+    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
+  }
+
+  const result = await callZayviAwsApi(
+    "/products?market=" + encodeURIComponent(market)
+  );
 
   if (!result.ok) {
     return NextResponse.json(
@@ -35,7 +44,8 @@ export async function GET() {
       name: product.name,
       image: product.image,
       price: Number(product.price),
-      currency: product.currency || "GBP",
+      currency: product.currency || (market === "NG" ? "NGN" : "GBP"),
+      marketCode: product.marketCode || market,
       category: product.category,
       emoji: product.emoji,
       desc: product.desc,
@@ -54,6 +64,8 @@ export async function GET() {
     {
       source: payload?.source || "postgresql",
       total: products.length,
+      market,
+      currency: market === "NG" ? "NGN" : "GBP",
       products,
     },
     {
