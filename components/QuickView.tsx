@@ -137,20 +137,19 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
                 <button onClick={() => setQty(qty + 1)} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>+</button>
               </div>
               <button
-                disabled
-                aria-disabled="true"
-                title="Purchasing will open when products and market availability are verified"
+                onClick={handleAdd}
+                title="Add this product to your Preview cart"
                 style={{
                   flex: 1,
-                  background: "#e8e7e2",
+                  background: "#17251e",
                   color: "#fff",
                   border: "none",
                   borderRadius: 10,
                   fontWeight: 700,
-                  cursor: "not-allowed",
+                  cursor: "pointer",
                 }}
               >
-                Not available yet
+                {added ? "Added" : "Add to preview cart"}
               </button>
             </div>
 
