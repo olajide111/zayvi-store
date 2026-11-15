@@ -126,9 +126,9 @@ export default function AdminOrdersPage() {
             Orders workspace is connected to the Preview backend
           </div>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-[#55705b]">
-            Checkout remains disabled in Preview, so no live customer orders can be
-            created yet. This page is ready to display and manage order records once
-            storefront checkout is connected.
+            Order persistence is now part of the Preview commerce model. Customer
+            checkout and payment processing remain disabled until fulfilment and
+            payment controls are completed.
           </p>
         </div>
 
@@ -234,7 +234,7 @@ export default function AdminOrdersPage() {
                 "Orders will appear here when customers begin purchasing from the storefront."}
             </p>
             <div className="mt-5 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-              Checkout disabled in Preview
+              Payments disabled in Preview
             </div>
           </div>
         )}
