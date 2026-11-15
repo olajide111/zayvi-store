@@ -198,7 +198,7 @@ export default function AdminOrdersPage() {
                 key={order.id}
                 className="grid grid-cols-[1fr_110px_120px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[150px_minmax(0,1fr)_130px_130px_120px_120px]"
               >
-                <div className="text-sm font-semibold">{order.orderNumber}</div>
+                <a href={`/admin/orders/${order.id}`} className="text-sm font-semibold text-[#23432d] hover:underline">{order.orderNumber}</a>
                 <div className="hidden min-w-0 md:block">
                   <div className="truncate text-sm font-medium">{order.customerName}</div>
                   <div className="mt-1 truncate text-xs text-gray-400">

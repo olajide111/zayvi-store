@@ -919,6 +919,223 @@ async function createOrder(input) {
 }
 
 
+
+async function getOrder(orderId) {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const orderResult = await tx.query(
+        `
+          SELECT
+            o.id,
+            o.order_number,
+            o.customer_id,
+            o.customer_name,
+            o.customer_email,
+            o.market_code,
+            o.currency_code,
+            o.order_status,
+            o.payment_status,
+            o.fulfilment_status,
+            o.subtotal,
+            o.shipping_total,
+            o.tax_total,
+            o.total,
+            o.source,
+            o.created_at,
+            o.updated_at
+          FROM commerce_orders o
+          WHERE o.tenant_id = $1
+            AND o.id = $2
+          LIMIT 1
+        `,
+        [tenantId, orderId]
+      );
+
+      if (orderResult.rowCount === 0) {
+        const error = new Error("Order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const itemResult = await tx.query(
+        `
+          SELECT
+            oi.id,
+            oi.product_id,
+            oi.product_name,
+            oi.merchant_sku,
+            oi.quantity,
+            oi.unit_price,
+            oi.line_total,
+            oi.currency_code,
+            oi.selected_options
+          FROM commerce_order_items oi
+          WHERE oi.tenant_id = $1
+            AND oi.order_id = $2
+          ORDER BY oi.created_at ASC
+        `,
+        [tenantId, orderId]
+      );
+
+      const row = orderResult.rows[0];
+
+      return {
+        id: row.id,
+        orderNumber: row.order_number,
+        customerId: row.customer_id,
+        customerName: row.customer_name,
+        customerEmail: row.customer_email,
+        marketCode: row.market_code,
+        currency: row.currency_code,
+        orderStatus: row.order_status,
+        paymentStatus: row.payment_status,
+        fulfilmentStatus: row.fulfilment_status,
+        subtotal: Number(row.subtotal),
+        shippingTotal: Number(row.shipping_total),
+        taxTotal: Number(row.tax_total),
+        total: Number(row.total),
+        source: row.source,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        items: itemResult.rows.map((item) => ({
+          id: item.id,
+          productId: item.product_id,
+          productName: item.product_name,
+          sku: item.merchant_sku,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unit_price),
+          lineTotal: Number(item.line_total),
+          currency: item.currency_code,
+          selectedOptions: item.selected_options || {}
+        }))
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function updateOrderStatus(orderId, input) {
+  const allowedOrderStatuses = new Set([
+    "draft",
+    "pending_payment",
+    "confirmed",
+    "cancelled",
+    "completed"
+  ]);
+  const allowedFulfilmentStatuses = new Set([
+    "unfulfilled",
+    "processing",
+    "fulfilled",
+    "cancelled"
+  ]);
+
+  const requestedOrderStatus =
+    input?.orderStatus === undefined ? undefined : String(input.orderStatus);
+  const requestedFulfilmentStatus =
+    input?.fulfilmentStatus === undefined
+      ? undefined
+      : String(input.fulfilmentStatus);
+
+  if (input?.paymentStatus !== undefined) {
+    const error = new Error("Payment status is provider-controlled and cannot be changed manually.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    requestedOrderStatus !== undefined &&
+    !allowedOrderStatuses.has(requestedOrderStatus)
+  ) {
+    const error = new Error("Invalid order status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    requestedFulfilmentStatus !== undefined &&
+    !allowedFulfilmentStatuses.has(requestedFulfilmentStatus)
+  ) {
+    const error = new Error("Invalid fulfilment status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    await withTenant(client, async (tx, tenantId) => {
+      const existing = await tx.query(
+        `
+          SELECT order_status, payment_status, fulfilment_status
+          FROM commerce_orders
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, orderId]
+      );
+
+      if (existing.rowCount === 0) {
+        const error = new Error("Order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const current = existing.rows[0];
+      const nextOrderStatus = requestedOrderStatus ?? current.order_status;
+      const nextFulfilmentStatus =
+        requestedFulfilmentStatus ?? current.fulfilment_status;
+
+      if (
+        nextOrderStatus === "confirmed" &&
+        current.payment_status !== "paid"
+      ) {
+        const error = new Error("An unpaid order cannot be confirmed.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (
+        ["processing", "fulfilled"].includes(nextFulfilmentStatus) &&
+        current.payment_status !== "paid"
+      ) {
+        const error = new Error("Unpaid orders cannot enter fulfilment.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (
+        nextOrderStatus === "completed" &&
+        nextFulfilmentStatus !== "fulfilled"
+      ) {
+        const error = new Error("Only fulfilled orders can be completed.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_orders
+          SET
+            order_status = $1,
+            fulfilment_status = $2,
+            updated_at = now()
+          WHERE tenant_id = $3
+            AND id = $4
+        `,
+        [nextOrderStatus, nextFulfilmentStatus, tenantId, orderId]
+      );
+    });
+
+    return await getOrder(orderId);
+  } finally {
+    client.release();
+  }
+}
+
 async function listInventory() {
   const client = await getPool().connect();
 
@@ -1097,6 +1314,52 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "markets_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && /\/orders\/[0-9a-f-]{36}$/i.test(routePath)) {
+    try {
+      const orderId = routePath.split("/").filter(Boolean).pop();
+      const order = await getOrder(orderId);
+      return response(200, {
+        source: "postgresql",
+        order,
+        purchasingEnabled: false
+      });
+    } catch (error) {
+      console.error("Order detail failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "order_detail_unavailable"
+      });
+    }
+  }
+
+  if (method === "PATCH" && /\/orders\/[0-9a-f-]{36}$/i.test(routePath)) {
+    try {
+      const orderId = routePath.split("/").filter(Boolean).pop();
+      const order = await updateOrderStatus(orderId, parseBody(event));
+      return response(200, {
+        source: "postgresql",
+        order,
+        purchasingEnabled: false
+      });
+    } catch (error) {
+      console.error("Order status update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "order_update_failed"
       });
     }
   }
