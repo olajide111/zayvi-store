@@ -1,24 +1,265 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type ConnectionResponse = {
+  storeId?: string;
+  storeName?: string;
+  connection?: {
+    externalConnectionId?: string;
+    status?: string;
+    approvedAt?: string | null;
+    revokedAt?: string | null;
+    metadata?: Record<string, unknown>;
+  } | null;
+  approveUrl?: string;
+  reused?: boolean;
+};
+
+type KredalEvent = {
+  eventId: string;
+  eventType: string;
+  processingStatus: string;
+  processingNote?: string | null;
+  receivedAt: string;
+  processedAt?: string | null;
+};
+
+type EventResponse = {
+  total?: number;
+  events?: KredalEvent[];
+};
+
+type TestPaymentResult = {
+  orderId?: string;
+  orderNumber?: string;
+  checkoutUrl?: string | null;
+  providerReference?: string;
+  providerStatus?: string;
+  testMode?: boolean;
+  error?: string;
+};
+
 export default function AdminPaymentsPage() {
-  const providers = [
-    {
-      name: "Kredal Pay",
-      market: "Nigeria · NGN",
-      status: "Foundation ready · payments disabled",
-      note: "Primary Zayvi payment platform for Nigeria. Kredal owns provider routing and can use Paystack or licensed partners underneath. Live checkout stays disabled until NGN catalogue pricing, signed webhooks and Kredal live credentials are verified.",
-    },
-    {
-      name: "Square",
-      market: "United Kingdom · GBP",
-      status: "Disabled in Preview",
-      note: "Existing UK card integration retained. Charges remain server-side blocked until the production checkout and fulfilment release gate is approved.",
-    },
-    {
-      name: "PayPal",
-      market: "International alternative",
-      status: "Disabled in Preview",
-      note: "Existing integration retained as an alternative payment route. Order creation and payment execution remain separated and server controlled.",
-    },
-  ];
+  const [connection, setConnection] = useState<ConnectionResponse | null>(null);
+  const [events, setEvents] = useState<KredalEvent[]>([]);
+  const [orderId, setOrderId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [testPayment, setTestPayment] = useState<TestPaymentResult | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [connectionResponse, eventResponse] = await Promise.all([
+        fetch("/api/admin/kredal/connection", {
+          credentials: "include",
+          cache: "no-store",
+        }),
+        fetch("/api/admin/kredal/events", {
+          credentials: "include",
+          cache: "no-store",
+        }),
+      ]);
+
+      if (connectionResponse.status === 401 || eventResponse.status === 401) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      const connectionPayload = await connectionResponse.json();
+      const eventPayload = (await eventResponse.json()) as EventResponse & {
+        error?: string;
+      };
+
+      if (!connectionResponse.ok) {
+        throw new Error(
+          connectionPayload?.error || "Unable to load Kredal connection."
+        );
+      }
+
+      if (!eventResponse.ok) {
+        throw new Error(eventPayload?.error || "Unable to load Kredal events.");
+      }
+
+      setConnection(connectionPayload);
+      setEvents(Array.isArray(eventPayload.events) ? eventPayload.events : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load payments.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function connectKredal() {
+    setWorking("connect");
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/admin/kredal/connection", {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to start Kredal connection.");
+      }
+
+      setConnection(payload);
+
+      const approveUrl =
+        payload?.approveUrl ||
+        payload?.connection?.metadata?.approveUrl;
+
+      if (typeof approveUrl === "string" && approveUrl) {
+        setNotice(
+          payload?.reused
+            ? "Existing Kredal test connection loaded."
+            : "Kredal test connection created. Complete approval in Kredal."
+        );
+        window.open(approveUrl, "_blank", "noopener,noreferrer");
+      } else {
+        setNotice("Kredal connection is already available.");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to connect Kredal."
+      );
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function disconnectKredal() {
+    setWorking("disconnect");
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/admin/kredal/connection", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to disconnect Kredal.");
+      }
+
+      setNotice("Kredal test connection disconnected.");
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to disconnect Kredal."
+      );
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function paymentAction(
+    method: "POST" | "PUT" | "DELETE",
+    action: string
+  ) {
+    if (!orderId.trim()) {
+      setError("Enter a Zayvi NGN order ID first.");
+      return;
+    }
+
+    setWorking(action);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/admin/kredal/test-payment", {
+        method,
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orderId: orderId.trim() }),
+      });
+      const payload = (await response.json()) as TestPaymentResult;
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Kredal test action failed.");
+      }
+
+      setTestPayment(payload);
+
+      if (method === "POST" && payload.checkoutUrl) {
+        setNotice("Kredal test checkout created. Opening hosted checkout.");
+        window.open(payload.checkoutUrl, "_blank", "noopener,noreferrer");
+      } else if (method === "PUT") {
+        setNotice(
+          "Kredal payment status verified from the provider and reconciled."
+        );
+      } else {
+        setNotice("Kredal test payment cancellation checked and reconciled.");
+      }
+
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Kredal test action failed."
+      );
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function refundTestPayment() {
+    if (!orderId.trim()) {
+      setError("Enter a Zayvi NGN order ID first.");
+      return;
+    }
+
+    setWorking("refund");
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        "/api/admin/kredal/test-payment/refund",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ orderId: orderId.trim() }),
+        }
+      );
+      const payload = (await response.json()) as TestPaymentResult;
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Kredal test refund failed.");
+      }
+
+      setTestPayment(payload);
+      setNotice("Kredal test refund requested and provider status checked.");
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Kredal test refund failed."
+      );
+    } finally {
+      setWorking("");
+    }
+  }
+
+  const connectionStatus = connection?.connection?.status || "not_connected";
+  const approvalUrl =
+    connection?.approveUrl ||
+    (typeof connection?.connection?.metadata?.approveUrl === "string"
+      ? connection.connection.metadata.approveUrl
+      : "");
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
@@ -42,55 +283,222 @@ export default function AdminPaymentsPage() {
       <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
           <div className="text-sm font-semibold text-amber-800">
-            Payment execution remains disabled
+            Test payments only
           </div>
           <p className="mt-1 text-xs leading-5 text-amber-700">
-            Zayvi can persist orders and payment-platform metadata in Preview,
-            but no provider may charge a real customer until market pricing,
-            signed provider verification, refunds and fulfilment gates pass the
-            release checklist.
+            Kredal integration is restricted to test mode. Test-paid orders are
+            blocked from real fulfilment even when their simulated provider
+            status is paid.
           </p>
         </div>
 
+        {error && (
+          <div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {notice && (
+          <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
+            {notice}
+          </div>
+        )}
+
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {providers.map((provider) => (
-            <div
-              key={provider.name}
-              className="rounded-2xl border border-gray-200 bg-white p-6"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold">{provider.name}</h2>
-                  <div className="mt-1 text-[11px] font-medium text-gray-400">
-                    {provider.market}
-                  </div>
-                </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-[11px] font-medium text-gray-600">
-                  {provider.status}
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-gray-500">
-                {provider.note}
-              </p>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Kredal Pay
             </div>
-          ))}
+            <div className="mt-2 text-lg font-semibold">Nigeria · NGN</div>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Connection</span>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                {loading ? "Loading..." : connectionStatus}
+              </span>
+            </div>
+            {connection?.connection?.externalConnectionId && (
+              <div className="mt-3 break-all text-xs text-gray-400">
+                {connection.connection.externalConnectionId}
+              </div>
+            )}
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={Boolean(working)}
+                onClick={() => void connectKredal()}
+                className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {working === "connect"
+                  ? "Connecting..."
+                  : connectionStatus === "active"
+                    ? "Refresh connection"
+                    : "Connect test store"}
+              </button>
+              {approvalUrl && connectionStatus === "pending" && (
+                <a
+                  href={approvalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700"
+                >
+                  Open approval
+                </a>
+              )}
+              {connectionStatus !== "not_connected" &&
+                connectionStatus !== "revoked" && (
+                  <button
+                    type="button"
+                    disabled={Boolean(working)}
+                    onClick={() => void disconnectKredal()}
+                    className="rounded-lg border border-red-100 px-4 py-2 text-xs font-semibold text-red-600 disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Square
+            </div>
+            <div className="mt-2 text-lg font-semibold">
+              United Kingdom · GBP
+            </div>
+            <p className="mt-4 text-sm leading-6 text-gray-500">
+              Existing UK provider retained. Real payment execution remains
+              behind the production release gate.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              PayPal
+            </div>
+            <div className="mt-2 text-lg font-semibold">
+              International alternative
+            </div>
+            <p className="mt-4 text-sm leading-6 text-gray-500">
+              Alternative route retained while the multi-market payment layer
+              is completed.
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
-          <h2 className="text-sm font-semibold">Routing boundary</h2>
-          <div className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-3">
-            <div className="rounded-xl bg-[#f7f8f6] p-4">
-              <div className="font-semibold text-[#17251e]">Nigeria · NGN</div>
-              <div className="mt-1 text-xs leading-5">Zayvi → Kredal Pay → provider rail</div>
+          <h2 className="text-sm font-semibold">Kredal end-to-end test</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-500">
+            Use an existing Preview Nigeria order. Zayvi reads the amount from
+            PostgreSQL, sends the exact NGN total to Kredal in kobo, and stores
+            the payment attempt before any status can affect the order.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-3 lg:flex-row">
+            <input
+              value={orderId}
+              onChange={(event) => setOrderId(event.target.value)}
+              placeholder="Zayvi NGN order UUID"
+              className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+            />
+            <button
+              type="button"
+              disabled={Boolean(working) || connectionStatus !== "active"}
+              onClick={() => void paymentAction("POST", "create")}
+              className="rounded-xl bg-[#17251e] px-4 py-3 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              {working === "create" ? "Creating..." : "Create test checkout"}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(working)}
+              onClick={() => void paymentAction("PUT", "verify")}
+              className="rounded-xl border border-gray-200 px-4 py-3 text-xs font-semibold text-gray-700 disabled:opacity-40"
+            >
+              {working === "verify" ? "Verifying..." : "Verify payment"}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(working)}
+              onClick={() => void paymentAction("DELETE", "cancel")}
+              className="rounded-xl border border-gray-200 px-4 py-3 text-xs font-semibold text-gray-700 disabled:opacity-40"
+            >
+              {working === "cancel" ? "Cancelling..." : "Cancel unpaid"}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(working)}
+              onClick={() => void refundTestPayment()}
+              className="rounded-xl border border-gray-200 px-4 py-3 text-xs font-semibold text-gray-700 disabled:opacity-40"
+            >
+              {working === "refund" ? "Refunding..." : "Refund test payment"}
+            </button>
+          </div>
+
+          {testPayment && (
+            <pre className="mt-5 overflow-x-auto rounded-xl bg-[#111814] p-4 text-xs leading-5 text-[#dfe8df]">
+              {JSON.stringify(testPayment, null, 2)}
+            </pre>
+          )}
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold">
+                Kredal webhook event ledger
+              </h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Signed events are stored once by event id. Money state changes
+                are reconciled through verified payment lookup.
+              </p>
             </div>
-            <div className="rounded-xl bg-[#f7f8f6] p-4">
-              <div className="font-semibold text-[#17251e]">UK · GBP</div>
-              <div className="mt-1 text-xs leading-5">Zayvi → Square</div>
-            </div>
-            <div className="rounded-xl bg-[#f7f8f6] p-4">
-              <div className="font-semibold text-[#17251e]">Alternative</div>
-              <div className="mt-1 text-xs leading-5">Zayvi → PayPal</div>
-            </div>
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50"
+            >
+              Refresh
+            </button>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="min-w-full text-left text-xs">
+              <thead className="text-gray-400">
+                <tr>
+                  <th className="pb-3 pr-5">Event</th>
+                  <th className="pb-3 pr-5">Type</th>
+                  <th className="pb-3 pr-5">State</th>
+                  <th className="pb-3">Received</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {events.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-gray-400">
+                      No Kredal webhook events have been stored yet.
+                    </td>
+                  </tr>
+                ) : (
+                  events.map((event) => (
+                    <tr key={event.eventId}>
+                      <td className="py-3 pr-5 font-mono text-[11px]">
+                        {event.eventId}
+                      </td>
+                      <td className="py-3 pr-5 font-medium">
+                        {event.eventType}
+                      </td>
+                      <td className="py-3 pr-5">
+                        {event.processingStatus}
+                      </td>
+                      <td className="py-3">
+                        {new Date(event.receivedAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
