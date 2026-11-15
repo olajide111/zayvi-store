@@ -27,19 +27,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const requested = body.items.map((raw) => {
-    const item = (raw ?? {}) as CartRequestLine;
-    const id = typeof item.id === "string" ? item.id : "";
-    const qty = Number(item.qty);
-    const selectedColor =
-      typeof item.selectedColor === "string" ? item.selectedColor : undefined;
+  let requested: Array<{ id: string; qty: number; selectedColor?: string }>;
 
-    if (!id || !Number.isInteger(qty) || qty < 1 || qty > 20) {
-      throw new Error("Invalid cart line.");
-    }
+  try {
+    requested = body.items.map((raw) => {
+      const item = (raw ?? {}) as CartRequestLine;
+      const id = typeof item.id === "string" ? item.id : "";
+      const qty = Number(item.qty);
+      const selectedColor =
+        typeof item.selectedColor === "string" ? item.selectedColor : undefined;
 
-    return { id, qty, selectedColor };
-  });
+      if (!id || !Number.isInteger(qty) || qty < 1 || qty > 20) {
+        throw new Error("Invalid cart line.");
+      }
+
+      return { id, qty, selectedColor };
+    });
+  } catch {
+    return NextResponse.json({ error: "Invalid cart line." }, { status: 400 });
+  }
 
   const result = await callZayviAwsApi("/products");
 
@@ -54,7 +60,9 @@ export async function POST(request: NextRequest) {
   const products = Array.isArray(payload?.products) ? payload.products : [];
   const productMap = new Map(products.map((product) => [product.id, product]));
 
-  const lines = requested.map((line) => {
+  const lines = [];
+
+  for (const line of requested) {
     const product = productMap.get(line.id);
 
     if (
@@ -64,13 +72,16 @@ export async function POST(request: NextRequest) {
       product.availabilityStatus !== "available" ||
       !Number.isFinite(Number(product.price))
     ) {
-      throw new Error("A product in your cart is no longer available.");
+      return NextResponse.json(
+        { error: "A product in your cart is no longer available." },
+        { status: 409 }
+      );
     }
 
     const unitPrice = Number(product.price);
     const lineTotalPence = Math.round(unitPrice * 100) * line.qty;
 
-    return {
+    lines.push({
       id: product.id,
       name: product.name,
       image: product.image,
@@ -80,8 +91,8 @@ export async function POST(request: NextRequest) {
       selectedColor: line.selectedColor,
       currency: product.currency || "GBP",
       lineTotal: lineTotalPence / 100,
-    };
-  });
+    });
+  }
 
   const subtotalPence = lines.reduce(
     (sum, line) => sum + Math.round(line.unitPrice * 100) * line.qty,
