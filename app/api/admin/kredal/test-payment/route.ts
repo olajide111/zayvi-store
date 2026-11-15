@@ -64,7 +64,16 @@ async function loadOrder(orderId: string) {
     throw new Error("Zayvi order details are incomplete.");
   }
 
-  return payload.order;
+  return {
+    id: payload.order.id,
+    orderNumber: payload.order.orderNumber,
+    customerEmail: payload.order.customerEmail,
+    marketCode: payload.order.marketCode || "",
+    currency: payload.order.currency || "",
+    total: Number(payload.order.total),
+    paymentStatus: payload.order.paymentStatus || "",
+    orderStatus: payload.order.orderStatus || "",
+  };
 }
 
 async function loadConnection() {
@@ -116,7 +125,14 @@ async function loadAttempt(orderId: string) {
     throw new Error("No Kredal payment attempt exists for this order.");
   }
 
-  return payload.attempt;
+  return {
+    providerReference: payload.attempt.providerReference,
+    connectionId: payload.attempt.connectionId,
+    status: payload.attempt.status || "",
+    amount: Number(payload.attempt.amount),
+    currency: payload.attempt.currency || "",
+    orderNumber: payload.attempt.orderNumber || "",
+  };
 }
 
 export async function POST(request: NextRequest) {
