@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import SquareCardForm from "@/components/SquareCardForm";
 import { PRODUCTS } from "@/lib/products";
 
 type CartItem = {
@@ -35,6 +36,7 @@ export default function CheckoutPage() {
   const [order, setOrder] = useState<OrderResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState<"paypal" | null>(null);
+  const [squareError, setSquareError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -222,8 +224,22 @@ export default function CheckoutPage() {
                   {paying === "paypal" ? "Connecting to PayPal…" : "Continue with PayPal"}
                 </button>
 
+                <div style={{ marginTop: 18 }}>
+                  <SquareCardForm
+                    orderId={order.orderId}
+                    amount={order.amountMinor / 100}
+                    onSuccess={() => setSquareError(null)}
+                    onError={setSquareError}
+                  />
+                  {squareError && (
+                    <p role="alert" style={{ color: "#b42318", fontSize: 13 }}>
+                      {squareError}
+                    </p>
+                  )}
+                </div>
+
                 <p style={{ fontSize: 12, color: "#777", lineHeight: 1.6 }}>
-                  Square card payment will be moved onto this order-first checkout next. Your order is not marked paid until the payment provider is verified server-side.
+                  Your ZAYVI order is marked paid only after the selected provider is verified server-side.
                 </p>
 
                 {error && <p role="alert" style={{ color: "#b42318", fontSize: 13 }}>{error}</p>}
