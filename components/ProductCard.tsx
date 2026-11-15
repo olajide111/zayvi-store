@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Product } from "@/lib/products";
+import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
 
 const STORE_COLOR = "#16a34a";
 
 type Props = {
   product: Product;
-  onView: (p: Product) => void;
-  onAdd: (p: Product, qty?: number, color?: string) => void;
+  onView: (p: StorefrontProduct) => void;
+  onAdd: (p: StorefrontProduct, qty?: number, color?: string) => void;
 };
 
 export default function ProductCard({ product, onView, onAdd }: Props) {
