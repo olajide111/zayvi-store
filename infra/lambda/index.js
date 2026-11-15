@@ -666,10 +666,17 @@ async function createOrder(input) {
   const customerName = String(input?.customerName || "").trim();
   const customerEmail = String(input?.customerEmail || "").trim().toLowerCase();
   const phone = input?.phone ? String(input.phone).trim() : null;
+  const idempotencyKey = String(input?.idempotencyKey || "").trim();
   const items = Array.isArray(input?.items) ? input.items : [];
 
   if (!customerName || !customerEmail || !customerEmail.includes("@")) {
     const error = new Error("Customer name and a valid email are required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
+    const error = new Error("A valid order idempotency key is required.");
     error.statusCode = 400;
     throw error;
   }
@@ -707,6 +714,18 @@ async function createOrder(input) {
     return { id, quantity, selectedColor, selectedSize };
   });
 
+  const requestFingerprint = crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
+        customerName,
+        customerEmail,
+        phone,
+        items: normalizedItems
+      })
+    )
+    .digest("hex");
+
   const client = await getPool().connect();
 
   try {
@@ -721,6 +740,56 @@ async function createOrder(input) {
       }
 
       const storeId = storeResult.rows[0].id;
+
+      const replay = await tx.query(
+        `
+          SELECT
+            id,
+            order_number,
+            customer_name,
+            customer_email,
+            total,
+            currency_code,
+            order_status,
+            payment_status,
+            fulfilment_status,
+            created_at,
+            request_fingerprint
+          FROM commerce_orders
+          WHERE tenant_id = $1
+            AND idempotency_key = $2
+          LIMIT 1
+        `,
+        [tenantId, idempotencyKey]
+      );
+
+      if (replay.rowCount > 0) {
+        const existing = replay.rows[0];
+
+        if (existing.request_fingerprint !== requestFingerprint) {
+          const error = new Error(
+            "This idempotency key was already used for a different order request."
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        return {
+          id: existing.id,
+          orderNumber: existing.order_number,
+          customerName: existing.customer_name,
+          customerEmail: existing.customer_email,
+          total: Number(existing.total),
+          currency: existing.currency_code,
+          orderStatus: existing.order_status,
+          paymentStatus: existing.payment_status,
+          fulfilmentStatus: existing.fulfilment_status,
+          createdAt: existing.created_at,
+          purchasingEnabled: false,
+          idempotentReplay: true
+        };
+      }
+
       const productIds = normalizedItems.map((item) => item.id);
 
       const productResult = await tx.query(
@@ -867,12 +936,15 @@ async function createOrder(input) {
             shipping_total,
             tax_total,
             total,
-            source
+            source,
+            idempotency_key,
+            request_fingerprint
           )
           VALUES (
             $1, $2, $3, $4, 'GB', 'GBP',
             'draft', 'unpaid', 'unfulfilled',
-            $5, $6, $7, 0, 0, $7, 'preview'
+            $5, $6, $7, 0, 0, $7, 'preview',
+            $8, $9
           )
           RETURNING *
         `,
@@ -883,7 +955,9 @@ async function createOrder(input) {
           createOrderNumber(),
           customerName,
           customerEmail,
-          subtotal
+          subtotal,
+          idempotencyKey,
+          requestFingerprint
         ]
       );
 
@@ -941,7 +1015,8 @@ async function createOrder(input) {
         paymentStatus: order.payment_status,
         fulfilmentStatus: order.fulfilment_status,
         createdAt: order.created_at,
-        purchasingEnabled: false
+        purchasingEnabled: false,
+        idempotentReplay: false
       };
     });
   } finally {

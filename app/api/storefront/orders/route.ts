@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     customerName?: unknown;
     customerEmail?: unknown;
     phone?: unknown;
+    idempotencyKey?: unknown;
     items?: unknown;
   };
 
@@ -37,10 +38,21 @@ export async function POST(request: NextRequest) {
     typeof payload.phone === "string" && payload.phone.trim()
       ? payload.phone.trim()
       : undefined;
+  const idempotencyKey =
+    typeof payload.idempotencyKey === "string"
+      ? payload.idempotencyKey.trim()
+      : "";
 
   if (!customerName || !customerEmail || !customerEmail.includes("@")) {
     return NextResponse.json(
       { error: "Name and a valid email are required." },
+      { status: 400 }
+    );
+  }
+
+  if (!/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
+    return NextResponse.json(
+      { error: "A valid order idempotency key is required." },
       { status: 400 }
     );
   }
@@ -77,6 +89,7 @@ export async function POST(request: NextRequest) {
       customerName,
       customerEmail,
       phone,
+      idempotencyKey,
       items,
     },
   });

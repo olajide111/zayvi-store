@@ -15,6 +15,7 @@ import Footer from "@/components/Footer";
 
 const STORE_COLOR = "#171714";
 const CART_STORAGE_KEY = "zayvi-cart-v2";
+const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v1";
 
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
@@ -284,6 +285,45 @@ export default function Home() {
     customerEmail: string;
     phone?: string;
   }) => {
+    const requestFingerprint = JSON.stringify({
+      customerName: details.customerName.trim(),
+      customerEmail: details.customerEmail.trim().toLowerCase(),
+      phone: details.phone?.trim() || null,
+      items: cart.map((item) => ({
+        id: item.id,
+        qty: item.qty,
+        selectedColor: item.selectedColor || null,
+        selectedSize: item.selectedSize || null,
+      })),
+    });
+
+    let idempotencyKey = "";
+
+    try {
+      const saved = window.localStorage.getItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : null;
+
+      if (
+        parsed &&
+        parsed.fingerprint === requestFingerprint &&
+        typeof parsed.key === "string"
+      ) {
+        idempotencyKey = parsed.key;
+      }
+    } catch {
+      window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
+    }
+
+    if (!idempotencyKey) {
+      idempotencyKey = crypto.randomUUID();
+      window.localStorage.setItem(
+        ORDER_IDEMPOTENCY_STORAGE_KEY,
+        JSON.stringify({
+          fingerprint: requestFingerprint,
+          key: idempotencyKey,
+        })
+      );
+    }
     if (!details.customerName.trim() || !details.customerEmail.trim()) {
       throw new Error("Name and email are required.");
     }
@@ -297,6 +337,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...details,
+        idempotencyKey,
         items: cart.map((item) => ({
           id: item.id,
           qty: item.qty,
@@ -320,6 +361,7 @@ export default function Home() {
 
     setCart([]);
     window.localStorage.removeItem(CART_STORAGE_KEY);
+    window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
     showToast(`Draft order ${orderNumber} created`);
 
     return { orderNumber };
