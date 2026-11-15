@@ -81,7 +81,6 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [page, setPage] = useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const bestRef = useRef<HTMLDivElement>(null);
   const cartHydrated = useRef(false);
@@ -155,22 +154,9 @@ export default function Home() {
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
   const filtered = cat === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.category === cat);
 
-  const handlePayPal = async () => {
-    if (checkoutLoading || cart.length === 0) return;
-    setCheckoutLoading(true);
-    try {
-      const res = await fetch("/api/paypal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart.map((i) => ({ id: i.id, qty: i.qty })) }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) throw new Error(data.error || "PayPal checkout is unavailable.");
-      window.location.assign(data.url);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Checkout failed. Please try again.");
-      setCheckoutLoading(false);
-    }
+  const startCheckout = () => {
+    if (cart.length === 0) return;
+    window.location.assign("/checkout");
   };
 
   return (
@@ -246,8 +232,7 @@ export default function Home() {
         onClose={() => setCartOpen(false)}
         onQty={updateQty}
         onRemove={removeFromCart}
-        onCheckout={handlePayPal}
-        checkoutLoading={checkoutLoading}
+        onCheckout={startCheckout}
       />
 
       <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />
