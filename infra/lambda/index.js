@@ -111,7 +111,8 @@ function normalizeProduct(row) {
     sizes: Array.isArray(attributes.sizes) ? attributes.sizes : [],
     badge: attributes.badge || undefined,
     price: row.customer_price === null ? null : Number(row.customer_price),
-    currency: row.currency_code || "GBP",
+    currency: row.currency_code || null,
+    marketCode: row.market_code || null,
     status: row.tenant_status,
     lifecycleStatus: row.lifecycle_status,
     publicationStatus: row.publication_status,
@@ -150,7 +151,15 @@ async function withTenant(client, work) {
   }
 }
 
-async function listProducts() {
+async function listProducts(marketCode = "GB") {
+  const normalizedMarket = String(marketCode || "GB").trim().toUpperCase();
+
+  if (!["GB", "NG"].includes(normalizedMarket)) {
+    const error = new Error("Unsupported market.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const client = await getPool().connect();
 
   try {
@@ -168,6 +177,7 @@ async function listProducts() {
             tcp.status AS tenant_status,
             tpm.customer_price,
             tpm.currency_code,
+            tpm.market_code,
             tpm.publication_status,
             tpm.availability_status,
             tcp.updated_at
@@ -177,12 +187,12 @@ async function listProducts() {
           LEFT JOIN tenant_product_markets tpm
             ON tpm.tenant_id = tcp.tenant_id
            AND tpm.tenant_catalogue_product_id = tcp.id
-           AND tpm.market_code = 'GB'
+           AND tpm.market_code = $2
           WHERE tcp.tenant_id = $1
             AND tcp.status <> 'archived'
           ORDER BY tcp.updated_at DESC, cp.name ASC
         `,
-        [tenantId]
+        [tenantId, normalizedMarket]
       );
 
       return result.rows.map(normalizeProduct);
@@ -303,6 +313,30 @@ async function createProduct(input) {
           )
         `,
         [tenantId, tenantProduct.rows[0].id, price]
+      );
+
+      await tx.query(
+        `
+          INSERT INTO tenant_product_markets (
+            tenant_id,
+            tenant_catalogue_product_id,
+            market_code,
+            availability_status,
+            compliance_status,
+            publication_status,
+            requires_human_approval,
+            customer_price,
+            currency_code,
+            price_observed_at
+          )
+          VALUES (
+            $1, $2, 'NG', 'unknown', 'not_assessed',
+            'not_listed', true, NULL, 'NGN', NULL
+          )
+          ON CONFLICT (tenant_id, tenant_catalogue_product_id, market_code)
+          DO NOTHING
+        `,
+        [tenantId, tenantProduct.rows[0].id]
       );
 
       const result = await tx.query(
@@ -551,6 +585,177 @@ async function updateProduct(productId, input) {
 }
 
 
+async function updateProductMarket(productId, marketCode, input) {
+  const normalizedMarket = String(marketCode || "").trim().toUpperCase();
+  const allowedAvailability = new Set([
+    "unknown",
+    "available",
+    "limited_stock",
+    "out_of_stock",
+    "unavailable",
+    "restricted"
+  ]);
+  const allowedPublication = new Set([
+    "not_listed",
+    "pending_review",
+    "published",
+    "held",
+    "rejected",
+    "withdrawn"
+  ]);
+
+  if (!["GB", "NG"].includes(normalizedMarket)) {
+    const error = new Error("Unsupported market.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const price =
+    input?.price === null || input?.price === undefined
+      ? null
+      : Number(input.price);
+  const availabilityStatus = String(
+    input?.availabilityStatus || "unknown"
+  ).trim();
+  const publicationStatus = String(
+    input?.publicationStatus || "not_listed"
+  ).trim();
+
+  if (price !== null && (!Number.isFinite(price) || price < 0)) {
+    const error = new Error("Market price must be a non-negative number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!allowedAvailability.has(availabilityStatus)) {
+    const error = new Error("Invalid market availability status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!allowedPublication.has(publicationStatus)) {
+    const error = new Error("Invalid market publication status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (availabilityStatus === "available" && price === null) {
+    const error = new Error("An available market product requires an explicit price.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const market = await tx.query(
+        `
+          SELECT currency_code
+          FROM commerce_markets
+          WHERE code = $1
+            AND enabled = true
+          LIMIT 1
+        `,
+        [normalizedMarket]
+      );
+
+      if (market.rowCount === 0) {
+        const error = new Error("The selected market is not enabled.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const product = await tx.query(
+        `
+          SELECT tcp.id AS tenant_product_id
+          FROM tenant_catalogue_products tcp
+          WHERE tcp.tenant_id = $1
+            AND tcp.product_id = $2
+          LIMIT 1
+        `,
+        [tenantId, productId]
+      );
+
+      if (product.rowCount === 0) {
+        const error = new Error("Product not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const currencyCode = market.rows[0].currency_code;
+
+      const result = await tx.query(
+        `
+          INSERT INTO tenant_product_markets (
+            tenant_id,
+            tenant_catalogue_product_id,
+            market_code,
+            availability_status,
+            compliance_status,
+            publication_status,
+            requires_human_approval,
+            customer_price,
+            currency_code,
+            price_observed_at
+          )
+          VALUES (
+            $1, $2, $3, $4, 'pending', $5, true, $6, $7,
+            CASE WHEN $6::numeric IS NULL THEN NULL ELSE now() END
+          )
+          ON CONFLICT (tenant_id, tenant_catalogue_product_id, market_code)
+          DO UPDATE SET
+            availability_status = EXCLUDED.availability_status,
+            publication_status = EXCLUDED.publication_status,
+            customer_price = EXCLUDED.customer_price,
+            currency_code = EXCLUDED.currency_code,
+            price_observed_at =
+              CASE
+                WHEN EXCLUDED.customer_price IS NULL THEN NULL
+                ELSE now()
+              END,
+            updated_at = now()
+          RETURNING
+            market_code,
+            currency_code,
+            customer_price,
+            availability_status,
+            publication_status,
+            compliance_status,
+            price_observed_at,
+            updated_at
+        `,
+        [
+          tenantId,
+          product.rows[0].tenant_product_id,
+          normalizedMarket,
+          availabilityStatus,
+          publicationStatus,
+          price,
+          currencyCode
+        ]
+      );
+
+      const row = result.rows[0];
+
+      return {
+        productId,
+        marketCode: row.market_code,
+        currency: row.currency_code,
+        price: row.customer_price === null ? null : Number(row.customer_price),
+        availabilityStatus: row.availability_status,
+        publicationStatus: row.publication_status,
+        complianceStatus: row.compliance_status,
+        priceObservedAt: row.price_observed_at,
+        updatedAt: row.updated_at
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 
 async function listOrders() {
   const client = await getPool().connect();
@@ -667,7 +872,14 @@ async function createOrder(input) {
   const customerEmail = String(input?.customerEmail || "").trim().toLowerCase();
   const phone = input?.phone ? String(input.phone).trim() : null;
   const idempotencyKey = String(input?.idempotencyKey || "").trim();
+  const marketCode = String(input?.marketCode || "GB").trim().toUpperCase();
   const items = Array.isArray(input?.items) ? input.items : [];
+
+  if (!["GB", "NG"].includes(marketCode)) {
+    const error = new Error("Unsupported order market.");
+    error.statusCode = 400;
+    throw error;
+  }
 
   if (!customerName || !customerEmail || !customerEmail.includes("@")) {
     const error = new Error("Customer name and a valid email are required.");
@@ -721,6 +933,7 @@ async function createOrder(input) {
         customerName,
         customerEmail,
         phone,
+        marketCode,
         items: normalizedItems
       })
     )
@@ -790,6 +1003,24 @@ async function createOrder(input) {
         };
       }
 
+      const marketResult = await tx.query(
+        `
+          SELECT currency_code
+          FROM commerce_markets
+          WHERE code = $1
+            AND enabled = true
+          LIMIT 1
+        `,
+        [marketCode]
+      );
+
+      if (marketResult.rowCount === 0) {
+        const error = new Error("The selected market is not enabled.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const marketCurrency = marketResult.rows[0].currency_code;
       const productIds = normalizedItems.map((item) => item.id);
 
       const productResult = await tx.query(
@@ -811,11 +1042,11 @@ async function createOrder(input) {
           JOIN tenant_product_markets tpm
             ON tpm.tenant_id = tcp.tenant_id
            AND tpm.tenant_catalogue_product_id = tcp.id
-           AND tpm.market_code = 'GB'
+           AND tpm.market_code = $3
           WHERE tcp.tenant_id = $1
             AND cp.id = ANY($2::uuid[])
         `,
-        [tenantId, productIds]
+        [tenantId, productIds, marketCode]
       );
 
       const productMap = new Map(
@@ -879,11 +1110,11 @@ async function createOrder(input) {
       });
 
       const currencySet = new Set(
-        pricedLines.map((line) => line.product.currency_code || "GBP")
+        pricedLines.map((line) => line.product.currency_code)
       );
 
-      if (currencySet.size !== 1 || !currencySet.has("GBP")) {
-        const error = new Error("Preview orders currently support GBP only.");
+      if (currencySet.size !== 1 || !currencySet.has(marketCurrency)) {
+        const error = new Error("Order items do not match the selected market currency.");
         error.statusCode = 409;
         throw error;
       }
@@ -941,10 +1172,10 @@ async function createOrder(input) {
             request_fingerprint
           )
           VALUES (
-            $1, $2, $3, $4, 'GB', 'GBP',
+            $1, $2, $3, $4, $5, $6,
             'draft', 'unpaid', 'unfulfilled',
-            $5, $6, $7, 0, 0, $7, 'preview',
-            $8, $9
+            $7, $8, $9, 0, 0, $9, 'preview',
+            $10, $11
           )
           RETURNING *
         `,
@@ -953,6 +1184,8 @@ async function createOrder(input) {
           storeId,
           customer.rows[0].id,
           createOrderNumber(),
+          marketCode,
+          marketCurrency,
           customerName,
           customerEmail,
           subtotal,
@@ -981,7 +1214,7 @@ async function createOrder(input) {
             )
             VALUES (
               $1, $2, $3, $4, $5, $6,
-              $7, $8, $9, 'GBP', $10::jsonb
+              $7, $8, $9, $10, $11::jsonb
             )
           `,
           [
@@ -994,6 +1227,7 @@ async function createOrder(input) {
             line.quantity,
             line.unitPrice,
             line.lineTotal,
+            marketCurrency,
             JSON.stringify(
               {
                 ...(line.selectedColor ? { color: line.selectedColor } : {}),
@@ -1514,7 +1748,9 @@ exports.handler = async (event, context) => {
 
   if (method === "GET" && routePath.endsWith("/products")) {
     try {
-      const products = await listProducts();
+      const marketCode =
+        event?.queryStringParameters?.market || "GB";
+      const products = await listProducts(marketCode);
       return response(200, {
         source: "postgresql",
         total: products.length,
@@ -1548,6 +1784,36 @@ exports.handler = async (event, context) => {
           error?.statusCode === 400
             ? error.message
             : "catalogue_create_failed"
+      });
+    }
+  }
+
+
+  if (
+    method === "PATCH" &&
+    /\/products\/[0-9a-f-]{36}\/markets\/[A-Za-z]{2}$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const productId = parts[parts.length - 3];
+      const marketCode = parts[parts.length - 1];
+      const market = await updateProductMarket(
+        productId,
+        marketCode,
+        parseBody(event)
+      );
+      return response(200, { market });
+    } catch (error) {
+      console.error("Product market update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "product_market_update_failed"
       });
     }
   }
