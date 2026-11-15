@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 
 const STORE_COLOR = "#16a34a";
 
@@ -21,11 +20,23 @@ type Props = {
   onQty: (id: string, color: string | undefined, d: number) => void;
   onRemove: (id: string, color: string | undefined) => void;
   onCheckout: () => void; // PayPal
+  verifiedSubtotal: number | null;
+  pricingState: "idle" | "checking" | "verified" | "error";
 };
 
-export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onCheckout }: Props) {
+export default function CartDrawer({
+  cart,
+  open,
+  onClose,
+  onQty,
+  onRemove,
+  onCheckout,
+  verifiedSubtotal,
+  pricingState,
+}: Props) {
 
-  const sub = cart.reduce((a, i) => a + i.price * i.qty, 0);
+  const browserSubtotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
+  const sub = verifiedSubtotal ?? browserSubtotal;
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
   return (
@@ -136,8 +147,17 @@ export default function CartDrawer({ cart, open, onClose, onQty, onRemove, onChe
               <span>£{sub.toFixed(2)}</span>
             </div>
 
+            <div style={{ marginBottom: 10, textAlign: "center", fontSize: 11, fontWeight: 700, color: pricingState === "verified" ? "#15803d" : pricingState === "error" ? "#b45309" : "#777" }}>
+              {pricingState === "verified"
+                ? "Prices verified from PostgreSQL"
+                : pricingState === "checking"
+                  ? "Checking current prices..."
+                  : pricingState === "error"
+                    ? "Price verification temporarily unavailable"
+                    : "Preview cart"}
+            </div>
             <p style={{ fontSize: 13, color: "#777", lineHeight: 1.6, textAlign: "center" }}>
-              Checkout is disabled while product details, pricing and destination-market fulfilment are being verified.
+              Checkout is disabled while order, fulfilment and payment controls are being completed.
             </p>
           </div>
         )}
