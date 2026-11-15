@@ -1409,7 +1409,7 @@ async function updateOrderStatus(orderId, input) {
     await withTenant(client, async (tx, tenantId) => {
       const existing = await tx.query(
         `
-          SELECT order_status, payment_status, fulfilment_status
+          SELECT order_status, payment_status, fulfilment_status, source
           FROM commerce_orders
           WHERE tenant_id = $1
             AND id = $2
@@ -1446,6 +1446,17 @@ async function updateOrderStatus(orderId, input) {
         error.statusCode = 409;
         throw error;
       }
+      if (
+        ["processing", "fulfilled"].includes(nextFulfilmentStatus) &&
+        current.source === "preview"
+      ) {
+        const error = new Error(
+          "Preview/test orders cannot enter real fulfilment."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
 
       if (
         nextOrderStatus === "completed" &&
