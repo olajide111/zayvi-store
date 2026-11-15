@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 
 type Props = {
+  orderId: string;
   amount: number;
-  items: { id: number; qty: number }[];
   onSuccess: () => void;
   onError: (msg: string) => void;
 };
@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-export default function SquareCardForm({ amount, items, onSuccess, onError }: Props) {
+export default function SquareCardForm({ orderId, amount, onSuccess, onError }: Props) {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [card, setCard] = useState<any>(null);
@@ -126,8 +126,8 @@ export default function SquareCardForm({ amount, items, onSuccess, onError }: Pr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          orderId,
           sourceId: result.token,
-          items,
           idempotencyKey: crypto.randomUUID(),
           buyer: {
             givenName: buyer.givenName.trim(),
