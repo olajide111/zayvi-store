@@ -1319,7 +1319,76 @@ async function getOrder(orderId) {
         [tenantId, orderId]
       );
 
+      const paymentAttemptResult = await tx.query(
+        `
+          SELECT
+            pa.id,
+            pa.provider,
+            pa.provider_reference,
+            pa.status,
+            pa.amount,
+            pa.currency_code,
+            pa.failure_code,
+            pa.failure_message,
+            pa.provider_payload,
+            pa.created_at,
+            pa.updated_at
+          FROM commerce_payment_attempts pa
+          WHERE pa.tenant_id = $1
+            AND pa.order_id = $2
+          ORDER BY pa.created_at DESC
+          LIMIT 1
+        `,
+        [tenantId, orderId]
+      );
+
+      const latestAttempt = paymentAttemptResult.rows[0] || null;
+      let paymentEvents = [];
+
+      if (latestAttempt) {
+        const paymentEventResult = await tx.query(
+          `
+            SELECT
+              pe.external_event_id,
+              pe.event_type,
+              pe.provider_sequence,
+              pe.processing_status,
+              pe.processing_note,
+              pe.received_at,
+              pe.processed_at
+            FROM commerce_payment_events pe
+            WHERE pe.tenant_id = $1
+              AND pe.payment_attempt_id = $2
+            ORDER BY pe.received_at DESC
+            LIMIT 20
+          `,
+          [tenantId, latestAttempt.id]
+        );
+
+        paymentEvents = paymentEventResult.rows.map((event) => ({
+          eventId: event.external_event_id,
+          eventType: event.event_type,
+          sequence:
+            event.provider_sequence === null ||
+            event.provider_sequence === undefined
+              ? null
+              : Number(event.provider_sequence),
+          processingStatus: event.processing_status,
+          processingNote: event.processing_note,
+          receivedAt: event.received_at,
+          processedAt: event.processed_at
+        }));
+      }
+
       const row = orderResult.rows[0];
+      const fulfilmentBlocked =
+        row.source === "preview" || row.payment_status !== "paid";
+      const fulfilmentBlockReason =
+        row.source === "preview"
+          ? "Preview/test orders cannot enter real fulfilment."
+          : row.payment_status !== "paid"
+            ? "Payment must be confirmed before fulfilment."
+            : null;
 
       return {
         id: row.id,
@@ -1339,6 +1408,30 @@ async function getOrder(orderId) {
         source: row.source,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
+        fulfilmentSafety: {
+          blocked: fulfilmentBlocked,
+          reason: fulfilmentBlockReason
+        },
+        paymentAttempt: latestAttempt
+          ? {
+              id: latestAttempt.id,
+              provider: latestAttempt.provider,
+              providerReference: latestAttempt.provider_reference,
+              status: latestAttempt.status,
+              amount: Number(latestAttempt.amount),
+              currency: latestAttempt.currency_code,
+              failureCode: latestAttempt.failure_code,
+              failureMessage: latestAttempt.failure_message,
+              providerState:
+                latestAttempt.provider_payload?.payment_state ||
+                latestAttempt.provider_payload?.status ||
+                null,
+              holdState: latestAttempt.provider_payload?.hold_state || null,
+              createdAt: latestAttempt.created_at,
+              updatedAt: latestAttempt.updated_at
+            }
+          : null,
+        paymentEvents,
         items: itemResult.rows.map((item) => ({
           id: item.id,
           productId: item.product_id,
