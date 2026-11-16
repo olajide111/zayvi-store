@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import https from "node:https";
 import { SignatureV4 } from "@smithy/signature-v4";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 
@@ -115,27 +116,59 @@ export async function callZayviAwsApi(
       body: requestBody,
     });
 
-    const response = await fetch(url, {
-      method,
-      headers: signed.headers as Record<string, string>,
-      body: requestBody,
-      cache: "no-store",
+    const result = await new Promise<{
+      status: number;
+      text: string;
+    }>((resolve, reject) => {
+      const request = https.request(
+        {
+          protocol: url.protocol,
+          hostname: url.hostname,
+          port: url.port ? Number(url.port) : undefined,
+          method,
+          path: `${url.pathname}${url.search}`,
+          headers: signed.headers as Record<string, string>,
+        },
+        (response) => {
+          const chunks: Buffer[] = [];
+
+          response.on("data", (chunk) => {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          });
+
+          response.on("end", () => {
+            resolve({
+              status: response.statusCode || 500,
+              text: Buffer.concat(chunks).toString("utf8"),
+            });
+          });
+        }
+      );
+
+      request.on("error", reject);
+
+      if (requestBody) {
+        request.write(requestBody);
+      }
+
+      request.end();
     });
 
-    const text = await response.text();
-    let data: unknown = text;
+    let data: unknown = result.text;
 
     try {
-      data = text ? JSON.parse(text) : null;
+      data = result.text ? JSON.parse(result.text) : null;
     } catch {
       // Keep non-JSON responses as text for diagnostics.
     }
 
+    const ok = result.status >= 200 && result.status < 300;
+
     return {
-      ok: response.ok,
-      status: response.status,
+      ok,
+      status: result.status,
       data,
-      error: response.ok ? undefined : "AWS API request failed.",
+      error: ok ? undefined : "AWS API request failed.",
     };
   } catch (error) {
     return {
