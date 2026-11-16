@@ -77,7 +77,8 @@ const navigation = [
     items: [
       ["Marketing", "↗", "#"],
       ["Promotions & Discounts", "%", "#"],
-      ["Shipping & Returns", "⇢", "/admin/shipping"],
+      ["Shipping", "⇢", "/admin/shipping"],
+      ["Returns & Refunds", "↩", "/admin/returns"],
     ],
   },
   {
@@ -301,14 +302,15 @@ export default function AdminDashboard() {
                   Your store is currently in preview mode
                 </h2>
                 <p className="mt-1 max-w-2xl text-xs leading-5 text-[#55705b]">
-                  Product and market information is being prepared. Checkout
-                  and payment processing remain disabled until fulfilment,
-                  policies and payment configuration are verified.
+                  Product and market information is being prepared. Provider
+                  test payments are available for controlled validation, while
+                  live checkout and real fulfilment remain disabled until the
+                  remaining release controls are verified.
                 </p>
               </div>
             </div>
             <span className="mt-4 inline-block text-xs font-semibold text-[#31543b] md:mt-0">
-              Purchasing disabled
+              Live purchasing disabled
             </span>
           </div>
 
@@ -432,11 +434,12 @@ export default function AdminDashboard() {
               </div>
               <div className="mt-6 rounded-xl bg-[#f7f8f6] p-4">
                 <div className="text-xs font-semibold text-gray-700">
-                  Payments are not active
+                  Live payments are not active
                 </div>
                 <p className="mt-1 text-xs leading-5 text-gray-500">
-                  Provider setup and end-to-end payment testing are still
-                  required before checkout can be enabled.
+                  Test-mode payment integration is available for validation.
+                  Live charging remains behind the release gate until provider,
+                  fulfilment and policy controls are approved.
                 </p>
               </div>
             </section>
