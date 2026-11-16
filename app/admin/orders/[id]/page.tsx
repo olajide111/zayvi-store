@@ -54,6 +54,11 @@ type FulfilmentAllocation = {
   score: number | null;
   rationale: Record<string, unknown>;
   reservationStatus: string;
+  executionStatus: "pending" | "dispatched" | "delivered" | "cancelled";
+  carrier?: string | null;
+  trackingNumber?: string | null;
+  dispatchedAt?: string | null;
+  deliveredAt?: string | null;
   onHand: number | null;
   reserved: number | null;
   safetyStock: number | null;
@@ -149,6 +154,7 @@ export default function AdminOrderDetailPage({
   const [fulfilmentPlan, setFulfilmentPlan] = useState<FulfilmentPlan | null>(null);
   const [planLoading, setPlanLoading] = useState(true);
   const [planWorking, setPlanWorking] = useState(false);
+  const [allocationWorkingId, setAllocationWorkingId] = useState("");
 
   async function loadOrder() {
     setLoading(true);
@@ -298,6 +304,77 @@ export default function AdminOrderDetailPage({
     }
   }
 
+  async function executionAction(
+    allocation: FulfilmentAllocation,
+    action: "dispatch" | "deliver"
+  ) {
+    setAllocationWorkingId(allocation.id);
+    setError("");
+    setNotice("");
+
+    let carrier: string | null = allocation.carrier || null;
+    let trackingNumber: string | null = allocation.trackingNumber || null;
+
+    if (action === "dispatch") {
+      const enteredCarrier = window.prompt(
+        "Carrier (optional)",
+        allocation.carrier || ""
+      );
+      if (enteredCarrier === null) {
+        setAllocationWorkingId("");
+        return;
+      }
+
+      const enteredTracking = window.prompt(
+        "Tracking number (optional)",
+        allocation.trackingNumber || ""
+      );
+      if (enteredTracking === null) {
+        setAllocationWorkingId("");
+        return;
+      }
+
+      carrier = enteredCarrier.trim() || null;
+      trackingNumber = enteredTracking.trim() || null;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${id}/fulfilment-plan/allocations/${allocation.id}/execution`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action, carrier, trackingNumber }),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+            (action === "dispatch"
+              ? "Unable to mark allocation dispatched."
+              : "Unable to mark allocation delivered.")
+        );
+      }
+
+      setNotice(
+        action === "dispatch"
+          ? "Allocation marked dispatched."
+          : "Allocation marked delivered."
+      );
+
+      await Promise.all([loadOrder(), loadFulfilmentPlan()]);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to update fulfilment execution."
+      );
+    } finally {
+      setAllocationWorkingId("");
+    }
+  }
+
   if (loading) {
     return <main className="min-h-screen bg-[#f7f8f6] p-10 text-sm text-gray-500">Loading order...</main>;
   }
@@ -388,7 +465,7 @@ export default function AdminOrderDetailPage({
                         </div>
                       </div>
 
-                      <div className="mt-3 grid gap-3 text-xs sm:grid-cols-4">
+                      <div className="mt-3 grid gap-3 text-xs sm:grid-cols-5">
                         <div>
                           <div className="text-gray-400">Score</div>
                           <div className="mt-1 font-semibold">{allocation.score ?? "—"}</div>
@@ -410,18 +487,64 @@ export default function AdminOrderDetailPage({
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Reserved stock</div>
-                          <div className="mt-1 font-semibold">
-                            {allocation.sourceType === "own_stock"
-                              ? allocation.reserved ?? 0
-                              : "External"}
+                          <div className="text-gray-400">Reservation</div>
+                          <div className="mt-1 font-semibold capitalize">
+                            {allocation.reservationStatus.replaceAll("_", " ")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Execution</div>
+                          <div className="mt-1 font-semibold capitalize">
+                            {allocation.executionStatus.replaceAll("_", " ")}
                           </div>
                         </div>
                       </div>
 
+                      {(allocation.carrier || allocation.trackingNumber) && (
+                        <div className="mt-3 rounded-lg bg-white px-3 py-2 text-[11px] text-gray-500">
+                          {allocation.carrier ? `Carrier: ${allocation.carrier}` : "Carrier not recorded"}
+                          {allocation.trackingNumber
+                            ? ` · Tracking: ${allocation.trackingNumber}`
+                            : ""}
+                        </div>
+                      )}
+
                       {typeof allocation.rationale?.reason === "string" && (
                         <div className="mt-3 text-[11px] leading-4 text-gray-500">
                           {allocation.rationale.reason}
+                        </div>
+                      )}
+
+                      {fulfilmentPlan.status === "approved" && (
+                        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                          {allocation.executionStatus === "pending" && (
+                            <button
+                              type="button"
+                              disabled={allocationWorkingId === allocation.id}
+                              onClick={() => void executionAction(allocation, "dispatch")}
+                              className="rounded-lg bg-[#17251e] px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                            >
+                              Mark dispatched
+                            </button>
+                          )}
+
+                          {allocation.executionStatus === "dispatched" && (
+                            <button
+                              type="button"
+                              disabled={allocationWorkingId === allocation.id}
+                              onClick={() => void executionAction(allocation, "deliver")}
+                              className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                            >
+                              Mark delivered
+                            </button>
+                          )}
+
+                          {allocation.sourceType === "supplier" &&
+                            allocation.executionStatus === "pending" && (
+                              <span className="self-center text-[10px] text-amber-700">
+                                This confirms an external action already taken; Zayvi will not contact the supplier.
+                              </span>
+                            )}
                         </div>
                       )}
                     </div>
