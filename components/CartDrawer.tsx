@@ -25,9 +25,10 @@ type Props = {
     customerName: string;
     customerEmail: string;
     phone?: string;
-  }) => Promise<{ orderNumber: string }>;
+  }) => Promise<{ orderNumber: string; orderId: string }>;
   verifiedSubtotal: number | null;
   pricingState: "idle" | "checking" | "verified" | "error";
+  marketCode: "GB" | "NG";
 };
 
 export default function CartDrawer({
@@ -39,6 +40,7 @@ export default function CartDrawer({
   onCreateDraftOrder,
   verifiedSubtotal,
   pricingState,
+  marketCode,
 }: Props) {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -47,6 +49,13 @@ export default function CartDrawer({
   const [draftMessage, setDraftMessage] = useState("");
 
   const browserSubtotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
+  const currency = marketCode === "NG" ? "NGN" : "GBP";
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat(marketCode === "NG" ? "en-NG" : "en-GB", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: marketCode === "NG" ? 0 : 2,
+    }).format(value);
   const sub = verifiedSubtotal ?? browserSubtotal;
   const cnt = cart.reduce((a, i) => a + i.qty, 0);
 
@@ -98,7 +107,7 @@ export default function CartDrawer({
 
         <div style={{ padding: "12px 24px", background: "#fafafa", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ fontSize: 12, color: STORE_COLOR, fontWeight: 700 }}>
-            Preview catalogue — checkout is not enabled yet
+            Preview {marketCode === "NG" ? "Nigeria · NGN" : "United Kingdom · GBP"} — checkout is not enabled yet
           </div>
         </div>
 
@@ -140,7 +149,7 @@ export default function CartDrawer({
                         <button onClick={() => onQty(item.id, item.selectedColor, item.selectedSize, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>£{(item.price * item.qty).toFixed(2)}</div>
+                        <div style={{ fontSize: 14, fontWeight: 800 }}>{formatMoney(item.price * item.qty)}</div>
                         <button onClick={() => onRemove(item.id, item.selectedColor, item.selectedSize)} style={{ fontSize: 10, color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>
                           Remove
                         </button>
@@ -157,7 +166,7 @@ export default function CartDrawer({
           <div style={{ padding: 24, borderTop: "1px solid #f0f0f0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, fontSize: 16, fontWeight: 800 }}>
               <span>Subtotal</span>
-              <span>£{sub.toFixed(2)}</span>
+              <span>{formatMoney(sub)}</span>
             </div>
 
             <div style={{ marginBottom: 10, textAlign: "center", fontSize: 11, fontWeight: 700, color: pricingState === "verified" ? "#15803d" : pricingState === "error" ? "#b45309" : "#777" }}>
@@ -205,7 +214,9 @@ export default function CartDrawer({
                       phone: phone || undefined,
                     });
                     setDraftState("saved");
-                    setDraftMessage(`Draft order ${result.orderNumber} created.`);
+                    setDraftMessage(
+                      `Draft order ${result.orderNumber} created. Order UUID: ${result.orderId}`
+                    );
                   } catch (error) {
                     setDraftState("error");
                     setDraftMessage(error instanceof Error ? error.message : "Unable to create draft order.");

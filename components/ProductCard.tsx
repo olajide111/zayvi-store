@@ -14,6 +14,15 @@ type Props = {
 
 export default function ProductCard({ product, onView, onAdd }: Props) {
   const [hov, setHov] = useState(false);
+  const currency = product.currency || (product.marketCode === "NG" ? "NGN" : "GBP");
+  const formattedPrice = new Intl.NumberFormat(
+    product.marketCode === "NG" ? "en-NG" : "en-GB",
+    {
+      style: "currency",
+      currency,
+      maximumFractionDigits: currency === "NGN" ? 0 : 2,
+    }
+  ).format(Number(product.price));
 
   return (
     <div
@@ -78,9 +87,11 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
           </div>
         </Link>
         <p style={{ fontSize: 12, color: "#777", marginBottom: 8 }}>Preview catalogue · Not yet available to purchase</p>
-        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>£{Number(product.price).toFixed(2)}</div>
+        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>{formattedPrice}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 12, color: "#777" }}>Preview GB price</div>
+          <div style={{ fontSize: 12, color: "#777" }}>
+            Preview {product.marketCode === "NG" ? "NG" : "GB"} price
+          </div>
           <button
             title="Add this product to your Preview cart"
             onClick={() => onAdd(product, 1, product.colors[0]?.name, product.sizes[0])}
