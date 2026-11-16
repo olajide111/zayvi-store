@@ -11,6 +11,7 @@ const primary = [
 ] as const;
 
 const more = [
+  { label: "Analytics", href: "/admin/analytics" },
   { label: "Returns", href: "/admin/returns" },
   { label: "Customers", href: "/admin/customers" },
   { label: "Markets", href: "/admin/markets" },
