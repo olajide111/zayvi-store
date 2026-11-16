@@ -14,6 +14,31 @@ type OrderItem = {
   selectedOptions: Record<string, string>;
 };
 
+type PaymentAttempt = {
+  id: string;
+  provider: string;
+  providerReference?: string | null;
+  status: string;
+  amount: number;
+  currency: string;
+  failureCode?: string | null;
+  failureMessage?: string | null;
+  providerState?: string | null;
+  holdState?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type PaymentEvent = {
+  eventId: string;
+  eventType: string;
+  sequence?: number | null;
+  processingStatus: string;
+  processingNote?: string | null;
+  receivedAt: string;
+  processedAt?: string | null;
+};
+
 type OrderDetail = {
   id: string;
   orderNumber: string;
@@ -31,8 +56,43 @@ type OrderDetail = {
   source: string;
   createdAt: string;
   updatedAt: string;
+  fulfilmentSafety: {
+    blocked: boolean;
+    reason?: string | null;
+  };
+  paymentAttempt?: PaymentAttempt | null;
+  paymentEvents: PaymentEvent[];
   items: OrderItem[];
 };
+
+function formatMoney(value: number, currency: string) {
+  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: currency === "NGN" ? 0 : 2,
+  }).format(Number(value || 0));
+}
+
+function StatusPill({ value }: { value: string }) {
+  const normalized = value.toLowerCase();
+  const positive = ["paid", "succeeded", "captured", "applied", "active"].includes(normalized);
+  const warning = ["pending", "created", "held", "processing", "stored"].includes(normalized);
+
+  return (
+    <span
+      className={
+        "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+        (positive
+          ? "bg-emerald-50 text-emerald-700"
+          : warning
+            ? "bg-amber-50 text-amber-700"
+            : "bg-gray-100 text-gray-600")
+      }
+    >
+      {value.replaceAll("_", " ")}
+    </span>
+  );
+}
 
 export default function AdminOrderDetailPage({
   params,
@@ -148,8 +208,8 @@ export default function AdminOrderDetailPage({
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-semibold">£{Number(item.lineTotal).toFixed(2)}</div>
-                  <div className="mt-1 text-xs text-gray-400">{item.quantity} × £{Number(item.unitPrice).toFixed(2)}</div>
+                  <div className="text-sm font-semibold">{formatMoney(item.lineTotal, item.currency)}</div>
+                  <div className="mt-1 text-xs text-gray-400">{item.quantity} × {formatMoney(item.unitPrice, item.currency)}</div>
                 </div>
               </div>
             ))}
@@ -160,16 +220,88 @@ export default function AdminOrderDetailPage({
             <div className="mt-3 text-sm font-medium">{order.customerName}</div>
             <div className="mt-1 text-sm text-gray-500">{order.customerEmail}</div>
           </div>
+
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold">Payment evidence</h2>
+                <p className="mt-1 text-xs text-gray-400">
+                  Provider-controlled payment state and reconciliation history.
+                </p>
+              </div>
+              <StatusPill value={order.paymentStatus} />
+            </div>
+
+            {order.paymentAttempt ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-[#fafbf9] p-4">
+                  <div className="text-[11px] uppercase tracking-wide text-gray-400">Provider</div>
+                  <div className="mt-1 text-sm font-semibold capitalize">{order.paymentAttempt.provider}</div>
+                  <div className="mt-2"><StatusPill value={order.paymentAttempt.status} /></div>
+                </div>
+                <div className="rounded-xl bg-[#fafbf9] p-4">
+                  <div className="text-[11px] uppercase tracking-wide text-gray-400">Amount</div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {formatMoney(order.paymentAttempt.amount, order.paymentAttempt.currency)}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Provider state: {order.paymentAttempt.providerState || "—"}
+                    {order.paymentAttempt.holdState ? ` · hold: ${order.paymentAttempt.holdState}` : ""}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-[#fafbf9] p-4 sm:col-span-2">
+                  <div className="text-[11px] uppercase tracking-wide text-gray-400">Provider reference</div>
+                  <div className="mt-1 break-all font-mono text-xs text-gray-700">
+                    {order.paymentAttempt.providerReference || "Not assigned"}
+                  </div>
+                </div>
+                {(order.paymentAttempt.failureCode || order.paymentAttempt.failureMessage) && (
+                  <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-xs text-red-700 sm:col-span-2">
+                    {[order.paymentAttempt.failureCode, order.paymentAttempt.failureMessage]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+                No payment attempt has been recorded for this order yet.
+              </div>
+            )}
+
+            {order.paymentEvents.length > 0 && (
+              <div className="mt-5">
+                <div className="mb-2 text-xs font-semibold text-gray-500">Recent payment events</div>
+                <div className="divide-y divide-gray-100 rounded-xl border border-gray-100">
+                  {order.paymentEvents.slice(0, 8).map((event) => (
+                    <div key={event.eventId} className="flex items-start justify-between gap-4 p-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-semibold text-gray-800">{event.eventType}</div>
+                        <div className="mt-1 text-[11px] text-gray-400">
+                          {new Date(event.receivedAt).toLocaleString("en-GB")}
+                          {event.sequence !== null && event.sequence !== undefined ? ` · seq ${event.sequence}` : ""}
+                        </div>
+                        {event.processingNote && (
+                          <div className="mt-1 text-[11px] leading-4 text-gray-500">{event.processingNote}</div>
+                        )}
+                      </div>
+                      <StatusPill value={event.processingStatus} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <aside className="space-y-6">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 className="text-sm font-semibold">Order totals</h2>
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>£{order.subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span>£{order.shippingTotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Tax</span><span>£{order.taxTotal.toFixed(2)}</span></div>
-              <div className="flex justify-between border-t border-gray-100 pt-3 font-semibold"><span>Total</span><span>£{order.total.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{formatMoney(order.subtotal, order.currency)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Shipping</span><span>{formatMoney(order.shippingTotal, order.currency)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Tax</span><span>{formatMoney(order.taxTotal, order.currency)}</span></div>
+              <div className="flex justify-between border-t border-gray-100 pt-3 font-semibold"><span>Total</span><span>{formatMoney(order.total, order.currency)}</span></div>
             </div>
           </div>
 
@@ -206,8 +338,8 @@ export default function AdminOrderDetailPage({
                 className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
               >
                 <option value="unfulfilled">Unfulfilled</option>
-                <option value="processing">Processing</option>
-                <option value="fulfilled">Fulfilled</option>
+                <option value="processing" disabled={order.fulfilmentSafety.blocked}>Processing</option>
+                <option value="fulfilled" disabled={order.fulfilmentSafety.blocked}>Fulfilled</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -216,8 +348,24 @@ export default function AdminOrderDetailPage({
             {error && <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs text-red-700">{error}</div>}
           </div>
 
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs leading-5 text-amber-800">
-            Payments remain disabled in Preview. Unpaid orders cannot be confirmed or enter fulfilment.
+          <div
+            className={
+              "rounded-2xl border p-4 text-xs leading-5 " +
+              (order.fulfilmentSafety.blocked
+                ? "border-amber-100 bg-amber-50 text-amber-800"
+                : "border-emerald-100 bg-emerald-50 text-emerald-800")
+            }
+          >
+            <div className="font-semibold">
+              {order.fulfilmentSafety.blocked ? "Fulfilment blocked" : "Fulfilment eligible"}
+            </div>
+            <div className="mt-1">
+              {order.fulfilmentSafety.reason ||
+                "Payment is confirmed and this is not a Preview/test order."}
+            </div>
+            <div className="mt-2 text-[11px] opacity-80">
+              Source: {order.source} · Payment: {order.paymentStatus}
+            </div>
           </div>
         </aside>
       </section>
