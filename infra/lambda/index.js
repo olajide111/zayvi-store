@@ -2576,6 +2576,285 @@ async function createSupplierOffer(input) {
 }
 
 
+async function getSourcingRecommendations(marketCode = "GB") {
+  const normalizedMarket = String(marketCode || "GB").trim().toUpperCase();
+
+  if (!["GB", "NG"].includes(normalizedMarket)) {
+    const error = new Error("Sourcing market must be GB or NG.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            tcp.id AS tenant_product_id,
+            cp.id AS product_id,
+            cp.name AS product_name,
+            cp.canonical_code,
+            tpm.customer_price,
+            tpm.currency_code,
+            tpm.publication_status,
+            tpm.availability_status,
+            own.on_hand,
+            own.reserved,
+            own.safety_stock,
+            own.location_name,
+            so.id AS offer_id,
+            so.supplier_sku,
+            so.unit_cost,
+            so.minimum_order_quantity,
+            so.lead_time_days,
+            so.stock_status,
+            so.external_stock_quantity,
+            so.source_updated_at,
+            s.id AS supplier_id,
+            s.name AS supplier_name,
+            s.supplier_type,
+            s.fulfilment_model,
+            s.verification_status
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          LEFT JOIN tenant_product_markets tpm
+            ON tpm.tenant_id = tcp.tenant_id
+           AND tpm.tenant_catalogue_product_id = tcp.id
+           AND tpm.market_code = $2
+          LEFT JOIN LATERAL (
+            SELECT
+              il.on_hand,
+              il.reserved,
+              il.safety_stock,
+              loc.name AS location_name
+            FROM commerce_inventory_locations loc
+            JOIN commerce_inventory_levels il
+              ON il.tenant_id = loc.tenant_id
+             AND il.location_id = loc.id
+            WHERE loc.tenant_id = tcp.tenant_id
+              AND loc.store_id = tcp.store_id
+              AND loc.market_code = $2
+              AND loc.location_type = 'own_stock'
+              AND loc.status = 'active'
+              AND il.tenant_catalogue_product_id = tcp.id
+            ORDER BY il.updated_at DESC
+            LIMIT 1
+          ) own ON true
+          LEFT JOIN commerce_supplier_offers so
+            ON so.tenant_id = tcp.tenant_id
+           AND so.tenant_catalogue_product_id = tcp.id
+           AND so.status = 'active'
+          LEFT JOIN commerce_suppliers s
+            ON s.tenant_id = so.tenant_id
+           AND s.id = so.supplier_id
+           AND s.market_code = $2
+           AND s.status = 'active'
+          WHERE tcp.tenant_id = $1
+            AND tcp.status <> 'archived'
+          ORDER BY cp.name ASC, s.name ASC NULLS LAST
+        `,
+        [tenantId, normalizedMarket]
+      );
+
+      const products = new Map();
+
+      for (const row of result.rows) {
+        if (!products.has(row.tenant_product_id)) {
+          const onHand = row.on_hand === null ? 0 : Number(row.on_hand);
+          const reserved = row.reserved === null ? 0 : Number(row.reserved);
+          const safetyStock =
+            row.safety_stock === null ? 0 : Number(row.safety_stock);
+          const availableToSell = Math.max(
+            0,
+            onHand - reserved - safetyStock
+          );
+
+          const sources = [];
+
+          if (row.on_hand !== null) {
+            sources.push({
+              sourceType: "own_stock",
+              sourceId: "own-stock",
+              sourceName: row.location_name || "Own stock",
+              eligible: availableToSell > 0,
+              score: availableToSell > 0 ? 100 : null,
+              reasons:
+                availableToSell > 0
+                  ? [
+                      "Stock is already held by Zayvi.",
+                      `${availableToSell} unit(s) are available to sell after reservations and safety stock.`
+                    ]
+                  : [
+                      "No own-stock units are currently available to sell."
+                    ],
+              availableQuantity: availableToSell,
+              unitCost: null,
+              marginAmount: null,
+              marginPercent: null,
+              leadTimeDays: 0,
+              verificationStatus: "internal",
+              stockStatus: availableToSell > 0 ? "in_stock" : "out_of_stock"
+            });
+          }
+
+          products.set(row.tenant_product_id, {
+            tenantProductId: row.tenant_product_id,
+            productId: row.product_id,
+            productName: row.product_name,
+            canonicalCode: row.canonical_code,
+            marketCode: normalizedMarket,
+            currency:
+              row.currency_code ||
+              (normalizedMarket === "NG" ? "NGN" : "GBP"),
+            sellingPrice:
+              row.customer_price === null
+                ? null
+                : Number(row.customer_price),
+            publicationStatus:
+              row.publication_status || "not_listed",
+            availabilityStatus:
+              row.availability_status || "unknown",
+            sources
+          });
+        }
+
+        if (!row.offer_id || !row.supplier_id) continue;
+
+        const product = products.get(row.tenant_product_id);
+        const sellingPrice = product.sellingPrice;
+        const unitCost =
+          row.unit_cost === null ? null : Number(row.unit_cost);
+        const marginAmount =
+          sellingPrice === null || unitCost === null
+            ? null
+            : sellingPrice - unitCost;
+        const marginPercent =
+          sellingPrice && marginAmount !== null
+            ? (marginAmount / sellingPrice) * 100
+            : null;
+        const verified = row.verification_status === "verified";
+        const supplierStock =
+          row.external_stock_quantity === null
+            ? null
+            : Number(row.external_stock_quantity);
+        const stockAvailable =
+          ["in_stock", "limited", "preorder"].includes(row.stock_status) &&
+          (supplierStock === null || supplierStock > 0);
+        const positiveMargin =
+          marginAmount !== null && marginAmount > 0;
+        const hasCommercialEvidence =
+          sellingPrice !== null && unitCost !== null;
+        const eligible =
+          verified &&
+          stockAvailable &&
+          positiveMargin &&
+          hasCommercialEvidence;
+
+        let score = null;
+        const reasons = [];
+
+        if (!verified) {
+          reasons.push("Supplier is not verified.");
+        }
+        if (!stockAvailable) {
+          reasons.push("Supplier stock is not currently available.");
+        }
+        if (!hasCommercialEvidence) {
+          reasons.push("Selling price or supplier unit cost is missing.");
+        } else if (!positiveMargin) {
+          reasons.push("Supplier cost does not leave a positive gross margin.");
+        }
+
+        if (eligible) {
+          const marginScore = Math.max(
+            0,
+            Math.min(30, Number(marginPercent || 0))
+          );
+          const stockScore =
+            row.stock_status === "in_stock"
+              ? 10
+              : row.stock_status === "limited"
+                ? 6
+                : 3;
+          const lead = row.lead_time_days === null
+            ? null
+            : Number(row.lead_time_days);
+          const leadScore =
+            lead === null
+              ? 0
+              : lead <= 2
+                ? 10
+                : lead <= 5
+                  ? 7
+                  : lead <= 10
+                    ? 3
+                    : 0;
+
+          score = Math.round(50 + marginScore + stockScore + leadScore);
+
+          reasons.push(
+            `Estimated gross margin is ${Number(marginPercent).toFixed(1)}% before shipping, tax and other variable costs.`
+          );
+          reasons.push(
+            lead === null
+              ? "Supplier lead time has not been recorded."
+              : `Recorded lead time is ${lead} day(s).`
+          );
+        }
+
+        product.sources.push({
+          sourceType: "supplier",
+          sourceId: row.offer_id,
+          supplierId: row.supplier_id,
+          sourceName: row.supplier_name,
+          supplierType: row.supplier_type,
+          fulfilmentModel: row.fulfilment_model,
+          supplierSku: row.supplier_sku,
+          eligible,
+          score,
+          reasons,
+          availableQuantity: supplierStock,
+          unitCost,
+          marginAmount,
+          marginPercent,
+          minimumOrderQuantity: Number(row.minimum_order_quantity),
+          leadTimeDays:
+            row.lead_time_days === null
+              ? null
+              : Number(row.lead_time_days),
+          verificationStatus: row.verification_status,
+          stockStatus: row.stock_status,
+          sourceUpdatedAt: row.source_updated_at
+        });
+      }
+
+      return [...products.values()].map((product) => {
+        const ranked = [...product.sources].sort((a, b) => {
+          const aScore = a.score === null ? -1 : a.score;
+          const bScore = b.score === null ? -1 : b.score;
+          return bScore - aScore;
+        });
+
+        const recommended = ranked.find((source) => source.eligible) || null;
+
+        return {
+          ...product,
+          recommendedSourceId: recommended?.sourceId || null,
+          recommendedSourceType: recommended?.sourceType || null,
+          recommendedSourceName: recommended?.sourceName || null,
+          sources: ranked
+        };
+      });
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -4010,6 +4289,33 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_offer_upsert_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/sourcing")) {
+    try {
+      const marketCode = event?.queryStringParameters?.market || "GB";
+      const recommendations = await getSourcingRecommendations(marketCode);
+      return response(200, {
+        source: "postgresql",
+        marketCode: String(marketCode).toUpperCase(),
+        generatedAt: new Date().toISOString(),
+        routingEnabled: false,
+        methodology:
+          "Deterministic sourcing score using owned stock, supplier verification, recorded stock state, gross margin and lead time. Shipping, tax, returns and other variable costs are not yet included.",
+        recommendations
+      });
+    } catch (error) {
+      console.error("Sourcing recommendations failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "sourcing_unavailable"
       });
     }
   }
