@@ -1,4 +1,6 @@
-import crypto from "node:crypto";
+import { Sha256 } from "@aws-crypto/sha256-js";
+import { HttpRequest } from "@smithy/protocol-http";
+import { SignatureV4 } from "@smithy/signature-v4";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 
 type AwsApiResult = {
@@ -13,31 +15,21 @@ type AwsApiOptions = {
   body?: unknown;
 };
 
-function sha256(value: string) {
-  return crypto.createHash("sha256").update(value, "utf8").digest("hex");
-}
+function queryObject(url: URL) {
+  const query: Record<string, string | string[]> = {};
 
-function hmac(key: Buffer | string, value: string) {
-  return crypto.createHmac("sha256", key).update(value, "utf8").digest();
-}
+  for (const [key, value] of url.searchParams.entries()) {
+    const existing = query[key];
+    if (existing === undefined) {
+      query[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      query[key] = [existing, value];
+    }
+  }
 
-function signingKey(secret: string, date: string, region: string, service: string) {
-  const kDate = hmac(`AWS4${secret}`, date);
-  const kRegion = hmac(kDate, region);
-  const kService = hmac(kRegion, service);
-  return hmac(kService, "aws4_request");
-}
-
-function canonicalQuery(url: URL) {
-  return [...url.searchParams.entries()]
-    .sort(([aKey, aValue], [bKey, bValue]) =>
-      aKey === bKey ? aValue.localeCompare(bValue) : aKey.localeCompare(bKey)
-    )
-    .map(
-      ([key, value]) =>
-        `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
-    )
-    .join("&");
+  return query;
 }
 
 export async function callZayviAwsApi(
@@ -49,7 +41,7 @@ export async function callZayviAwsApi(
   const region = process.env.AWS_REGION || "eu-west-2";
   const method = options.method || "GET";
   const requestBody =
-    options.body === undefined ? "" : JSON.stringify(options.body);
+    options.body === undefined ? undefined : JSON.stringify(options.body);
 
   if (!endpoint || !roleArn) {
     return {
@@ -63,81 +55,34 @@ export async function callZayviAwsApi(
   try {
     const credentials = await awsCredentialsProvider({ roleArn })();
     const url = new URL(path, endpoint.endsWith("/") ? endpoint : `${endpoint}/`);
-    const now = new Date();
-    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
-    const dateStamp = amzDate.slice(0, 8);
-    const service = "execute-api";
-    const payloadHash = sha256(requestBody);
 
-    const signedHeaderNames = ["host", "x-amz-date"];
-    const canonicalHeaderValues: Record<string, string> = {
-      host: url.host,
-      "x-amz-date": amzDate,
-    };
+    const signer = new SignatureV4({
+      credentials,
+      region,
+      service: "execute-api",
+      sha256: Sha256,
+    });
 
-    if (requestBody) {
-      signedHeaderNames.push("content-type");
-      canonicalHeaderValues["content-type"] = "application/json";
-    }
-
-    if (credentials.sessionToken) {
-      signedHeaderNames.push("x-amz-security-token");
-      canonicalHeaderValues["x-amz-security-token"] = credentials.sessionToken;
-    }
-
-    signedHeaderNames.sort();
-    const signedHeaders = signedHeaderNames.join(";");
-    const canonicalHeaders =
-      signedHeaderNames
-        .map((name) => `${name}:${canonicalHeaderValues[name].trim()}\n`)
-        .join("");
-
-    const canonicalRequest = [
+    const request = new HttpRequest({
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port ? Number(url.port) : undefined,
       method,
-      url.pathname || "/",
-      canonicalQuery(url),
-      canonicalHeaders,
-      signedHeaders,
-      payloadHash,
-    ].join("\n");
+      path: url.pathname || "/",
+      query: queryObject(url),
+      headers: {
+        host: url.host,
+        ...(requestBody ? { "content-type": "application/json" } : {}),
+      },
+      body: requestBody,
+    });
 
-    const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-    const stringToSign = [
-      "AWS4-HMAC-SHA256",
-      amzDate,
-      credentialScope,
-      sha256(canonicalRequest),
-    ].join("\n");
-
-    const signature = crypto
-      .createHmac(
-        "sha256",
-        signingKey(credentials.secretAccessKey, dateStamp, region, service)
-      )
-      .update(stringToSign, "utf8")
-      .digest("hex");
-
-    const authorization =
-      `AWS4-HMAC-SHA256 Credential=${credentials.accessKeyId}/${credentialScope}, ` +
-      `SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-    const headers: Record<string, string> = {
-      "x-amz-date": amzDate,
-      authorization,
-    };
-
-    if (requestBody) {
-      headers["content-type"] = "application/json";
-    }
-
-    if (credentials.sessionToken) {
-      headers["x-amz-security-token"] = credentials.sessionToken;
-    }
+    const signed = await signer.sign(request);
 
     const response = await fetch(url, {
       method,
-      headers,
-      body: requestBody || undefined,
+      headers: signed.headers as Record<string, string>,
+      body: requestBody,
       cache: "no-store",
     });
 
