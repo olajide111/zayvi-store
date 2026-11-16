@@ -10,6 +10,9 @@ The next unapplied migrations are expected to be:
 
 - `0011_inventory_ledger.sql`
 - `0012_supplier_registry.sql`
+- `0013_fulfilment_planning.sql`
+- `0014_fulfilment_execution.sql`
+- `0015_supplier_verification_audit.sql`
 
 The bootstrap runner is checksum-protected and only applies migrations not already recorded in `zayvi_schema_migrations`.
 
@@ -48,6 +51,9 @@ Confirm the output includes:
 ```text
 migrations/0011_inventory_ledger.sql
 migrations/0012_supplier_registry.sql
+migrations/0013_fulfilment_planning.sql
+migrations/0014_fulfilment_execution.sql
+migrations/0015_supplier_verification_audit.sql
 ```
 
 ## Initialise the existing Preview backend
@@ -92,7 +98,7 @@ terraform apply zayvi-preview-migrations.tfplan
 
 The bootstrap output should report `bootstrap_complete`.
 
-For this activation, `migrationsApplied` should include 0011 and 0012 when they were not already applied.
+For this activation, `migrationsApplied` should include migrations 0011 through 0015 when they were not already applied.
 
 ## Post-apply checks
 
@@ -118,6 +124,10 @@ Then validate the Preview application:
 5. A supplier can be created in `pending review`.
 6. Supplier detail can save a product offer.
 7. Admin → Sourcing Intelligence loads and keeps automatic routing disabled.
+8. A supplier can be moved through pending review → verified/rejected with an audit event recorded.
+9. A draft fulfilment plan can be generated for an order without auto-routing or contacting suppliers.
+10. Preview/test orders remain blocked from approving or executing real fulfilment.
+11. Replenishment watchlist loads and keeps automatic reordering disabled.
 
 ## Rollback policy
 
