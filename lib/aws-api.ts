@@ -1,5 +1,4 @@
-import { Sha256 } from "@aws-crypto/sha256-js";
-import { HttpRequest } from "@smithy/protocol-http";
+import crypto from "node:crypto";
 import { SignatureV4 } from "@smithy/signature-v4";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 
@@ -14,6 +13,24 @@ type AwsApiOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
 };
+
+class NodeSha256 {
+  private hash = crypto.createHash("sha256");
+
+  constructor(secret?: Uint8Array | string) {
+    if (secret !== undefined) {
+      this.hash = crypto.createHmac("sha256", secret);
+    }
+  }
+
+  update(data: Uint8Array | string) {
+    this.hash.update(data);
+  }
+
+  async digest(): Promise<Uint8Array> {
+    return this.hash.digest();
+  }
+}
 
 function queryObject(url: URL) {
   const query: Record<string, string | string[]> = {};
@@ -60,10 +77,10 @@ export async function callZayviAwsApi(
       credentials,
       region,
       service: "execute-api",
-      sha256: Sha256,
+      sha256: NodeSha256,
     });
 
-    const request = new HttpRequest({
+    const signed = await signer.sign({
       protocol: url.protocol,
       hostname: url.hostname,
       port: url.port ? Number(url.port) : undefined,
@@ -76,8 +93,6 @@ export async function callZayviAwsApi(
       },
       body: requestBody,
     });
-
-    const signed = await signer.sign(request);
 
     const response = await fetch(url, {
       method,
