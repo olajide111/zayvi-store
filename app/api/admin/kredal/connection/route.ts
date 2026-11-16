@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
   const result = await callZayviAwsApi("/payment-connections/kredal");
 
   if (!result.ok) {
+    console.error("Direct Lambda Kredal connection GET failed", {
+      status: result.status,
+      error: result.error,
+      data: result.data,
+    });
     return NextResponse.json(
       { error: "Unable to load Kredal connection." },
       { status: result.status || 502 }
@@ -103,6 +108,11 @@ export async function POST(request: NextRequest) {
     const current = await callZayviAwsApi("/payment-connections/kredal");
 
     if (!current.ok) {
+      console.error("Direct Lambda Kredal connection POST preflight failed", {
+        status: current.status,
+        error: current.error,
+        data: current.data,
+      });
       throw new Error("Unable to load the Zayvi store connection context.");
     }
 
