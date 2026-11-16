@@ -9,7 +9,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  const result = await callZayviAwsApi("/inventory");
+  const market = (request.nextUrl.searchParams.get("market") || "GB").toUpperCase();
+
+  if (!["GB", "NG"].includes(market)) {
+    return NextResponse.json({ error: "Unsupported inventory market." }, { status: 400 });
+  }
+
+  const result = await callZayviAwsApi(
+    "/inventory?market=" + encodeURIComponent(market)
+  );
 
   if (!result.ok) {
     return NextResponse.json(
