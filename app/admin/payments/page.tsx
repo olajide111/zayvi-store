@@ -19,6 +19,7 @@ type ConnectionResponse = {
 type KredalEvent = {
   eventId: string;
   eventType: string;
+  sequence?: number | null;
   processingStatus: string;
   processingNote?: string | null;
   receivedAt: string;
@@ -36,6 +37,8 @@ type TestPaymentResult = {
   checkoutUrl?: string | null;
   providerReference?: string;
   providerStatus?: string;
+  providerPaymentState?: string;
+  providerHoldState?: string | null;
   testMode?: boolean;
   error?: string;
 };
@@ -254,6 +257,36 @@ export default function AdminPaymentsPage() {
     }
   }
 
+
+  async function catchUpKredalEvents() {
+    setWorking("catchup");
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/admin/kredal/catch-up", {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to catch up Kredal events.");
+      }
+
+      setNotice(
+        `Kredal catch-up complete: ${payload.fetched ?? 0} fetched, ${payload.applied ?? 0} applied, ${payload.duplicates ?? 0} duplicates, last sequence ${payload.lastSequence ?? 0}.`
+      );
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to catch up Kredal events."
+      );
+    } finally {
+      setWorking("");
+    }
+  }
+
   const connectionStatus = connection?.connection?.status || "not_connected";
   const approvalUrl =
     connection?.approveUrl ||
@@ -448,18 +481,29 @@ export default function AdminPaymentsPage() {
                 Kredal webhook event ledger
               </h2>
               <p className="mt-1 text-xs text-gray-500">
-                Signed events are stored once by event id. Money state changes
-                are reconciled through verified payment lookup.
+                Signed events are stored once by event id and applied in Kredal
+                sequence order. Missed events can be recovered from Kredal's
+                event feed without replaying older state.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void load()}
-              disabled={loading}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50"
-            >
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void catchUpKredalEvents()}
+                disabled={Boolean(working)}
+                className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {working === "catchup" ? "Catching up..." : "Catch up events"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void load()}
+                disabled={loading}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div className="mt-5 overflow-x-auto">
@@ -467,6 +511,7 @@ export default function AdminPaymentsPage() {
               <thead className="text-gray-400">
                 <tr>
                   <th className="pb-3 pr-5">Event</th>
+                  <th className="pb-3 pr-5">Sequence</th>
                   <th className="pb-3 pr-5">Type</th>
                   <th className="pb-3 pr-5">State</th>
                   <th className="pb-3">Received</th>
@@ -475,7 +520,7 @@ export default function AdminPaymentsPage() {
               <tbody className="divide-y divide-gray-100">
                 {events.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-gray-400">
+                    <td colSpan={5} className="py-6 text-gray-400">
                       No Kredal webhook events have been stored yet.
                     </td>
                   </tr>
@@ -484,6 +529,9 @@ export default function AdminPaymentsPage() {
                     <tr key={event.eventId}>
                       <td className="py-3 pr-5 font-mono text-[11px]">
                         {event.eventId}
+                      </td>
+                      <td className="py-3 pr-5 font-mono text-[11px]">
+                        {event.sequence ?? "—"}
                       </td>
                       <td className="py-3 pr-5 font-medium">
                         {event.eventType}

@@ -1977,7 +1977,15 @@ async function getKredalPaymentAttempt(orderId) {
 
 async function applyVerifiedKredalPayment(input) {
   const orderId = String(input?.orderId || "").trim();
-  const providerStatus = String(input?.providerStatus || "").trim();
+  const providerPaymentState = String(
+    input?.providerPaymentState || ""
+  ).trim();
+  const providerHoldState =
+    input?.providerHoldState === null ||
+    input?.providerHoldState === undefined ||
+    input?.providerHoldState === ""
+      ? null
+      : String(input.providerHoldState).trim();
   const providerPayload =
     input?.providerPayload &&
     typeof input.providerPayload === "object" &&
@@ -1985,23 +1993,18 @@ async function applyVerifiedKredalPayment(input) {
       ? input.providerPayload
       : {};
 
-  const statusMap = {
-    pending: { attempt: "pending", order: "pending" },
-    held: { attempt: "held", order: "pending" },
-    paid: { attempt: "captured", order: "paid" },
-    released: { attempt: "captured", order: "paid" },
-    failed: { attempt: "failed", order: "failed" },
-    cancelled: { attempt: "cancelled", order: "failed" },
-    partially_refunded: {
-      attempt: "partially_refunded",
-      order: "partially_refunded"
-    },
-    refunded: { attempt: "refunded", order: "refunded" }
-  };
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
+    const error = new Error("A valid Zayvi order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
 
-  const mapped = statusMap[providerStatus];
+  const mapped = mapKredalPaymentState({
+    payment_state: providerPaymentState,
+    hold_state: providerHoldState
+  });
 
-  if (!mapped || !/^[0-9a-f-]{36}$/i.test(orderId)) {
+  if (!mapped) {
     const error = new Error("Unsupported verified Kredal payment state.");
     error.statusCode = 400;
     throw error;
@@ -2038,13 +2041,13 @@ async function applyVerifiedKredalPayment(input) {
       }
 
       const state = current.rows[0];
-      const terminalRefund =
+      const refundTerminal =
         ["refunded", "partially_refunded"].includes(state.payment_status) ||
         ["refunded", "partially_refunded"].includes(state.attempt_status);
 
       if (
-        terminalRefund &&
-        ["pending", "held", "paid", "released"].includes(providerStatus)
+        refundTerminal &&
+        ["created", "pending", "succeeded"].includes(providerPaymentState)
       ) {
         return {
           ignored: true,
@@ -2063,37 +2066,58 @@ async function applyVerifiedKredalPayment(input) {
             AND id = $4
         `,
         [
-          mapped.attempt,
+          mapped.attemptStatus,
           JSON.stringify(providerPayload),
           tenantId,
           state.id
         ]
       );
 
+      let nextOrderStatus = state.order_status;
+
+      if (mapped.orderStatusMode === "confirm") {
+        if (
+          state.order_status === "draft" ||
+          state.order_status === "pending_payment"
+        ) {
+          nextOrderStatus = "confirmed";
+        }
+      } else if (mapped.orderStatusMode === "cancel") {
+        if (state.order_status !== "completed") {
+          nextOrderStatus = "cancelled";
+        }
+      } else if (
+        mapped.orderStatusMode === "keep_pending" &&
+        state.order_status === "draft"
+      ) {
+        nextOrderStatus = "pending_payment";
+      }
+
       await tx.query(
         `
           UPDATE commerce_orders
           SET
             payment_status = $1,
-            order_status =
-              CASE
-                WHEN $1 = 'paid' AND order_status = 'pending_payment'
-                  THEN 'confirmed'
-                WHEN $1 IN ('failed','refunded') AND order_status = 'pending_payment'
-                  THEN 'cancelled'
-                ELSE order_status
-              END,
+            order_status = $2,
             updated_at = now()
-          WHERE tenant_id = $2
-            AND id = $3
+          WHERE tenant_id = $3
+            AND id = $4
         `,
-        [mapped.order, tenantId, orderId]
+        [
+          mapped.orderPaymentStatus,
+          nextOrderStatus,
+          tenantId,
+          orderId
+        ]
       );
 
       return {
         ignored: false,
-        attemptStatus: mapped.attempt,
-        orderPaymentStatus: mapped.order
+        attemptStatus: mapped.attemptStatus,
+        orderPaymentStatus: mapped.orderPaymentStatus,
+        orderStatus: nextOrderStatus,
+        providerPaymentState,
+        providerHoldState
       };
     });
   } finally {
@@ -2102,11 +2126,21 @@ async function applyVerifiedKredalPayment(input) {
 }
 
 async function storeKredalEvent(input) {
-  const externalEventId = String(input?.eventId || "").trim();
-  const eventType = String(input?.eventType || "").trim();
   const payload =
     input?.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
       ? input.payload
+      : null;
+
+  const externalEventId = String(payload?.id || input?.eventId || "").trim();
+  const eventType = String(payload?.type || input?.eventType || "").trim();
+  const schemaVersion = String(payload?.schema_version || "").trim() || null;
+  const businessId = String(payload?.business_id || "").trim() || null;
+  const sequence = Number(payload?.sequence);
+  const livemode =
+    typeof payload?.livemode === "boolean" ? payload.livemode : null;
+  const data =
+    payload?.data && typeof payload.data === "object" && !Array.isArray(payload.data)
+      ? payload.data
       : null;
 
   const allowedEvents = new Set([
@@ -2117,23 +2151,46 @@ async function storeKredalEvent(input) {
     "payment.cancelled",
     "payment.failed",
     "payment.arrival_chosen",
-    "settlement.updated",
     "transfer.received",
     "connection.approved",
     "connection.revoked"
   ]);
 
-  if (!/^[A-Za-z0-9._:-]{1,180}$/.test(externalEventId)) {
+  if (!/^evt_[A-Za-z0-9._:-]{1,180}$/.test(externalEventId)) {
     const error = new Error("A valid Kredal event id is required.");
     error.statusCode = 400;
     throw error;
   }
 
-  if (!allowedEvents.has(eventType) || !payload) {
+  if (
+    !allowedEvents.has(eventType) ||
+    !payload ||
+    !data ||
+    !Number.isSafeInteger(sequence) ||
+    sequence < 0
+  ) {
     const error = new Error("Unsupported or malformed Kredal event.");
     error.statusCode = 400;
     throw error;
   }
+
+  if (livemode !== false) {
+    const error = new Error("Only Kredal test-mode events are accepted here.");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const isConnectionEvent =
+    eventType === "connection.approved" ||
+    eventType === "connection.revoked";
+
+  const providerObjectId = String(data.id || "").trim() || null;
+  const providerReference = isConnectionEvent
+    ? null
+    : String(data.reference || "").trim() || null;
+  const providerConnectionId = isConnectionEvent
+    ? providerObjectId
+    : String(data.connection_id || "").trim() || null;
 
   const client = await getPool().connect();
 
@@ -2146,6 +2203,13 @@ async function storeKredalEvent(input) {
             platform,
             external_event_id,
             event_type,
+            provider_sequence,
+            schema_version,
+            livemode,
+            business_id,
+            provider_object_id,
+            provider_reference,
+            provider_connection_id,
             payload,
             processing_status,
             processing_note
@@ -2155,9 +2219,16 @@ async function storeKredalEvent(input) {
             'kredal',
             $2,
             $3,
-            $4::jsonb,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11::jsonb,
             'stored',
-            'Signed webhook stored. Awaiting verified provider lookup before money-state mutation.'
+            'Signed Kredal event stored.'
           )
           ON CONFLICT (tenant_id, platform, external_event_id)
           DO NOTHING
@@ -2167,37 +2238,484 @@ async function storeKredalEvent(input) {
           tenantId,
           externalEventId,
           eventType,
+          sequence,
+          schemaVersion,
+          livemode,
+          businessId,
+          providerObjectId,
+          providerReference,
+          providerConnectionId,
           JSON.stringify(payload)
         ]
       );
 
-      if (inserted.rowCount > 0) {
+      if (inserted.rowCount === 0) {
+        const existing = await tx.query(
+          `
+            SELECT
+              event_type,
+              received_at,
+              processing_status,
+              processing_note,
+              provider_sequence
+            FROM commerce_payment_events
+            WHERE tenant_id = $1
+              AND platform = 'kredal'
+              AND external_event_id = $2
+            LIMIT 1
+          `,
+          [tenantId, externalEventId]
+        );
+
+        return {
+          eventId: externalEventId,
+          eventType: existing.rows[0]?.event_type || eventType,
+          duplicate: true,
+          storedAt: existing.rows[0]?.received_at || null,
+          processingStatus: existing.rows[0]?.processing_status || "stored",
+          processingNote: existing.rows[0]?.processing_note || null,
+          sequence: existing.rows[0]?.provider_sequence ?? sequence
+        };
+      }
+
+      const eventRowId = inserted.rows[0].id;
+
+      const prior = await tx.query(
+        `
+          SELECT max(provider_sequence) AS last_sequence
+          FROM commerce_payment_events
+          WHERE tenant_id = $1
+            AND platform = 'kredal'
+            AND id <> $2
+            AND provider_sequence IS NOT NULL
+            AND (
+              ($3::text IS NOT NULL AND provider_reference = $3)
+              OR
+              ($4::text IS NOT NULL AND provider_connection_id = $4)
+            )
+            AND processing_status IN ('verified','applied','ignored')
+        `,
+        [tenantId, eventRowId, providerReference, providerConnectionId]
+      );
+
+      const lastSequence =
+        prior.rows[0]?.last_sequence === null ||
+        prior.rows[0]?.last_sequence === undefined
+          ? null
+          : Number(prior.rows[0].last_sequence);
+
+      if (lastSequence !== null && sequence < lastSequence) {
+        await tx.query(
+          `
+            UPDATE commerce_payment_events
+            SET
+              processing_status = 'ignored',
+              processing_note = $1,
+              processed_at = now()
+            WHERE tenant_id = $2
+              AND id = $3
+          `,
+          [
+            "Ignored stale Kredal event sequence " +
+              sequence +
+              "; latest applied sequence is " +
+              lastSequence +
+              ".",
+            tenantId,
+            eventRowId
+          ]
+        );
+
         return {
           eventId: externalEventId,
           eventType,
           duplicate: false,
+          ignored: true,
+          sequence,
+          lastSequence,
           storedAt: inserted.rows[0].received_at
         };
       }
 
-      const existing = await tx.query(
+      if (isConnectionEvent) {
+        if (!/^kc_[A-Za-z0-9._:-]{1,180}$/.test(providerConnectionId || "")) {
+          const error = new Error("Kredal connection event has an invalid connection id.");
+          error.statusCode = 400;
+          throw error;
+        }
+
+        const nextStatus =
+          eventType === "connection.approved" ? "active" : "revoked";
+
+        const updated = await tx.query(
+          `
+            UPDATE commerce_payment_connections
+            SET
+              status = $1,
+              approved_at =
+                CASE
+                  WHEN $1 = 'active' THEN COALESCE(approved_at, now())
+                  ELSE approved_at
+                END,
+              revoked_at =
+                CASE
+                  WHEN $1 = 'revoked' THEN now()
+                  ELSE NULL
+                END,
+              metadata =
+                COALESCE(metadata, '{}'::jsonb) ||
+                jsonb_build_object(
+                  'lastKredalSequence', $2::bigint,
+                  'lastKredalEventId', $3::text,
+                  'businessName', $4::text
+                ),
+              updated_at = now()
+            WHERE tenant_id = $5
+              AND platform = 'kredal'
+              AND external_connection_id = $6
+            RETURNING id
+          `,
+          [
+            nextStatus,
+            sequence,
+            externalEventId,
+            String(data.business_name || ""),
+            tenantId,
+            providerConnectionId
+          ]
+        );
+
+        if (updated.rowCount === 0) {
+          await tx.query(
+            `
+              UPDATE commerce_payment_events
+              SET
+                processing_status = 'failed',
+                processing_note =
+                  'Connection event did not match a stored Zayvi Kredal connection.',
+                processed_at = now()
+              WHERE tenant_id = $1
+                AND id = $2
+            `,
+            [tenantId, eventRowId]
+          );
+
+          return {
+            eventId: externalEventId,
+            eventType,
+            duplicate: false,
+            applied: false,
+            sequence,
+            reason: "connection_not_found",
+            storedAt: inserted.rows[0].received_at
+          };
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_payment_events
+            SET
+              connection_id = $1,
+              processing_status = 'applied',
+              processing_note = $2,
+              processed_at = now()
+            WHERE tenant_id = $3
+              AND id = $4
+          `,
+          [
+            updated.rows[0].id,
+            "Applied Kredal connection state: " + nextStatus + ".",
+            tenantId,
+            eventRowId
+          ]
+        );
+
+        return {
+          eventId: externalEventId,
+          eventType,
+          duplicate: false,
+          applied: true,
+          connectionStatus: nextStatus,
+          sequence,
+          storedAt: inserted.rows[0].received_at
+        };
+      }
+
+      if (
+        !providerReference ||
+        !/^rq_[A-Za-z0-9._:-]{1,180}$/.test(providerObjectId || "") ||
+        !/^kc_[A-Za-z0-9._:-]{1,180}$/.test(providerConnectionId || "")
+      ) {
+        const error = new Error("Kredal payment event identifiers are invalid.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const paymentState = String(data.payment_state || "").trim();
+      const mapped = mapKredalPaymentState(data);
+
+      if (!mapped) {
+        await tx.query(
+          `
+            UPDATE commerce_payment_events
+            SET
+              processing_status = 'ignored',
+              processing_note = $1,
+              processed_at = now()
+            WHERE tenant_id = $2
+              AND id = $3
+          `,
+          [
+            "No Zayvi state mapping for Kredal payment_state: " +
+              (paymentState || "missing") +
+              ".",
+            tenantId,
+            eventRowId
+          ]
+        );
+
+        return {
+          eventId: externalEventId,
+          eventType,
+          duplicate: false,
+          ignored: true,
+          sequence,
+          providerState: paymentState || null,
+          storedAt: inserted.rows[0].received_at
+        };
+      }
+
+      const payment = await tx.query(
         `
-          SELECT event_type, received_at, processing_status
-          FROM commerce_payment_events
-          WHERE tenant_id = $1
-            AND platform = 'kredal'
-            AND external_event_id = $2
+          SELECT
+            pa.id AS payment_attempt_id,
+            pa.status AS attempt_status,
+            pa.amount,
+            pa.currency_code,
+            o.id AS order_id,
+            o.order_number,
+            o.payment_status,
+            o.order_status,
+            o.total,
+            o.store_id,
+            c.id AS connection_row_id,
+            c.external_connection_id
+          FROM commerce_orders o
+          JOIN commerce_payment_attempts pa
+            ON pa.tenant_id = o.tenant_id
+           AND pa.order_id = o.id
+           AND pa.provider = 'kredal'
+          JOIN commerce_payment_connections c
+            ON c.tenant_id = o.tenant_id
+           AND c.store_id = o.store_id
+           AND c.platform = 'kredal'
+          WHERE o.tenant_id = $1
+            AND o.order_number = $2
+          ORDER BY pa.created_at DESC
           LIMIT 1
         `,
-        [tenantId, externalEventId]
+        [tenantId, providerReference]
+      );
+
+      if (payment.rowCount === 0) {
+        await tx.query(
+          `
+            UPDATE commerce_payment_events
+            SET
+              processing_status = 'failed',
+              processing_note =
+                'Payment event did not match a stored Zayvi Kredal order/attempt.',
+              processed_at = now()
+            WHERE tenant_id = $1
+              AND id = $2
+          `,
+          [tenantId, eventRowId]
+        );
+
+        return {
+          eventId: externalEventId,
+          eventType,
+          duplicate: false,
+          applied: false,
+          sequence,
+          reason: "payment_attempt_not_found",
+          storedAt: inserted.rows[0].received_at
+        };
+      }
+
+      const row = payment.rows[0];
+      const amountMinor = Number(data.amount_minor);
+      const expectedMinor = Math.round(Number(row.amount) * 100);
+
+      if (
+        row.external_connection_id !== providerConnectionId ||
+        String(data.currency || "") !== row.currency_code ||
+        !Number.isSafeInteger(amountMinor) ||
+        amountMinor !== expectedMinor ||
+        Number(row.total) !== Number(row.amount)
+      ) {
+        await tx.query(
+          `
+            UPDATE commerce_payment_events
+            SET
+              payment_attempt_id = $1,
+              connection_id = $2,
+              processing_status = 'failed',
+              processing_note =
+                'Kredal event amount, currency or connection did not match Zayvi records.',
+              processed_at = now()
+            WHERE tenant_id = $3
+              AND id = $4
+          `,
+          [
+            row.payment_attempt_id,
+            row.connection_row_id,
+            tenantId,
+            eventRowId
+          ]
+        );
+
+        return {
+          eventId: externalEventId,
+          eventType,
+          duplicate: false,
+          applied: false,
+          sequence,
+          reason: "payment_mismatch",
+          storedAt: inserted.rows[0].received_at
+        };
+      }
+
+      const refundTerminal =
+        ["partially_refunded", "refunded"].includes(row.payment_status) ||
+        ["partially_refunded", "refunded"].includes(row.attempt_status);
+
+      if (
+        refundTerminal &&
+        ["created", "pending", "succeeded"].includes(paymentState)
+      ) {
+        await tx.query(
+          `
+            UPDATE commerce_payment_events
+            SET
+              payment_attempt_id = $1,
+              connection_id = $2,
+              processing_status = 'ignored',
+              processing_note =
+                'Ignored state regression after refund.',
+              processed_at = now()
+            WHERE tenant_id = $3
+              AND id = $4
+          `,
+          [
+            row.payment_attempt_id,
+            row.connection_row_id,
+            tenantId,
+            eventRowId
+          ]
+        );
+
+        return {
+          eventId: externalEventId,
+          eventType,
+          duplicate: false,
+          ignored: true,
+          sequence,
+          reason: "refund_state_regression",
+          storedAt: inserted.rows[0].received_at
+        };
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_payment_attempts
+          SET
+            provider_reference = $1,
+            status = $2,
+            provider_payload = $3::jsonb,
+            updated_at = now()
+          WHERE tenant_id = $4
+            AND id = $5
+        `,
+        [
+          providerObjectId,
+          mapped.attemptStatus,
+          JSON.stringify(data),
+          tenantId,
+          row.payment_attempt_id
+        ]
+      );
+
+      let nextOrderStatus = row.order_status;
+
+      if (mapped.orderStatusMode === "confirm") {
+        if (row.order_status === "draft" || row.order_status === "pending_payment") {
+          nextOrderStatus = "confirmed";
+        }
+      } else if (mapped.orderStatusMode === "cancel") {
+        if (row.order_status !== "completed") {
+          nextOrderStatus = "cancelled";
+        }
+      } else if (mapped.orderStatusMode === "keep_pending") {
+        if (row.order_status === "draft") {
+          nextOrderStatus = "pending_payment";
+        }
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_orders
+          SET
+            payment_status = $1,
+            order_status = $2,
+            updated_at = now()
+          WHERE tenant_id = $3
+            AND id = $4
+        `,
+        [
+          mapped.orderPaymentStatus,
+          nextOrderStatus,
+          tenantId,
+          row.order_id
+        ]
+      );
+
+      await tx.query(
+        `
+          UPDATE commerce_payment_events
+          SET
+            payment_attempt_id = $1,
+            connection_id = $2,
+            processing_status = 'applied',
+            processing_note = $3,
+            processed_at = now()
+          WHERE tenant_id = $4
+            AND id = $5
+        `,
+        [
+          row.payment_attempt_id,
+          row.connection_row_id,
+          "Applied Kredal payment_state=" +
+            paymentState +
+            (data.hold_state ? ", hold_state=" + data.hold_state : "") +
+            ".",
+          tenantId,
+          eventRowId
+        ]
       );
 
       return {
         eventId: externalEventId,
-        eventType: existing.rows[0]?.event_type || eventType,
-        duplicate: true,
-        storedAt: existing.rows[0]?.received_at || null,
-        processingStatus: existing.rows[0]?.processing_status || "stored"
+        eventType,
+        duplicate: false,
+        applied: true,
+        sequence,
+        paymentState,
+        holdState: data.hold_state ?? null,
+        attemptStatus: mapped.attemptStatus,
+        orderPaymentStatus: mapped.orderPaymentStatus,
+        orderStatus: nextOrderStatus,
+        storedAt: inserted.rows[0].received_at
       };
     });
   } finally {
@@ -2215,6 +2733,7 @@ async function listKredalEvents() {
           SELECT
             external_event_id,
             event_type,
+            provider_sequence,
             processing_status,
             processing_note,
             received_at,
@@ -2231,6 +2750,10 @@ async function listKredalEvents() {
       return result.rows.map((row) => ({
         eventId: row.external_event_id,
         eventType: row.event_type,
+        sequence:
+          row.provider_sequence === null || row.provider_sequence === undefined
+            ? null
+            : Number(row.provider_sequence),
         processingStatus: row.processing_status,
         processingNote: row.processing_note,
         receivedAt: row.received_at,

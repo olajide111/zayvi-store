@@ -17,6 +17,11 @@ export type KredalPayment = {
   id?: string;
   reference?: string;
   status?: string;
+  payment_state?: string;
+  order_status?: string;
+  hold_state?: string | null;
+  refunded_minor?: number;
+  refunds?: Array<Record<string, unknown>>;
   checkout_url?: string;
   amount_minor?: number;
   currency?: string;
@@ -211,4 +216,32 @@ export function refundKredalPayment(input: {
           : { amount_minor: input.amountMinor },
     }
   );
+}
+
+
+export type KredalEventEnvelope = {
+  id: string;
+  type: string;
+  created_at?: string;
+  schema_version?: string;
+  livemode?: boolean;
+  business_id?: string;
+  sequence: number;
+  data: Record<string, unknown>;
+};
+
+export type KredalEventPage = {
+  data?: KredalEventEnvelope[];
+  events?: KredalEventEnvelope[];
+  has_more?: boolean;
+  next_after?: number | string | null;
+};
+
+export function listKredalEvents(after?: number | string) {
+  const query =
+    after === undefined || after === null || String(after) === ""
+      ? ""
+      : "?after=" + encodeURIComponent(String(after));
+
+  return kredalRequest<KredalEventPage>("/v1/kpay/events" + query);
 }

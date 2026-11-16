@@ -101,20 +101,25 @@ export async function POST(request: NextRequest) {
       attempt.providerReference
     );
 
-    const providerStatus =
-      typeof payment.status === "string"
-        ? payment.status.trim().toLowerCase()
+    const providerPaymentState =
+      typeof payment.payment_state === "string"
+        ? payment.payment_state.trim().toLowerCase()
         : "";
+    const providerHoldState =
+      typeof payment.hold_state === "string"
+        ? payment.hold_state.trim().toLowerCase()
+        : null;
 
     if (
-      providerStatus === "refunded" ||
-      providerStatus === "partially_refunded"
+      providerPaymentState === "refunded" ||
+      providerPaymentState === "partially_refunded"
     ) {
       await callZayviAwsApi("/payment-attempts/kredal", {
         method: "PUT",
         body: {
           orderId,
-          providerStatus,
+          providerPaymentState,
+          providerHoldState,
           providerPayload: {
             ...payment,
             mode: "test",
@@ -126,7 +131,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       refundRequested: true,
-      providerStatus: providerStatus || "unknown",
+      providerPaymentState: providerPaymentState || "unknown",
+      providerHoldState,
       payment,
       testMode: true,
     });

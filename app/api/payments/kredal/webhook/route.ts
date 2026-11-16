@@ -14,7 +14,6 @@ const ALLOWED_EVENTS = new Set([
   "payment.cancelled",
   "payment.failed",
   "payment.arrival_chosen",
-  "settlement.updated",
   "transfer.received",
   "connection.approved",
   "connection.revoked",
@@ -60,14 +59,24 @@ export async function POST(request: NextRequest) {
   const event = payload as {
     id?: unknown;
     type?: unknown;
+    sequence?: unknown;
+    livemode?: unknown;
+    data?: unknown;
   };
 
   const eventId = typeof event.id === "string" ? event.id.trim() : "";
   const eventType = typeof event.type === "string" ? event.type.trim() : "";
+  const sequence = Number(event.sequence);
 
   if (
-    !/^[A-Za-z0-9._:-]{1,180}$/.test(eventId) ||
-    !ALLOWED_EVENTS.has(eventType)
+    !/^evt_[A-Za-z0-9._:-]{1,180}$/.test(eventId) ||
+    !ALLOWED_EVENTS.has(eventType) ||
+    !Number.isSafeInteger(sequence) ||
+    sequence < 0 ||
+    event.livemode !== false ||
+    !event.data ||
+    typeof event.data !== "object" ||
+    Array.isArray(event.data)
   ) {
     return NextResponse.json(
       { error: "Unsupported Kredal webhook event." },

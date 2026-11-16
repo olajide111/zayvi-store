@@ -264,27 +264,32 @@ export async function PUT(request: NextRequest) {
       attempt.providerReference
     );
 
-    const providerStatus =
-      typeof payment.status === "string"
-        ? payment.status.trim().toLowerCase()
+    const providerPaymentState =
+      typeof payment.payment_state === "string"
+        ? payment.payment_state.trim().toLowerCase()
         : "";
+    const providerHoldState =
+      typeof payment.hold_state === "string"
+        ? payment.hold_state.trim().toLowerCase()
+        : null;
 
     const supported = new Set([
+      "created",
       "pending",
-      "held",
-      "paid",
-      "released",
+      "succeeded",
       "failed",
       "cancelled",
+      "expired",
       "partially_refunded",
       "refunded",
     ]);
 
-    if (!supported.has(providerStatus)) {
+    if (!supported.has(providerPaymentState)) {
       return NextResponse.json({
         verified: true,
         applied: false,
-        providerStatus: providerStatus || "unknown",
+        providerPaymentState: providerPaymentState || "unknown",
+        providerHoldState,
         payment,
         message:
           "Kredal returned a status Zayvi does not map yet; no order state was changed.",
@@ -297,7 +302,8 @@ export async function PUT(request: NextRequest) {
         method: "PUT",
         body: {
           orderId,
-          providerStatus,
+          providerPaymentState,
+          providerHoldState,
           providerPayload: {
             ...payment,
             mode: "test",
@@ -314,7 +320,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       verified: true,
       applied: true,
-      providerStatus,
+      providerPaymentState,
+      providerHoldState,
       payment,
       state: (applied.data as { state?: unknown }).state || null,
       testMode: true,
@@ -356,12 +363,13 @@ export async function DELETE(request: NextRequest) {
       attempt.providerReference
     );
 
-    if (payment.status === "cancelled") {
+    if (payment.payment_state === "cancelled") {
       await callZayviAwsApi("/payment-attempts/kredal", {
         method: "PUT",
         body: {
           orderId,
-          providerStatus: "cancelled",
+          providerPaymentState: "cancelled",
+          providerHoldState: payment.hold_state ?? null,
           providerPayload: {
             ...payment,
             mode: "test",
@@ -372,8 +380,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({
-      cancelled: payment.status === "cancelled",
-      providerStatus: payment.status || "unknown",
+      cancelled: payment.payment_state === "cancelled",
+      providerPaymentState: payment.payment_state || "unknown",
+      providerHoldState: payment.hold_state ?? null,
       payment,
       testMode: true,
     });

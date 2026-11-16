@@ -145,3 +145,57 @@ The original integration note does not define the exact nested data shape for ev
 A simulated paid result may set a Preview order's payment state to paid for lifecycle testing, but Preview orders are hard-blocked from entering real processing or fulfilment.
 
 This is independent of the UI. The restriction is enforced by the AWS commerce API.
+
+
+## Exact webhook reconciliation contract
+
+Kredal's confirmed platform event envelope contains:
+
+- `id` — unique `evt_...` event id used for deduplication;
+- `type`;
+- `created_at`;
+- `schema_version`;
+- `livemode`;
+- `business_id`;
+- `sequence` — monotonically increasing for ordering;
+- `data` — the full payment object at that moment, or the full connection object for connection events.
+
+Zayvi persists the envelope and applies events in sequence order. For the same payment or connection, an older sequence is ignored even if delivery arrives later.
+
+Payment events are matched to Zayvi using:
+
+- `data.reference` = Zayvi order number;
+- `data.id` = Kredal payment id;
+- `data.connection_id` = stored Kredal store connection;
+- `data.amount_minor` = exact stored order amount in kobo;
+- `data.currency` = `NGN`.
+
+Zayvi refuses to apply a payment event when amount, currency or connection does not match its own records.
+
+### Authoritative state mapping
+
+Zayvi reconciles primarily from `payment_state`, with `hold_state` for held/pay-on-delivery cases:
+
+| Kredal payment_state | hold_state | Zayvi payment attempt | Zayvi order payment |
+| --- | --- | --- | --- |
+| created | any | pending | pending |
+| pending | any | pending | pending |
+| succeeded | held/disputed | held | pending |
+| succeeded | null/released | captured | paid |
+| failed | any | failed | failed |
+| cancelled | any | cancelled | failed |
+| expired | any | failed | failed |
+| partially_refunded | any | partially_refunded | partially_refunded |
+| refunded | any | refunded | refunded |
+
+A failed or expired Kredal attempt does not automatically cancel the Zayvi order, because another payment attempt may still be possible. A cancelled payment can cancel the pending Zayvi order.
+
+Refund states are monotonic: a late paid/succeeded event cannot overwrite a partial or full refund.
+
+### Missed event recovery
+
+Kredal retries webhook delivery, but Zayvi also supports catch-up from:
+
+`GET /v1/kpay/events?after=<last sequence>`
+
+The admin Payments page starts from the highest locally stored sequence and processes returned pages in order. Existing event ids remain idempotent, and stale sequences are ignored.
