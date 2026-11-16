@@ -98,7 +98,7 @@ export default function Home() {
     const fn = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
-  }, [marketCode, marketReady]);
+  }, []);
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search)
@@ -147,9 +147,12 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [marketCode, marketReady]);
 
   useEffect(() => {
+    if (!marketReady) return;
+    setCartHydrated(false);
+    setCart([]);
     try {
       const raw = window.localStorage.getItem(`${CART_STORAGE_KEY}-${marketCode}`);
       if (raw) {
