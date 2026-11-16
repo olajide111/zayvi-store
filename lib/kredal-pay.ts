@@ -17,6 +17,11 @@ export type KredalPayment = {
   id?: string;
   reference?: string;
   status?: string;
+  payment_state?: string;
+  order_status?: string;
+  hold_state?: string | null;
+  refunded_minor?: number;
+  refunds?: Array<Record<string, unknown>>;
   checkout_url?: string;
   amount_minor?: number;
   currency?: string;
