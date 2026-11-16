@@ -39,6 +39,47 @@ type PaymentEvent = {
   processedAt?: string | null;
 };
 
+type FulfilmentAllocation = {
+  id: string;
+  orderItemId: string;
+  productName: string;
+  sku?: string | null;
+  sourceType: "own_stock" | "supplier";
+  sourceName: string;
+  supplierSku?: string | null;
+  quantity: number;
+  unitCost: number | null;
+  currency: string;
+  expectedLeadTimeDays: number | null;
+  score: number | null;
+  rationale: Record<string, unknown>;
+  reservationStatus: string;
+  onHand: number | null;
+  reserved: number | null;
+  safetyStock: number | null;
+};
+
+type FulfilmentPlan = {
+  id: string;
+  orderId: string;
+  status: "draft" | "approved" | "cancelled" | "completed";
+  recommendationVersion: string;
+  rationale: {
+    complete?: boolean;
+    blockedItems?: Array<{
+      orderItemId: string;
+      productName: string;
+      reason: string;
+    }>;
+  };
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  cancelledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  allocations: FulfilmentAllocation[];
+};
+
 type OrderDetail = {
   id: string;
   orderNumber: string;
@@ -105,6 +146,9 @@ export default function AdminOrderDetailPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [fulfilmentPlan, setFulfilmentPlan] = useState<FulfilmentPlan | null>(null);
+  const [planLoading, setPlanLoading] = useState(true);
+  const [planWorking, setPlanWorking] = useState(false);
 
   async function loadOrder() {
     setLoading(true);
@@ -135,8 +179,38 @@ export default function AdminOrderDetailPage({
     }
   }
 
+  async function loadFulfilmentPlan() {
+    setPlanLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${id}/fulfilment-plan`,
+        { credentials: "include", cache: "no-store" }
+      );
+
+      if (response.status === 401) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to load fulfilment plan.");
+      }
+
+      setFulfilmentPlan(payload.plan || null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to load fulfilment plan."
+      );
+    } finally {
+      setPlanLoading(false);
+    }
+  }
+
   useEffect(() => {
-    loadOrder();
+    void loadOrder();
+    void loadFulfilmentPlan();
   }, [id]);
 
   async function updateStatuses(update: {
@@ -166,6 +240,61 @@ export default function AdminOrderDetailPage({
       setError(err instanceof Error ? err.message : "Unable to update order.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function planAction(
+    action: "generate" | "approve" | "cancel"
+  ) {
+    setPlanWorking(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const suffix =
+        action === "generate"
+          ? ""
+          : action === "approve"
+            ? "/approve"
+            : "/cancel";
+
+      const response = await fetch(
+        `/api/admin/orders/${id}/fulfilment-plan${suffix}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+            (action === "generate"
+              ? "Unable to generate fulfilment plan."
+              : action === "approve"
+                ? "Unable to approve fulfilment plan."
+                : "Unable to cancel fulfilment plan.")
+        );
+      }
+
+      setNotice(
+        action === "generate"
+          ? "Fulfilment plan generated for review."
+          : action === "approve"
+            ? "Fulfilment plan approved and owned stock reserved."
+            : "Fulfilment plan cancelled and reservations released."
+      );
+
+      await Promise.all([loadOrder(), loadFulfilmentPlan()]);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to update fulfilment plan."
+      );
+    } finally {
+      setPlanWorking(false);
     }
   }
 
@@ -219,6 +348,158 @@ export default function AdminOrderDetailPage({
             <h2 className="text-sm font-semibold">Customer</h2>
             <div className="mt-3 text-sm font-medium">{order.customerName}</div>
             <div className="mt-1 text-sm text-gray-500">{order.customerEmail}</div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold">Fulfilment plan</h2>
+                <p className="mt-1 text-xs leading-5 text-gray-400">
+                  Human-approved source allocation. Supplier plans do not contact or dispatch to suppliers automatically.
+                </p>
+              </div>
+              {fulfilmentPlan && <StatusPill value={fulfilmentPlan.status} />}
+            </div>
+
+            {planLoading ? (
+              <div className="mt-4 text-sm text-gray-400">Loading fulfilment plan...</div>
+            ) : fulfilmentPlan ? (
+              <>
+                <div className="mt-4 space-y-3">
+                  {fulfilmentPlan.allocations.map((allocation) => (
+                    <div
+                      key={allocation.id}
+                      className="rounded-xl border border-gray-100 bg-[#fafbf9] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold">{allocation.productName}</div>
+                          <div className="mt-1 text-xs text-gray-400">
+                            {allocation.quantity} unit(s) · {allocation.sourceName}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[11px] uppercase tracking-wide text-gray-400">
+                            {allocation.sourceType === "own_stock" ? "Own stock" : "Supplier"}
+                          </div>
+                          <div className="mt-1 text-xs font-semibold capitalize">
+                            {allocation.reservationStatus.replaceAll("_", " ")}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid gap-3 text-xs sm:grid-cols-4">
+                        <div>
+                          <div className="text-gray-400">Score</div>
+                          <div className="mt-1 font-semibold">{allocation.score ?? "—"}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Unit cost</div>
+                          <div className="mt-1 font-semibold">
+                            {allocation.unitCost === null
+                              ? "Internal"
+                              : formatMoney(allocation.unitCost, allocation.currency)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Lead time</div>
+                          <div className="mt-1 font-semibold">
+                            {allocation.expectedLeadTimeDays === null
+                              ? "Unknown"
+                              : `${allocation.expectedLeadTimeDays} day(s)`}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Reserved stock</div>
+                          <div className="mt-1 font-semibold">
+                            {allocation.sourceType === "own_stock"
+                              ? allocation.reserved ?? 0
+                              : "External"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {typeof allocation.rationale?.reason === "string" && (
+                        <div className="mt-3 text-[11px] leading-4 text-gray-500">
+                          {allocation.rationale.reason}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {(fulfilmentPlan.rationale.blockedItems?.length ?? 0) > 0 && (
+                  <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-4">
+                    <div className="text-xs font-semibold text-amber-800">Unresolved items</div>
+                    <div className="mt-2 space-y-1">
+                      {fulfilmentPlan.rationale.blockedItems?.map((item) => (
+                        <div key={item.orderItemId} className="text-[11px] leading-4 text-amber-700">
+                          {item.productName}: {item.reason}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {fulfilmentPlan.status === "draft" && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={planWorking}
+                        onClick={() => void planAction("generate")}
+                        className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 disabled:opacity-40"
+                      >
+                        Recalculate plan
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          planWorking ||
+                          fulfilmentPlan.rationale.complete !== true ||
+                          order.fulfilmentSafety.blocked
+                        }
+                        onClick={() => void planAction("approve")}
+                        className="rounded-xl bg-[#17251e] px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                      >
+                        Approve & reserve stock
+                      </button>
+                    </>
+                  )}
+
+                  {["draft", "approved"].includes(fulfilmentPlan.status) && (
+                    <button
+                      type="button"
+                      disabled={planWorking}
+                      onClick={() => void planAction("cancel")}
+                      className="rounded-xl border border-red-100 px-4 py-2 text-xs font-semibold text-red-600 disabled:opacity-40"
+                    >
+                      Cancel plan
+                    </button>
+                  )}
+                </div>
+
+                {fulfilmentPlan.status === "draft" && order.fulfilmentSafety.blocked && (
+                  <p className="mt-3 text-[11px] leading-4 text-amber-700">
+                    This plan can be reviewed, but approval is blocked: {order.fulfilmentSafety.reason}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="mt-4">
+                <div className="rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+                  No fulfilment plan exists for this order.
+                </div>
+                <button
+                  type="button"
+                  disabled={planWorking}
+                  onClick={() => void planAction("generate")}
+                  className="mt-3 rounded-xl bg-[#17251e] px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                >
+                  Generate fulfilment plan
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
