@@ -77,6 +77,8 @@ function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void 
 
 export default function Home() {
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [marketCode, setMarketCode] = useState<"GB" | "NG">("GB");
+  const [marketReady, setMarketReady] = useState(false);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -96,16 +98,28 @@ export default function Home() {
     const fn = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
+  }, [marketCode, marketReady]);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search)
+      .get("market")
+      ?.toUpperCase();
+    setMarketCode(requested === "NG" ? "NG" : "GB");
+    setMarketReady(true);
   }, []);
 
   useEffect(() => {
+    if (!marketReady) return;
+
     let cancelled = false;
 
     async function loadProducts() {
       try {
-        const response = await fetch("/api/storefront/products", {
-          cache: "no-store",
-        });
+        setCatalogueLoading(true);
+        const response = await fetch(
+          `/api/storefront/products?market=${encodeURIComponent(marketCode)}`,
+          { cache: "no-store" }
+        );
         const payload = (await response.json()) as StorefrontProductsResponse & {
           error?: string;
         };
@@ -137,7 +151,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+      const raw = window.localStorage.getItem(`${CART_STORAGE_KEY}-${marketCode}`);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -156,16 +170,16 @@ export default function Home() {
         }
       }
     } catch {
-      window.localStorage.removeItem(CART_STORAGE_KEY);
+      window.localStorage.removeItem(`${CART_STORAGE_KEY}-${marketCode}`);
     } finally {
       setCartHydrated(true);
     }
-  }, []);
+  }, [marketCode, marketReady]);
 
   useEffect(() => {
-    if (!cartHydrated) return;
+    if (!cartHydrated || !marketReady) return;
 
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    window.localStorage.setItem(`${CART_STORAGE_KEY}-${marketCode}`, JSON.stringify(cart));
 
     if (cart.length === 0) {
       setVerifiedSubtotal(0);
@@ -183,6 +197,7 @@ export default function Home() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            marketCode,
             items: cart.map((item) => ({
               id: item.id,
               qty: item.qty,
@@ -239,7 +254,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [cart, cartHydrated]);
+  }, [cart, cartHydrated, marketCode, marketReady]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -289,6 +304,7 @@ export default function Home() {
       customerName: details.customerName.trim(),
       customerEmail: details.customerEmail.trim().toLowerCase(),
       phone: details.phone?.trim() || null,
+      marketCode,
       items: cart.map((item) => ({
         id: item.id,
         qty: item.qty,
@@ -338,6 +354,7 @@ export default function Home() {
       body: JSON.stringify({
         ...details,
         idempotencyKey,
+        marketCode,
         items: cart.map((item) => ({
           id: item.id,
           qty: item.qty,
@@ -360,7 +377,7 @@ export default function Home() {
     }
 
     setCart([]);
-    window.localStorage.removeItem(CART_STORAGE_KEY);
+    window.localStorage.removeItem(`${CART_STORAGE_KEY}-${marketCode}`);
     window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
     showToast(`Draft order ${orderNumber} created`);
 
@@ -370,7 +387,7 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 12, letterSpacing: 0.3 }}>
-        ZAYVI STORE PREVIEW &nbsp;·&nbsp; Product range and market availability are being verified
+        ZAYVI STORE PREVIEW &nbsp;·&nbsp; {marketCode === "NG" ? "Nigeria · NGN" : "United Kingdom · GBP"} &nbsp;·&nbsp; Product range and market availability are being verified
       </div>
 
       <Header
@@ -456,6 +473,7 @@ export default function Home() {
         onCreateDraftOrder={createPreviewDraftOrder}
         verifiedSubtotal={verifiedSubtotal}
         pricingState={pricingState}
+        marketCode={marketCode}
       />
 
       <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />
