@@ -1596,7 +1596,7 @@ async function listInventory(marketCode = "GB") {
       const result = await tx.query(
         `
           SELECT
-            cp.id,
+            tcp.id,
             cp.canonical_code,
             cp.name,
             cp.attributes,
@@ -1609,6 +1609,15 @@ async function listInventory(marketCode = "GB") {
             tpm.customer_price,
             tpm.currency_code,
             tpm.price_observed_at,
+            il.id AS inventory_level_id,
+            il.on_hand,
+            il.reserved,
+            il.safety_stock,
+            il.updated_at AS inventory_updated_at,
+            loc.id AS location_id,
+            loc.code AS location_code,
+            loc.name AS location_name,
+            loc.location_type,
             tcp.updated_at
           FROM tenant_catalogue_products tcp
           JOIN catalogue_products cp
@@ -1617,6 +1626,16 @@ async function listInventory(marketCode = "GB") {
             ON tpm.tenant_id = tcp.tenant_id
            AND tpm.tenant_catalogue_product_id = tcp.id
            AND tpm.market_code = $2
+          LEFT JOIN commerce_inventory_locations loc
+            ON loc.tenant_id = tcp.tenant_id
+           AND loc.store_id = tcp.store_id
+           AND loc.market_code = $2
+           AND loc.location_type = 'own_stock'
+           AND loc.status = 'active'
+          LEFT JOIN commerce_inventory_levels il
+            ON il.tenant_id = tcp.tenant_id
+           AND il.location_id = loc.id
+           AND il.tenant_catalogue_product_id = tcp.id
           WHERE tcp.tenant_id = $1
             AND tcp.status <> 'archived'
           ORDER BY cp.name ASC
@@ -1624,34 +1643,237 @@ async function listInventory(marketCode = "GB") {
         [tenantId, normalizedMarket]
       );
 
-      return result.rows.map((row) => ({
-        id: row.id,
-        sku: row.canonical_code,
-        name: row.name,
-        image: row.attributes?.image || "",
-        status: row.product_status,
-        marketCode: row.market_code || normalizedMarket,
-        availabilityStatus: row.availability_status || "unknown",
-        publicationStatus: row.publication_status || "not_listed",
-        complianceStatus: row.compliance_status || "pending",
-        requiresHumanApproval:
-          row.requires_human_approval === null ||
-          row.requires_human_approval === undefined
-            ? true
-            : Boolean(row.requires_human_approval),
-        quantity: null,
-        inventoryManaged: false,
-        price: row.customer_price === null ? null : Number(row.customer_price),
-        currency:
-          row.currency_code || (normalizedMarket === "NG" ? "NGN" : "GBP"),
-        priceObservedAt: row.price_observed_at,
-        updatedAt: row.updated_at
-      }));
+      return result.rows.map((row) => {
+        const onHand = row.on_hand === null ? null : Number(row.on_hand);
+        const reserved = row.reserved === null ? 0 : Number(row.reserved);
+        const safetyStock = row.safety_stock === null ? 0 : Number(row.safety_stock);
+        const availableToSell =
+          onHand === null ? null : Math.max(0, onHand - reserved - safetyStock);
+
+        return {
+          id: row.id,
+          sku: row.canonical_code,
+          name: row.name,
+          image: row.attributes?.image || "",
+          status: row.product_status,
+          marketCode: row.market_code || normalizedMarket,
+          availabilityStatus: row.availability_status || "unknown",
+          publicationStatus: row.publication_status || "not_listed",
+          complianceStatus: row.compliance_status || "pending",
+          requiresHumanApproval:
+            row.requires_human_approval === null ||
+            row.requires_human_approval === undefined
+              ? true
+              : Boolean(row.requires_human_approval),
+          inventoryManaged: Boolean(row.inventory_level_id),
+          inventoryLevelId: row.inventory_level_id || null,
+          locationId: row.location_id || null,
+          locationCode: row.location_code || null,
+          locationName: row.location_name || null,
+          locationType: row.location_type || null,
+          onHand,
+          reserved,
+          safetyStock,
+          availableToSell,
+          price: row.customer_price === null ? null : Number(row.customer_price),
+          currency:
+            row.currency_code || (normalizedMarket === "NG" ? "NGN" : "GBP"),
+          priceObservedAt: row.price_observed_at,
+          updatedAt: row.inventory_updated_at || row.updated_at
+        };
+      });
     });
   } finally {
     client.release();
   }
 }
+
+async function adjustInventory(input) {
+  const productId = String(input?.productId || "").trim();
+  const marketCode = String(input?.marketCode || "").trim().toUpperCase();
+  const delta = Number(input?.quantityDelta);
+  const safetyStock =
+    input?.safetyStock === undefined ? undefined : Number(input.safetyStock);
+  const note = String(input?.note || "").trim().slice(0, 500);
+
+  if (!/^[0-9a-f-]{36}$/i.test(productId)) {
+    const error = new Error("A valid catalogue product id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["GB", "NG"].includes(marketCode)) {
+    const error = new Error("Inventory market must be GB or NG.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Number.isSafeInteger(delta) || Math.abs(delta) > 100000) {
+    const error = new Error("Inventory adjustment must be a whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (delta === 0 && safetyStock === undefined) {
+    const error = new Error("Provide a stock adjustment or safety-stock change.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    safetyStock !== undefined &&
+    (!Number.isSafeInteger(safetyStock) || safetyStock < 0 || safetyStock > 100000)
+  ) {
+    const error = new Error("Safety stock must be a non-negative whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const product = await tx.query(
+        `
+          SELECT tcp.id, tcp.store_id
+          FROM tenant_catalogue_products tcp
+          WHERE tcp.tenant_id = $1
+            AND tcp.id = $2
+            AND tcp.status <> 'archived'
+          LIMIT 1
+        `,
+        [tenantId, productId]
+      );
+
+      if (product.rowCount === 0) {
+        const error = new Error("Inventory product not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const storeId = product.rows[0].store_id;
+      const location = await tx.query(
+        `
+          SELECT id
+          FROM commerce_inventory_locations
+          WHERE tenant_id = $1
+            AND store_id = $2
+            AND market_code = $3
+            AND location_type = 'own_stock'
+            AND status = 'active'
+          ORDER BY created_at ASC
+          LIMIT 1
+        `,
+        [tenantId, storeId, marketCode]
+      );
+
+      if (location.rowCount === 0) {
+        const error = new Error("Active own-stock location not found for this market.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const locationId = location.rows[0].id;
+
+      await tx.query(
+        `
+          INSERT INTO commerce_inventory_levels (
+            tenant_id,
+            location_id,
+            tenant_catalogue_product_id,
+            on_hand,
+            reserved,
+            safety_stock
+          )
+          VALUES ($1, $2, $3, 0, 0, $4)
+          ON CONFLICT (tenant_id, location_id, tenant_catalogue_product_id)
+          DO NOTHING
+        `,
+        [tenantId, locationId, productId, safetyStock ?? 0]
+      );
+
+      const levelResult = await tx.query(
+        `
+          SELECT id, on_hand, reserved, safety_stock
+          FROM commerce_inventory_levels
+          WHERE tenant_id = $1
+            AND location_id = $2
+            AND tenant_catalogue_product_id = $3
+          FOR UPDATE
+        `,
+        [tenantId, locationId, productId]
+      );
+
+      const level = levelResult.rows[0];
+      const nextOnHand = Number(level.on_hand) + delta;
+      const nextSafetyStock =
+        safetyStock === undefined ? Number(level.safety_stock) : safetyStock;
+
+      if (nextOnHand < 0) {
+        const error = new Error("Inventory adjustment would make on-hand stock negative.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (Number(level.reserved) > nextOnHand) {
+        const error = new Error("Inventory adjustment cannot reduce stock below reserved quantity.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_inventory_levels
+          SET
+            on_hand = $1,
+            safety_stock = $2,
+            updated_at = now()
+          WHERE tenant_id = $3
+            AND id = $4
+        `,
+        [nextOnHand, nextSafetyStock, tenantId, level.id]
+      );
+
+      if (delta !== 0) {
+        await tx.query(
+          `
+            INSERT INTO commerce_inventory_movements (
+              tenant_id,
+              inventory_level_id,
+              movement_type,
+              quantity_delta,
+              note,
+              actor
+            )
+            VALUES ($1, $2, $3, $4, $5, 'admin')
+          `,
+          [
+            tenantId,
+            level.id,
+            Number(level.on_hand) === 0 && delta > 0 ? "opening_balance" : "adjustment",
+            delta,
+            note || null
+          ]
+        );
+      }
+
+      return {
+        inventoryLevelId: level.id,
+        marketCode,
+        onHand: nextOnHand,
+        reserved: Number(level.reserved),
+        safetyStock: nextSafetyStock,
+        availableToSell: Math.max(
+          0,
+          nextOnHand - Number(level.reserved) - nextSafetyStock
+        )
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
 
 async function listReturnsOverview() {
   const client = await getPool().connect();
@@ -3156,7 +3378,7 @@ exports.handler = async (event, context) => {
         source: "postgresql",
         marketCode: String(marketCode).toUpperCase(),
         total: items.length,
-        inventoryTrackingEnabled: false,
+        inventoryTrackingEnabled: true,
         items
       });
     } catch (error) {
@@ -3166,6 +3388,27 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "inventory_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/inventory/adjust")) {
+    try {
+      const adjustment = await adjustInventory(parseBody(event));
+      return response(200, {
+        source: "postgresql",
+        adjustment
+      });
+    } catch (error) {
+      console.error("Inventory adjustment failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "inventory_adjustment_failed"
       });
     }
   }
