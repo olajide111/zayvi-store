@@ -190,7 +190,8 @@ export async function callZayviAwsApi(
   options: AwsApiOptions = {}
 ): Promise<AwsApiResult> {
   const endpoint = process.env.ZAYVI_AWS_API_URL;
-  const roleArn = process.env.AWS_ROLE_ARN;
+  const roleArn =
+    process.env.AWS_BACKEND_ROLE_ARN || process.env.AWS_ROLE_ARN;
   const region = process.env.AWS_REGION || "eu-west-2";
   const method = options.method || "GET";
   const requestBody =
@@ -201,7 +202,7 @@ export async function callZayviAwsApi(
       ok: false,
       status: 503,
       data: null,
-      error: "AWS Preview integration is not configured.",
+      error: "AWS backend integration is not configured.",
     };
   }
 
