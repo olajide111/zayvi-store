@@ -2733,6 +2733,7 @@ async function listKredalEvents() {
           SELECT
             external_event_id,
             event_type,
+            provider_sequence,
             processing_status,
             processing_note,
             received_at,
@@ -2749,6 +2750,10 @@ async function listKredalEvents() {
       return result.rows.map((row) => ({
         eventId: row.external_event_id,
         eventType: row.event_type,
+        sequence:
+          row.provider_sequence === null || row.provider_sequence === undefined
+            ? null
+            : Number(row.provider_sequence),
         processingStatus: row.processing_status,
         processingNote: row.processing_note,
         receivedAt: row.received_at,
