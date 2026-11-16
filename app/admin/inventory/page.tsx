@@ -258,9 +258,7 @@ export default function AdminInventoryPage() {
                         setError("Safety stock must be a non-negative whole number.");
                         return;
                       }
-                      void adjustStock(item, 1, next).then(() =>
-                        adjustStock(item, -1)
-                      );
+                      void adjustStock(item, 0, next);
                     }}
                     className="rounded-lg border border-gray-200 px-2.5 py-2 text-[10px] font-semibold text-gray-600 disabled:opacity-40"
                   >
