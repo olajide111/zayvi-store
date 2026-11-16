@@ -2855,6 +2855,718 @@ async function getSourcingRecommendations(marketCode = "GB") {
 }
 
 
+async function getFulfilmentPlan(orderId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(orderId || ""))) {
+    const error = new Error("A valid order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const planResult = await tx.query(
+        `
+          SELECT
+            p.id,
+            p.order_id,
+            p.status,
+            p.recommendation_version,
+            p.rationale,
+            p.approved_by,
+            p.approved_at,
+            p.cancelled_at,
+            p.created_at,
+            p.updated_at
+          FROM commerce_fulfilment_plans p
+          WHERE p.tenant_id = $1
+            AND p.order_id = $2
+          LIMIT 1
+        `,
+        [tenantId, orderId]
+      );
+
+      if (planResult.rowCount === 0) return null;
+
+      const plan = planResult.rows[0];
+      const allocationResult = await tx.query(
+        `
+          SELECT
+            a.id,
+            a.order_item_id,
+            a.source_type,
+            a.quantity,
+            a.unit_cost_snapshot,
+            a.currency_code,
+            a.expected_lead_time_days,
+            a.score_snapshot,
+            a.rationale,
+            a.reservation_status,
+            oi.product_name,
+            oi.merchant_sku,
+            il.on_hand,
+            il.reserved,
+            il.safety_stock,
+            loc.name AS inventory_location_name,
+            s.name AS supplier_name,
+            so.supplier_sku
+          FROM commerce_fulfilment_allocations a
+          JOIN commerce_order_items oi
+            ON oi.tenant_id = a.tenant_id
+           AND oi.id = a.order_item_id
+          LEFT JOIN commerce_inventory_levels il
+            ON il.tenant_id = a.tenant_id
+           AND il.id = a.inventory_level_id
+          LEFT JOIN commerce_inventory_locations loc
+            ON loc.tenant_id = il.tenant_id
+           AND loc.id = il.location_id
+          LEFT JOIN commerce_supplier_offers so
+            ON so.tenant_id = a.tenant_id
+           AND so.id = a.supplier_offer_id
+          LEFT JOIN commerce_suppliers s
+            ON s.tenant_id = so.tenant_id
+           AND s.id = so.supplier_id
+          WHERE a.tenant_id = $1
+            AND a.fulfilment_plan_id = $2
+          ORDER BY oi.created_at ASC
+        `,
+        [tenantId, plan.id]
+      );
+
+      return {
+        id: plan.id,
+        orderId: plan.order_id,
+        status: plan.status,
+        recommendationVersion: plan.recommendation_version,
+        rationale: plan.rationale || {},
+        approvedBy: plan.approved_by,
+        approvedAt: plan.approved_at,
+        cancelledAt: plan.cancelled_at,
+        createdAt: plan.created_at,
+        updatedAt: plan.updated_at,
+        allocations: allocationResult.rows.map((row) => ({
+          id: row.id,
+          orderItemId: row.order_item_id,
+          productName: row.product_name,
+          sku: row.merchant_sku,
+          sourceType: row.source_type,
+          sourceName:
+            row.source_type === "own_stock"
+              ? row.inventory_location_name || "Own stock"
+              : row.supplier_name || "Supplier",
+          supplierSku: row.supplier_sku,
+          quantity: Number(row.quantity),
+          unitCost:
+            row.unit_cost_snapshot === null
+              ? null
+              : Number(row.unit_cost_snapshot),
+          currency: row.currency_code,
+          expectedLeadTimeDays:
+            row.expected_lead_time_days === null
+              ? null
+              : Number(row.expected_lead_time_days),
+          score:
+            row.score_snapshot === null ? null : Number(row.score_snapshot),
+          rationale: row.rationale || {},
+          reservationStatus: row.reservation_status,
+          onHand: row.on_hand === null ? null : Number(row.on_hand),
+          reserved: row.reserved === null ? null : Number(row.reserved),
+          safetyStock:
+            row.safety_stock === null ? null : Number(row.safety_stock)
+        }))
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function generateFulfilmentPlan(orderId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(orderId || ""))) {
+    const error = new Error("A valid order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const orderResult = await tx.query(
+        `
+          SELECT
+            id, store_id, market_code, currency_code, payment_status,
+            fulfilment_status, source
+          FROM commerce_orders
+          WHERE tenant_id = $1 AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, orderId]
+      );
+
+      if (orderResult.rowCount === 0) {
+        const error = new Error("Order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const order = orderResult.rows[0];
+
+      const existing = await tx.query(
+        "SELECT id, status FROM commerce_fulfilment_plans WHERE tenant_id = $1 AND order_id = $2 LIMIT 1",
+        [tenantId, orderId]
+      );
+
+      if (existing.rowCount > 0 && existing.rows[0].status === "approved") {
+        const error = new Error("Approved fulfilment plans cannot be regenerated.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (existing.rowCount > 0) {
+        await tx.query(
+          "DELETE FROM commerce_fulfilment_allocations WHERE tenant_id = $1 AND fulfilment_plan_id = $2",
+          [tenantId, existing.rows[0].id]
+        );
+        await tx.query(
+          "DELETE FROM commerce_fulfilment_plans WHERE tenant_id = $1 AND id = $2",
+          [tenantId, existing.rows[0].id]
+        );
+      }
+
+      const items = await tx.query(
+        `
+          SELECT
+            oi.id,
+            oi.tenant_catalogue_product_id,
+            oi.product_name,
+            oi.quantity,
+            oi.unit_price,
+            oi.currency_code
+          FROM commerce_order_items oi
+          WHERE oi.tenant_id = $1
+            AND oi.order_id = $2
+          ORDER BY oi.created_at ASC
+        `,
+        [tenantId, orderId]
+      );
+
+      if (items.rowCount === 0) {
+        const error = new Error("Order contains no items.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const planResult = await tx.query(
+        `
+          INSERT INTO commerce_fulfilment_plans (
+            tenant_id,
+            order_id,
+            status,
+            recommendation_version,
+            rationale
+          )
+          VALUES ($1, $2, 'draft', 'v1', $3::jsonb)
+          RETURNING id
+        `,
+        [
+          tenantId,
+          orderId,
+          JSON.stringify({
+            generatedAutomatically: true,
+            approvalRequired: true,
+            paymentStatus: order.payment_status,
+            source: order.source,
+            marketCode: order.market_code
+          })
+        ]
+      );
+
+      const planId = planResult.rows[0].id;
+      const blockedItems = [];
+
+      for (const item of items.rows) {
+        const own = await tx.query(
+          `
+            SELECT
+              il.id,
+              il.on_hand,
+              il.reserved,
+              il.safety_stock,
+              loc.name
+            FROM commerce_inventory_locations loc
+            JOIN commerce_inventory_levels il
+              ON il.tenant_id = loc.tenant_id
+             AND il.location_id = loc.id
+            WHERE loc.tenant_id = $1
+              AND loc.store_id = $2
+              AND loc.market_code = $3
+              AND loc.location_type = 'own_stock'
+              AND loc.status = 'active'
+              AND il.tenant_catalogue_product_id = $4
+            ORDER BY il.updated_at DESC
+            LIMIT 1
+          `,
+          [
+            tenantId,
+            order.store_id,
+            order.market_code,
+            item.tenant_catalogue_product_id
+          ]
+        );
+
+        let selected = null;
+
+        if (own.rowCount > 0) {
+          const row = own.rows[0];
+          const available =
+            Number(row.on_hand) -
+            Number(row.reserved) -
+            Number(row.safety_stock);
+
+          if (available >= Number(item.quantity)) {
+            selected = {
+              sourceType: "own_stock",
+              inventoryLevelId: row.id,
+              supplierOfferId: null,
+              unitCost: null,
+              leadTimeDays: 0,
+              score: 100,
+              rationale: {
+                reason: "Owned stock is available after reservations and safety stock.",
+                availableBeforeReservation: available
+              }
+            };
+          }
+        }
+
+        if (!selected) {
+          const supplier = await tx.query(
+            `
+              SELECT
+                so.id,
+                so.unit_cost,
+                so.lead_time_days,
+                so.minimum_order_quantity,
+                so.stock_status,
+                so.external_stock_quantity,
+                s.name,
+                s.verification_status
+              FROM commerce_supplier_offers so
+              JOIN commerce_suppliers s
+                ON s.tenant_id = so.tenant_id
+               AND s.id = so.supplier_id
+              WHERE so.tenant_id = $1
+                AND so.tenant_catalogue_product_id = $2
+                AND so.status = 'active'
+                AND s.status = 'active'
+                AND s.market_code = $3
+                AND s.verification_status = 'verified'
+                AND so.currency_code = $4
+                AND so.unit_cost IS NOT NULL
+                AND so.unit_cost < $5
+                AND so.minimum_order_quantity <= $6
+                AND so.stock_status IN ('in_stock','limited')
+                AND (
+                  so.external_stock_quantity IS NULL
+                  OR so.external_stock_quantity >= $6
+                )
+              ORDER BY
+                so.unit_cost ASC,
+                so.lead_time_days ASC NULLS LAST,
+                so.updated_at DESC
+              LIMIT 1
+            `,
+            [
+              tenantId,
+              item.tenant_catalogue_product_id,
+              order.market_code,
+              item.currency_code,
+              Number(item.unit_price),
+              Number(item.quantity)
+            ]
+          );
+
+          if (supplier.rowCount > 0) {
+            const row = supplier.rows[0];
+            const marginAmount =
+              Number(item.unit_price) - Number(row.unit_cost);
+            const marginPercent =
+              Number(item.unit_price) > 0
+                ? (marginAmount / Number(item.unit_price)) * 100
+                : 0;
+            const lead =
+              row.lead_time_days === null
+                ? null
+                : Number(row.lead_time_days);
+            const score = Math.round(
+              50 +
+              Math.max(0, Math.min(30, marginPercent)) +
+              (row.stock_status === "in_stock" ? 10 : 6) +
+              (lead === null ? 0 : lead <= 2 ? 10 : lead <= 5 ? 7 : lead <= 10 ? 3 : 0)
+            );
+
+            selected = {
+              sourceType: "supplier",
+              inventoryLevelId: null,
+              supplierOfferId: row.id,
+              unitCost: Number(row.unit_cost),
+              leadTimeDays: lead,
+              score,
+              rationale: {
+                reason: "Verified supplier offer with stock and positive recorded gross margin.",
+                supplierName: row.name,
+                grossMarginPercent: Number(marginPercent.toFixed(2))
+              }
+            };
+          }
+        }
+
+        if (!selected) {
+          blockedItems.push({
+            orderItemId: item.id,
+            productName: item.product_name,
+            reason:
+              "No owned stock or verified supplier offer currently satisfies quantity, stock and positive-margin requirements."
+          });
+          continue;
+        }
+
+        await tx.query(
+          `
+            INSERT INTO commerce_fulfilment_allocations (
+              tenant_id,
+              fulfilment_plan_id,
+              order_item_id,
+              source_type,
+              inventory_level_id,
+              supplier_offer_id,
+              quantity,
+              unit_cost_snapshot,
+              currency_code,
+              expected_lead_time_days,
+              score_snapshot,
+              rationale
+            )
+            VALUES (
+              $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb
+            )
+          `,
+          [
+            tenantId,
+            planId,
+            item.id,
+            selected.sourceType,
+            selected.inventoryLevelId,
+            selected.supplierOfferId,
+            Number(item.quantity),
+            selected.unitCost,
+            item.currency_code,
+            selected.leadTimeDays,
+            selected.score,
+            JSON.stringify(selected.rationale)
+          ]
+        );
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_fulfilment_plans
+          SET rationale = rationale || $1::jsonb, updated_at = now()
+          WHERE tenant_id = $2 AND id = $3
+        `,
+        [
+          JSON.stringify({
+            blockedItems,
+            complete: blockedItems.length === 0
+          }),
+          tenantId,
+          planId
+        ]
+      );
+
+      return { planId, complete: blockedItems.length === 0, blockedItems };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function approveFulfilmentPlan(orderId) {
+  const client = await getPool().connect();
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const orderResult = await tx.query(
+        `
+          SELECT id, payment_status, source, fulfilment_status
+          FROM commerce_orders
+          WHERE tenant_id = $1 AND id = $2
+          FOR UPDATE
+        `,
+        [tenantId, orderId]
+      );
+
+      if (orderResult.rowCount === 0) {
+        const error = new Error("Order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const order = orderResult.rows[0];
+
+      if (order.payment_status !== "paid") {
+        const error = new Error("Payment must be confirmed before fulfilment-plan approval.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (order.source === "preview") {
+        const error = new Error("Preview/test orders cannot approve real fulfilment plans.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const planResult = await tx.query(
+        `
+          SELECT id, status, rationale
+          FROM commerce_fulfilment_plans
+          WHERE tenant_id = $1 AND order_id = $2
+          FOR UPDATE
+        `,
+        [tenantId, orderId]
+      );
+
+      if (planResult.rowCount === 0) {
+        const error = new Error("Generate a fulfilment plan before approval.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const plan = planResult.rows[0];
+
+      if (plan.status !== "draft") {
+        const error = new Error("Only draft fulfilment plans can be approved.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (plan.rationale?.complete !== true) {
+        const error = new Error("Fulfilment plan has unresolved items.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const allocations = await tx.query(
+        `
+          SELECT id, source_type, inventory_level_id, quantity
+          FROM commerce_fulfilment_allocations
+          WHERE tenant_id = $1
+            AND fulfilment_plan_id = $2
+          ORDER BY created_at ASC
+          FOR UPDATE
+        `,
+        [tenantId, plan.id]
+      );
+
+      for (const allocation of allocations.rows) {
+        if (allocation.source_type !== "own_stock") continue;
+
+        const levelResult = await tx.query(
+          `
+            SELECT id, on_hand, reserved, safety_stock
+            FROM commerce_inventory_levels
+            WHERE tenant_id = $1 AND id = $2
+            FOR UPDATE
+          `,
+          [tenantId, allocation.inventory_level_id]
+        );
+
+        if (levelResult.rowCount === 0) {
+          const error = new Error("Inventory level disappeared before reservation.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        const level = levelResult.rows[0];
+        const available =
+          Number(level.on_hand) -
+          Number(level.reserved) -
+          Number(level.safety_stock);
+
+        if (available < Number(allocation.quantity)) {
+          const error = new Error("Owned stock changed and is no longer sufficient for this plan.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_inventory_levels
+            SET reserved = reserved + $1, updated_at = now()
+            WHERE tenant_id = $2 AND id = $3
+          `,
+          [Number(allocation.quantity), tenantId, level.id]
+        );
+
+        await tx.query(
+          `
+            INSERT INTO commerce_inventory_movements (
+              tenant_id,
+              inventory_level_id,
+              movement_type,
+              quantity_delta,
+              reserved_delta,
+              reference_type,
+              reference_id,
+              note,
+              actor
+            )
+            VALUES ($1,$2,'reservation',0,$3,'fulfilment_plan',$4,$5,'admin')
+          `,
+          [
+            tenantId,
+            level.id,
+            Number(allocation.quantity),
+            plan.id,
+            "Reserved during fulfilment-plan approval"
+          ]
+        );
+
+        await tx.query(
+          `
+            UPDATE commerce_fulfilment_allocations
+            SET reservation_status = 'reserved', updated_at = now()
+            WHERE tenant_id = $1 AND id = $2
+          `,
+          [tenantId, allocation.id]
+        );
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_fulfilment_plans
+          SET
+            status = 'approved',
+            approved_by = 'admin',
+            approved_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, plan.id]
+      );
+
+      return { planId: plan.id, status: "approved" };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function cancelFulfilmentPlan(orderId) {
+  const client = await getPool().connect();
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const planResult = await tx.query(
+        `
+          SELECT id, status
+          FROM commerce_fulfilment_plans
+          WHERE tenant_id = $1 AND order_id = $2
+          FOR UPDATE
+        `,
+        [tenantId, orderId]
+      );
+
+      if (planResult.rowCount === 0) {
+        const error = new Error("Fulfilment plan not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const plan = planResult.rows[0];
+
+      if (!["draft","approved"].includes(plan.status)) {
+        const error = new Error("This fulfilment plan cannot be cancelled.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (plan.status === "approved") {
+        const allocations = await tx.query(
+          `
+            SELECT id, inventory_level_id, quantity
+            FROM commerce_fulfilment_allocations
+            WHERE tenant_id = $1
+              AND fulfilment_plan_id = $2
+              AND source_type = 'own_stock'
+              AND reservation_status = 'reserved'
+            FOR UPDATE
+          `,
+          [tenantId, plan.id]
+        );
+
+        for (const allocation of allocations.rows) {
+          await tx.query(
+            `
+              UPDATE commerce_inventory_levels
+              SET reserved = reserved - $1, updated_at = now()
+              WHERE tenant_id = $2
+                AND id = $3
+                AND reserved >= $1
+            `,
+            [Number(allocation.quantity), tenantId, allocation.inventory_level_id]
+          );
+
+          await tx.query(
+            `
+              INSERT INTO commerce_inventory_movements (
+                tenant_id,
+                inventory_level_id,
+                movement_type,
+                quantity_delta,
+                reserved_delta,
+                reference_type,
+                reference_id,
+                note,
+                actor
+              )
+              VALUES ($1,$2,'release',0,$3,'fulfilment_plan',$4,$5,'admin')
+            `,
+            [
+              tenantId,
+              allocation.inventory_level_id,
+              -Number(allocation.quantity),
+              plan.id,
+              "Released because fulfilment plan was cancelled"
+            ]
+          );
+
+          await tx.query(
+            `
+              UPDATE commerce_fulfilment_allocations
+              SET reservation_status = 'released', updated_at = now()
+              WHERE tenant_id = $1 AND id = $2
+            `,
+            [tenantId, allocation.id]
+          );
+        }
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_fulfilment_plans
+          SET status = 'cancelled', cancelled_at = now(), updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, plan.id]
+      );
+
+      return { planId: plan.id, status: "cancelled" };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -4522,6 +5234,113 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "markets_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    /\/orders\/[0-9a-f-]{36}\/fulfilment-plan$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const orderId = parts[parts.length - 2];
+      const plan = await getFulfilmentPlan(orderId);
+      return response(200, {
+        source: "postgresql",
+        plan,
+        automaticRoutingEnabled: false
+      });
+    } catch (error) {
+      console.error("Fulfilment plan read failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "fulfilment_plan_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/orders\/[0-9a-f-]{36}\/fulfilment-plan$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const orderId = parts[parts.length - 2];
+      const result = await generateFulfilmentPlan(orderId);
+      return response(201, {
+        source: "postgresql",
+        ...result,
+        automaticRoutingEnabled: false
+      });
+    } catch (error) {
+      console.error("Fulfilment plan generation failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "fulfilment_plan_generation_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/orders\/[0-9a-f-]{36}\/fulfilment-plan\/approve$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const orderId = parts[parts.length - 3];
+      const result = await approveFulfilmentPlan(orderId);
+      return response(200, {
+        source: "postgresql",
+        ...result,
+        automaticRoutingEnabled: false
+      });
+    } catch (error) {
+      console.error("Fulfilment plan approval failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "fulfilment_plan_approval_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/orders\/[0-9a-f-]{36}\/fulfilment-plan\/cancel$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const orderId = parts[parts.length - 3];
+      const result = await cancelFulfilmentPlan(orderId);
+      return response(200, {
+        source: "postgresql",
+        ...result
+      });
+    } catch (error) {
+      console.error("Fulfilment plan cancellation failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "fulfilment_plan_cancellation_failed"
       });
     }
   }
