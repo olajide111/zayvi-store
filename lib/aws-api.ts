@@ -48,6 +48,12 @@ export async function callZayviAwsApi(
   const roleArn = process.env.AWS_ROLE_ARN;
   const region = process.env.AWS_REGION || "eu-west-2";
   const method = options.method || "GET";
+
+  console.info("Zayvi AWS runtime configuration", {
+    region,
+    endpointHost: endpoint ? new URL(endpoint).host : null,
+    roleName: roleArn ? roleArn.split("/").pop() : null,
+  });
   const requestBody =
     options.body === undefined ? "" : JSON.stringify(options.body);
 
