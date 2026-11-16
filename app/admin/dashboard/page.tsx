@@ -84,7 +84,7 @@ const navigation = [
   {
     group: "INTELLIGENCE",
     items: [
-      ["Sales Analytics", "⌁", "#"],
+      ["Sales Analytics", "⌁", "/admin/analytics"],
       ["Product Intelligence", "✧", "#"],
       ["Forecasting", "⌇", "#"],
     ],
