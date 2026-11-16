@@ -17,10 +17,7 @@
     "next": "16.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "stripe": "^20.4.1",
-    "@aws-crypto/sha256-js": "^5.2.0",
-    "@smithy/protocol-http": "^5.3.5",
-    "@smithy/signature-v4": "^5.3.5"
+    "stripe": "^20.4.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
