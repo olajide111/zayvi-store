@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           expected="$(find database/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort)"
-          packaged="$(unzip -Z1 infra/terraform/zayvi-db-bootstrap.zip | sed -n 's#^migrations/##p' | sort)"
+          packaged="$(unzip -Z1 infra/terraform/zayvi-db-bootstrap.zip | awk -F/ '$1 == "migrations" && $2 ~ /^[0-9][0-9][0-9][0-9]_.+\.sql$/ { print $2 }' | sort)"
 
           if [ "$expected" != "$packaged" ]; then
             echo "Database bootstrap package is missing or contains unexpected migrations."
