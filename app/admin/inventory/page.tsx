@@ -141,7 +141,10 @@ export default function AdminInventoryPage() {
             <div className="text-xs text-gray-400">Workspace / Inventory</div>
             <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Inventory</h1>
           </div>
-          <a href="/admin/dashboard" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">Back to overview</a>
+          <div className="flex gap-2">
+            <a href="/admin/replenishment" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">Replenishment</a>
+            <a href="/admin/dashboard" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">Back to overview</a>
+          </div>
         </div>
       </header>
 
