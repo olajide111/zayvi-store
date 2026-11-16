@@ -15,20 +15,41 @@ type AwsApiOptions = {
 };
 
 class NodeSha256 {
-  private hash = crypto.createHash("sha256");
+  private readonly secret?: Buffer;
+  private chunks: Buffer[] = [];
 
-  constructor(secret?: Uint8Array | string) {
+  constructor(secret?: string | Uint8Array | ArrayBuffer) {
     if (secret !== undefined) {
-      this.hash = crypto.createHmac("sha256", secret);
+      this.secret =
+        typeof secret === "string"
+          ? Buffer.from(secret)
+          : secret instanceof ArrayBuffer
+            ? Buffer.from(new Uint8Array(secret))
+            : Buffer.from(secret);
     }
   }
 
-  update(data: Uint8Array | string) {
-    this.hash.update(data);
+  update(data: string | Uint8Array | ArrayBuffer) {
+    this.chunks.push(
+      typeof data === "string"
+        ? Buffer.from(data)
+        : data instanceof ArrayBuffer
+          ? Buffer.from(new Uint8Array(data))
+          : Buffer.from(data)
+    );
+  }
+
+  copy() {
+    const cloned = new NodeSha256(this.secret);
+    cloned.chunks = this.chunks.map((chunk) => Buffer.from(chunk));
+    return cloned;
   }
 
   async digest(): Promise<Uint8Array> {
-    return this.hash.digest();
+    const body = Buffer.concat(this.chunks);
+    return this.secret
+      ? crypto.createHmac("sha256", this.secret).update(body).digest()
+      : crypto.createHash("sha256").update(body).digest();
   }
 }
 
