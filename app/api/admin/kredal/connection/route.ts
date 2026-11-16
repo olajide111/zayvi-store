@@ -103,6 +103,11 @@ export async function POST(request: NextRequest) {
     const current = await callZayviAwsApi("/payment-connections/kredal");
 
     if (!current.ok) {
+      console.error("Kredal Zayvi connection context failed", {
+        status: current.status,
+        error: current.error,
+        data: current.data,
+      });
       throw new Error("Unable to load the Zayvi store connection context.");
     }
 
