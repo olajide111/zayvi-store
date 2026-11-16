@@ -2,6 +2,15 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 
+type VerificationEvent = {
+  id: string;
+  fromStatus: string;
+  toStatus: string;
+  reviewNote?: string | null;
+  actor: string;
+  createdAt: string;
+};
+
 type Supplier = {
   id: string;
   supplierCode: string;
@@ -80,13 +89,15 @@ export default function SupplierDetailPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [verificationEvents, setVerificationEvents] = useState<VerificationEvent[]>([]);
+  const [verificationWorking, setVerificationWorking] = useState(false);
 
   async function load() {
     setLoading(true);
     setError("");
 
     try {
-      const [supplierResponse, productResponse, offersResponse] =
+      const [supplierResponse, productResponse, offersResponse, verificationResponse] =
         await Promise.all([
           fetch("/api/admin/suppliers", {
             credentials: "include",
@@ -103,12 +114,20 @@ export default function SupplierDetailPage({
               cache: "no-store",
             }
           ),
+          fetch(
+            `/api/admin/suppliers/${id}/verification-events`,
+            {
+              credentials: "include",
+              cache: "no-store",
+            }
+          ),
         ]);
 
       if (
         supplierResponse.status === 401 ||
         productResponse.status === 401 ||
-        offersResponse.status === 401
+        offersResponse.status === 401 ||
+        verificationResponse.status === 401
       ) {
         window.location.href = "/admin";
         return;
@@ -117,6 +136,7 @@ export default function SupplierDetailPage({
       const supplierPayload = await supplierResponse.json();
       const productPayload = await productResponse.json();
       const offerPayload = await offersResponse.json();
+      const verificationPayload = await verificationResponse.json();
 
       if (!supplierResponse.ok) {
         throw new Error(supplierPayload?.error || "Unable to load supplier.");
@@ -126,6 +146,12 @@ export default function SupplierDetailPage({
       }
       if (!offersResponse.ok) {
         throw new Error(offerPayload?.error || "Unable to load supplier offers.");
+      }
+      if (!verificationResponse.ok) {
+        throw new Error(
+          verificationPayload?.error ||
+            "Unable to load supplier verification history."
+        );
       }
 
       const match = (supplierPayload.suppliers || []).find(
@@ -139,6 +165,11 @@ export default function SupplierDetailPage({
       setSupplier(match);
       setProducts(Array.isArray(productPayload.products) ? productPayload.products : []);
       setOffers(Array.isArray(offerPayload.offers) ? offerPayload.offers : []);
+      setVerificationEvents(
+        Array.isArray(verificationPayload.events)
+          ? verificationPayload.events
+          : []
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load supplier.");
     } finally {
@@ -154,6 +185,78 @@ export default function SupplierDetailPage({
     const linked = new Set(offers.map((offer) => offer.productId));
     return products.filter((product) => !linked.has(product.id));
   }, [products, offers]);
+
+  async function updateVerification(
+    verificationStatus: "pending_review" | "verified" | "rejected"
+  ) {
+    if (!supplier) return;
+
+    let reviewNote: string | null = null;
+
+    if (verificationStatus === "verified") {
+      const entered = window.prompt(
+        "Verification note (recommended)",
+        ""
+      );
+      if (entered === null) return;
+      reviewNote = entered.trim() || null;
+    }
+
+    if (verificationStatus === "rejected") {
+      const entered = window.prompt(
+        "Why is this supplier being rejected?",
+        ""
+      );
+      if (entered === null) return;
+      reviewNote = entered.trim();
+
+      if (!reviewNote) {
+        setError("A review note is required when rejecting a supplier.");
+        return;
+      }
+    }
+
+    setVerificationWorking(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/suppliers/${supplier.id}/verification`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ verificationStatus, reviewNote }),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Unable to update supplier verification."
+        );
+      }
+
+      setNotice(
+        verificationStatus === "verified"
+          ? "Supplier verified."
+          : verificationStatus === "rejected"
+            ? "Supplier rejected."
+            : "Supplier returned to pending review."
+      );
+
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update supplier verification."
+      );
+    } finally {
+      setVerificationWorking(false);
+    }
+  }
 
   async function saveOffer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -254,6 +357,41 @@ export default function SupplierDetailPage({
             <div className="text-xs text-gray-400">Verification</div>
             <div className="mt-2 text-lg font-semibold capitalize">
               {supplier.verificationStatus.replaceAll("_", " ")}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {supplier.verificationStatus !== "verified" && (
+                <button
+                  type="button"
+                  disabled={verificationWorking}
+                  onClick={() => void updateVerification("verified")}
+                  className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                >
+                  Mark verified
+                </button>
+              )}
+
+              {supplier.verificationStatus !== "rejected" && (
+                <button
+                  type="button"
+                  disabled={verificationWorking}
+                  onClick={() => void updateVerification("rejected")}
+                  className="rounded-lg border border-red-100 px-3 py-2 text-[11px] font-semibold text-red-600 disabled:opacity-40"
+                >
+                  Reject
+                </button>
+              )}
+
+              {supplier.verificationStatus !== "pending_review" && (
+                <button
+                  type="button"
+                  disabled={verificationWorking}
+                  onClick={() => void updateVerification("pending_review")}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-[11px] font-semibold text-gray-600 disabled:opacity-40"
+                >
+                  Return to review
+                </button>
+              )}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -412,6 +550,41 @@ export default function SupplierDetailPage({
             </div>
           </form>
         )}
+
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+          <div>
+            <h2 className="text-sm font-semibold">Verification history</h2>
+            <p className="mt-1 text-xs text-gray-400">
+              Auditable review decisions for this supplier.
+            </p>
+          </div>
+
+          {verificationEvents.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+              No verification events recorded yet.
+            </div>
+          ) : (
+            <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-100">
+              {verificationEvents.map((event) => (
+                <div key={event.id} className="p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-xs font-semibold text-gray-700">
+                      {event.fromStatus.replaceAll("_", " ")} →{" "}
+                      {event.toStatus.replaceAll("_", " ")}
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                      {new Date(event.createdAt).toLocaleString("en-GB")}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    Reviewer: {event.actor}
+                    {event.reviewNote ? ` · ${event.reviewNote}` : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-5 py-4">
