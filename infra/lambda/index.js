@@ -1580,7 +1580,15 @@ async function updateOrderStatus(orderId, input) {
   }
 }
 
-async function listInventory() {
+async function listInventory(marketCode = "GB") {
+  const normalizedMarket = String(marketCode || "GB").trim().toUpperCase();
+
+  if (!["GB", "NG"].includes(normalizedMarket)) {
+    const error = new Error("Unsupported inventory market.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const client = await getPool().connect();
 
   try {
@@ -1593,9 +1601,14 @@ async function listInventory() {
             cp.name,
             cp.attributes,
             tcp.status AS product_status,
+            tpm.market_code,
             tpm.availability_status,
+            tpm.publication_status,
+            tpm.compliance_status,
+            tpm.requires_human_approval,
             tpm.customer_price,
             tpm.currency_code,
+            tpm.price_observed_at,
             tcp.updated_at
           FROM tenant_catalogue_products tcp
           JOIN catalogue_products cp
@@ -1603,12 +1616,12 @@ async function listInventory() {
           LEFT JOIN tenant_product_markets tpm
             ON tpm.tenant_id = tcp.tenant_id
            AND tpm.tenant_catalogue_product_id = tcp.id
-           AND tpm.market_code = 'GB'
+           AND tpm.market_code = $2
           WHERE tcp.tenant_id = $1
             AND tcp.status <> 'archived'
           ORDER BY cp.name ASC
         `,
-        [tenantId]
+        [tenantId, normalizedMarket]
       );
 
       return result.rows.map((row) => ({
@@ -1617,11 +1630,21 @@ async function listInventory() {
         name: row.name,
         image: row.attributes?.image || "",
         status: row.product_status,
+        marketCode: row.market_code || normalizedMarket,
         availabilityStatus: row.availability_status || "unknown",
+        publicationStatus: row.publication_status || "not_listed",
+        complianceStatus: row.compliance_status || "pending",
+        requiresHumanApproval:
+          row.requires_human_approval === null ||
+          row.requires_human_approval === undefined
+            ? true
+            : Boolean(row.requires_human_approval),
         quantity: null,
         inventoryManaged: false,
         price: row.customer_price === null ? null : Number(row.customer_price),
-        currency: row.currency_code || "GBP",
+        currency:
+          row.currency_code || (normalizedMarket === "NG" ? "NGN" : "GBP"),
+        priceObservedAt: row.price_observed_at,
         updatedAt: row.updated_at
       }));
     });
@@ -2924,9 +2947,11 @@ exports.handler = async (event, context) => {
 
   if (method === "GET" && routePath.endsWith("/inventory")) {
     try {
-      const items = await listInventory();
+      const marketCode = event?.queryStringParameters?.market || "GB";
+      const items = await listInventory(marketCode);
       return response(200, {
         source: "postgresql",
+        marketCode: String(marketCode).toUpperCase(),
         total: items.length,
         inventoryTrackingEnabled: false,
         items
