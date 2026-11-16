@@ -2902,6 +2902,11 @@ async function getFulfilmentPlan(orderId) {
             a.score_snapshot,
             a.rationale,
             a.reservation_status,
+            a.execution_status,
+            a.carrier,
+            a.tracking_number,
+            a.dispatched_at,
+            a.delivered_at,
             oi.product_name,
             oi.merchant_sku,
             il.on_hand,
@@ -2969,6 +2974,11 @@ async function getFulfilmentPlan(orderId) {
             row.score_snapshot === null ? null : Number(row.score_snapshot),
           rationale: row.rationale || {},
           reservationStatus: row.reservation_status,
+          executionStatus: row.execution_status,
+          carrier: row.carrier,
+          trackingNumber: row.tracking_number,
+          dispatchedAt: row.dispatched_at,
+          deliveredAt: row.delivered_at,
           onHand: row.on_hand === null ? null : Number(row.on_hand),
           reserved: row.reserved === null ? null : Number(row.reserved),
           safetyStock:
@@ -3560,6 +3570,279 @@ async function cancelFulfilmentPlan(orderId) {
       );
 
       return { planId: plan.id, status: "cancelled" };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
+async function updateFulfilmentExecution(orderId, allocationId, input) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(orderId || ""))) {
+    const error = new Error("A valid order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[0-9a-f-]{36}$/i.test(String(allocationId || ""))) {
+    const error = new Error("A valid allocation id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const action = String(input?.action || "").trim();
+  const carrier = String(input?.carrier || "").trim().slice(0, 120) || null;
+  const trackingNumber =
+    String(input?.trackingNumber || "").trim().slice(0, 180) || null;
+
+  if (!["dispatch", "deliver"].includes(action)) {
+    const error = new Error("Fulfilment action must be dispatch or deliver.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const orderResult = await tx.query(
+        `
+          SELECT id, payment_status, source, fulfilment_status
+          FROM commerce_orders
+          WHERE tenant_id = $1 AND id = $2
+          FOR UPDATE
+        `,
+        [tenantId, orderId]
+      );
+
+      if (orderResult.rowCount === 0) {
+        const error = new Error("Order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const order = orderResult.rows[0];
+
+      if (order.payment_status !== "paid") {
+        const error = new Error("Payment must be confirmed before fulfilment execution.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (order.source === "preview") {
+        const error = new Error("Preview/test orders cannot execute real fulfilment.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const allocationResult = await tx.query(
+        `
+          SELECT
+            a.id,
+            a.fulfilment_plan_id,
+            a.source_type,
+            a.inventory_level_id,
+            a.quantity,
+            a.reservation_status,
+            a.execution_status,
+            p.status AS plan_status
+          FROM commerce_fulfilment_allocations a
+          JOIN commerce_fulfilment_plans p
+            ON p.tenant_id = a.tenant_id
+           AND p.id = a.fulfilment_plan_id
+          WHERE a.tenant_id = $1
+            AND a.id = $2
+            AND p.order_id = $3
+          FOR UPDATE
+        `,
+        [tenantId, allocationId, orderId]
+      );
+
+      if (allocationResult.rowCount === 0) {
+        const error = new Error("Fulfilment allocation not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const allocation = allocationResult.rows[0];
+
+      if (allocation.plan_status !== "approved") {
+        const error = new Error("The fulfilment plan must be approved before execution.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (action === "dispatch") {
+        if (allocation.execution_status !== "pending") {
+          const error = new Error("Only pending allocations can be marked dispatched.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (
+          allocation.source_type === "own_stock" &&
+          allocation.reservation_status !== "reserved"
+        ) {
+          const error = new Error("Owned stock must be reserved before dispatch.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (allocation.source_type === "own_stock") {
+          const levelResult = await tx.query(
+            `
+              SELECT id, on_hand, reserved
+              FROM commerce_inventory_levels
+              WHERE tenant_id = $1 AND id = $2
+              FOR UPDATE
+            `,
+            [tenantId, allocation.inventory_level_id]
+          );
+
+          if (levelResult.rowCount === 0) {
+            const error = new Error("Reserved inventory level not found.");
+            error.statusCode = 409;
+            throw error;
+          }
+
+          const level = levelResult.rows[0];
+          const quantity = Number(allocation.quantity);
+
+          if (
+            Number(level.on_hand) < quantity ||
+            Number(level.reserved) < quantity
+          ) {
+            const error = new Error("Reserved owned stock is no longer consistent.");
+            error.statusCode = 409;
+            throw error;
+          }
+
+          await tx.query(
+            `
+              UPDATE commerce_inventory_levels
+              SET
+                on_hand = on_hand - $1,
+                reserved = reserved - $1,
+                updated_at = now()
+              WHERE tenant_id = $2 AND id = $3
+            `,
+            [quantity, tenantId, level.id]
+          );
+
+          await tx.query(
+            `
+              INSERT INTO commerce_inventory_movements (
+                tenant_id,
+                inventory_level_id,
+                movement_type,
+                quantity_delta,
+                reserved_delta,
+                reference_type,
+                reference_id,
+                note,
+                actor
+              )
+              VALUES ($1,$2,'sale',$3,$3,'fulfilment_allocation',$4,$5,'admin')
+            `,
+            [
+              tenantId,
+              level.id,
+              -quantity,
+              allocation.id,
+              "Consumed reserved stock on manual dispatch confirmation"
+            ]
+          );
+        }
+
+        const updated = await tx.query(
+          `
+            UPDATE commerce_fulfilment_allocations
+            SET
+              execution_status = 'dispatched',
+              reservation_status = CASE
+                WHEN source_type = 'own_stock' THEN 'consumed'
+                ELSE reservation_status
+              END,
+              carrier = COALESCE($1, carrier),
+              tracking_number = COALESCE($2, tracking_number),
+              dispatched_at = now(),
+              updated_at = now()
+            WHERE tenant_id = $3 AND id = $4
+            RETURNING id, execution_status, carrier, tracking_number, dispatched_at
+          `,
+          [carrier, trackingNumber, tenantId, allocation.id]
+        );
+
+        await tx.query(
+          `
+            UPDATE commerce_orders
+            SET fulfilment_status = 'processing', updated_at = now()
+            WHERE tenant_id = $1
+              AND id = $2
+              AND fulfilment_status = 'unfulfilled'
+          `,
+          [tenantId, orderId]
+        );
+
+        return updated.rows[0];
+      }
+
+      if (allocation.execution_status !== "dispatched") {
+        const error = new Error("Only dispatched allocations can be marked delivered.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const delivered = await tx.query(
+        `
+          UPDATE commerce_fulfilment_allocations
+          SET
+            execution_status = 'delivered',
+            carrier = COALESCE($1, carrier),
+            tracking_number = COALESCE($2, tracking_number),
+            delivered_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $3 AND id = $4
+          RETURNING id, execution_status, carrier, tracking_number, delivered_at
+        `,
+        [carrier, trackingNumber, tenantId, allocation.id]
+      );
+
+      const remaining = await tx.query(
+        `
+          SELECT COUNT(*)::int AS remaining
+          FROM commerce_fulfilment_allocations
+          WHERE tenant_id = $1
+            AND fulfilment_plan_id = $2
+            AND execution_status <> 'delivered'
+        `,
+        [tenantId, allocation.fulfilment_plan_id]
+      );
+
+      if (Number(remaining.rows[0]?.remaining || 0) === 0) {
+        await tx.query(
+          `
+            UPDATE commerce_fulfilment_plans
+            SET status = 'completed', updated_at = now()
+            WHERE tenant_id = $1 AND id = $2
+          `,
+          [tenantId, allocation.fulfilment_plan_id]
+        );
+
+        await tx.query(
+          `
+            UPDATE commerce_orders
+            SET
+              fulfilment_status = 'fulfilled',
+              order_status = 'completed',
+              updated_at = now()
+            WHERE tenant_id = $1 AND id = $2
+          `,
+          [tenantId, orderId]
+        );
+      }
+
+      return delivered.rows[0];
     });
   } finally {
     client.release();
@@ -5234,6 +5517,38 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "markets_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/orders\/[0-9a-f-]{36}\/fulfilment-plan\/allocations\/[0-9a-f-]{36}\/execution$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const orderId = parts[parts.length - 5];
+      const allocationId = parts[parts.length - 2];
+      const execution = await updateFulfilmentExecution(
+        orderId,
+        allocationId,
+        parseBody(event)
+      );
+      return response(200, {
+        source: "postgresql",
+        execution,
+        automaticDispatchEnabled: false
+      });
+    } catch (error) {
+      console.error("Fulfilment execution update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "fulfilment_execution_update_failed"
       });
     }
   }
