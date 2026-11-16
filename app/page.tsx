@@ -374,9 +374,10 @@ export default function Home() {
     }
 
     const orderNumber = String(payload?.order?.orderNumber || "");
+    const orderId = String(payload?.order?.id || "");
 
-    if (!orderNumber) {
-      throw new Error("Draft order was created without an order number.");
+    if (!orderNumber || !orderId) {
+      throw new Error("Draft order was created without an order identifier.");
     }
 
     setCart([]);
@@ -384,7 +385,7 @@ export default function Home() {
     window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
     showToast(`Draft order ${orderNumber} created`);
 
-    return { orderNumber };
+    return { orderNumber, orderId };
   };
 
   return (
