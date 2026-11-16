@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
   const result = await callZayviAwsApi("/payment-connections/kredal");
 
   if (!result.ok) {
+    console.error("Kredal connection GET upstream failed", {
+      status: result.status,
+      error: result.error,
+      data: result.data,
+    });
     return NextResponse.json(
       { error: "Unable to load Kredal connection." },
       { status: result.status || 502 }
