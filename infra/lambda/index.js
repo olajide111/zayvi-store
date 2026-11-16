@@ -1708,8 +1708,14 @@ async function adjustInventory(input) {
     throw error;
   }
 
-  if (!Number.isSafeInteger(delta) || delta === 0 || Math.abs(delta) > 100000) {
-    const error = new Error("Inventory adjustment must be a non-zero whole number.");
+  if (!Number.isSafeInteger(delta) || Math.abs(delta) > 100000) {
+    const error = new Error("Inventory adjustment must be a whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (delta === 0 && safetyStock === undefined) {
+    const error = new Error("Provide a stock adjustment or safety-stock change.");
     error.statusCode = 400;
     throw error;
   }
@@ -1828,26 +1834,28 @@ async function adjustInventory(input) {
         [nextOnHand, nextSafetyStock, tenantId, level.id]
       );
 
-      await tx.query(
-        `
-          INSERT INTO commerce_inventory_movements (
-            tenant_id,
-            inventory_level_id,
-            movement_type,
-            quantity_delta,
-            note,
-            actor
-          )
-          VALUES ($1, $2, $3, $4, $5, 'admin')
-        `,
-        [
-          tenantId,
-          level.id,
-          Number(level.on_hand) === 0 && delta > 0 ? "opening_balance" : "adjustment",
-          delta,
-          note || null
-        ]
-      );
+      if (delta !== 0) {
+        await tx.query(
+          `
+            INSERT INTO commerce_inventory_movements (
+              tenant_id,
+              inventory_level_id,
+              movement_type,
+              quantity_delta,
+              note,
+              actor
+            )
+            VALUES ($1, $2, $3, $4, $5, 'admin')
+          `,
+          [
+            tenantId,
+            level.id,
+            Number(level.on_hand) === 0 && delta > 0 ? "opening_balance" : "adjustment",
+            delta,
+            note || null
+          ]
+        );
+      }
 
       return {
         inventoryLevelId: level.id,
