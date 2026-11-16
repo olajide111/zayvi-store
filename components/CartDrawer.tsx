@@ -25,7 +25,7 @@ type Props = {
     customerName: string;
     customerEmail: string;
     phone?: string;
-  }) => Promise<{ orderNumber: string }>;
+  }) => Promise<{ orderNumber: string; orderId: string }>;
   verifiedSubtotal: number | null;
   pricingState: "idle" | "checking" | "verified" | "error";
   marketCode: "GB" | "NG";
@@ -214,7 +214,9 @@ export default function CartDrawer({
                       phone: phone || undefined,
                     });
                     setDraftState("saved");
-                    setDraftMessage(`Draft order ${result.orderNumber} created.`);
+                    setDraftMessage(
+                      `Draft order ${result.orderNumber} created. Order UUID: ${result.orderId}`
+                    );
                   } catch (error) {
                     setDraftState("error");
                     setDraftMessage(error instanceof Error ? error.message : "Unable to create draft order.");
