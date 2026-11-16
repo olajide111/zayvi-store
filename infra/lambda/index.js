@@ -2263,6 +2263,319 @@ async function createSupplier(input) {
 }
 
 
+async function listSupplierOffers(supplierId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            o.id,
+            o.supplier_id,
+            o.supplier_sku,
+            o.currency_code,
+            o.unit_cost,
+            o.minimum_order_quantity,
+            o.lead_time_days,
+            o.stock_status,
+            o.external_stock_quantity,
+            o.source_updated_at,
+            o.status,
+            o.created_at,
+            o.updated_at,
+            tcp.id AS tenant_product_id,
+            cp.id AS product_id,
+            cp.name AS product_name,
+            cp.canonical_code
+          FROM commerce_supplier_offers o
+          JOIN tenant_catalogue_products tcp
+            ON tcp.tenant_id = o.tenant_id
+           AND tcp.id = o.tenant_catalogue_product_id
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          WHERE o.tenant_id = $1
+            AND o.supplier_id = $2
+            AND o.status <> 'archived'
+          ORDER BY o.updated_at DESC, cp.name ASC
+        `,
+        [tenantId, supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        supplierId: row.supplier_id,
+        supplierSku: row.supplier_sku,
+        productId: row.product_id,
+        tenantProductId: row.tenant_product_id,
+        productName: row.product_name,
+        canonicalCode: row.canonical_code,
+        currency: row.currency_code,
+        unitCost: row.unit_cost === null ? null : Number(row.unit_cost),
+        minimumOrderQuantity: Number(row.minimum_order_quantity),
+        leadTimeDays: row.lead_time_days === null ? null : Number(row.lead_time_days),
+        stockStatus: row.stock_status,
+        externalStockQuantity:
+          row.external_stock_quantity === null
+            ? null
+            : Number(row.external_stock_quantity),
+        sourceUpdatedAt: row.source_updated_at,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function createSupplierOffer(input) {
+  const supplierId = String(input?.supplierId || "").trim();
+  const productId = String(input?.productId || "").trim();
+  const supplierSku = String(input?.supplierSku || "").trim() || null;
+  const currency = String(input?.currency || "").trim().toUpperCase();
+  const unitCost =
+    input?.unitCost === null || input?.unitCost === undefined
+      ? null
+      : Number(input.unitCost);
+  const minimumOrderQuantity = Number(input?.minimumOrderQuantity ?? 1);
+  const leadTimeDays =
+    input?.leadTimeDays === null || input?.leadTimeDays === undefined
+      ? null
+      : Number(input.leadTimeDays);
+  const stockStatus = String(input?.stockStatus || "unknown").trim();
+  const externalStockQuantity =
+    input?.externalStockQuantity === null ||
+    input?.externalStockQuantity === undefined ||
+    input?.externalStockQuantity === ""
+      ? null
+      : Number(input.externalStockQuantity);
+
+  if (!/^[0-9a-f-]{36}$/i.test(supplierId)) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[0-9a-f-]{36}$/i.test(productId)) {
+    const error = new Error("A valid product id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["GBP", "NGN"].includes(currency)) {
+    const error = new Error("Supplier offer currency must be GBP or NGN.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (unitCost !== null && (!Number.isFinite(unitCost) || unitCost < 0)) {
+    const error = new Error("Unit cost must be a non-negative number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    !Number.isSafeInteger(minimumOrderQuantity) ||
+    minimumOrderQuantity < 1 ||
+    minimumOrderQuantity > 100000
+  ) {
+    const error = new Error("Minimum order quantity must be a positive whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    leadTimeDays !== null &&
+    (!Number.isSafeInteger(leadTimeDays) || leadTimeDays < 0 || leadTimeDays > 3650)
+  ) {
+    const error = new Error("Lead time must be a non-negative whole number of days.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["unknown","in_stock","limited","out_of_stock","preorder"].includes(stockStatus)) {
+    const error = new Error("Invalid supplier stock status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    externalStockQuantity !== null &&
+    (!Number.isSafeInteger(externalStockQuantity) || externalStockQuantity < 0)
+  ) {
+    const error = new Error("External stock quantity must be a non-negative whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const supplier = await tx.query(
+        `
+          SELECT id, market_code
+          FROM commerce_suppliers
+          WHERE tenant_id = $1
+            AND id = $2
+            AND status = 'active'
+          LIMIT 1
+        `,
+        [tenantId, supplierId]
+      );
+
+      if (supplier.rowCount === 0) {
+        const error = new Error("Active supplier not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const product = await tx.query(
+        `
+          SELECT tcp.id
+          FROM tenant_catalogue_products tcp
+          WHERE tcp.tenant_id = $1
+            AND tcp.product_id = $2
+            AND tcp.status <> 'archived'
+          LIMIT 1
+        `,
+        [tenantId, productId]
+      );
+
+      if (product.rowCount === 0) {
+        const error = new Error("Catalogue product not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const expectedCurrency =
+        supplier.rows[0].market_code === "NG" ? "NGN" : "GBP";
+
+      if (currency !== expectedCurrency) {
+        const error = new Error(
+          "Supplier offer currency must match the supplier market."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const result = await tx.query(
+        `
+          INSERT INTO commerce_supplier_offers (
+            tenant_id,
+            supplier_id,
+            tenant_catalogue_product_id,
+            supplier_sku,
+            currency_code,
+            unit_cost,
+            minimum_order_quantity,
+            lead_time_days,
+            stock_status,
+            external_stock_quantity,
+            source_updated_at,
+            status
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), 'active'
+          )
+          ON CONFLICT (tenant_id, supplier_id, tenant_catalogue_product_id)
+          DO UPDATE SET
+            supplier_sku = EXCLUDED.supplier_sku,
+            currency_code = EXCLUDED.currency_code,
+            unit_cost = EXCLUDED.unit_cost,
+            minimum_order_quantity = EXCLUDED.minimum_order_quantity,
+            lead_time_days = EXCLUDED.lead_time_days,
+            stock_status = EXCLUDED.stock_status,
+            external_stock_quantity = EXCLUDED.external_stock_quantity,
+            source_updated_at = now(),
+            status = 'active',
+            updated_at = now()
+          RETURNING id
+        `,
+        [
+          tenantId,
+          supplierId,
+          product.rows[0].id,
+          supplierSku,
+          currency,
+          unitCost,
+          minimumOrderQuantity,
+          leadTimeDays,
+          stockStatus,
+          externalStockQuantity
+        ]
+      );
+
+      const offers = await tx.query(
+        `
+          SELECT
+            o.id,
+            o.supplier_id,
+            o.supplier_sku,
+            o.currency_code,
+            o.unit_cost,
+            o.minimum_order_quantity,
+            o.lead_time_days,
+            o.stock_status,
+            o.external_stock_quantity,
+            o.source_updated_at,
+            o.status,
+            o.created_at,
+            o.updated_at,
+            cp.id AS product_id,
+            cp.name AS product_name,
+            cp.canonical_code
+          FROM commerce_supplier_offers o
+          JOIN tenant_catalogue_products tcp
+            ON tcp.tenant_id = o.tenant_id
+           AND tcp.id = o.tenant_catalogue_product_id
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          WHERE o.tenant_id = $1
+            AND o.id = $2
+          LIMIT 1
+        `,
+        [tenantId, result.rows[0].id]
+      );
+
+      const row = offers.rows[0];
+
+      return {
+        id: row.id,
+        supplierId: row.supplier_id,
+        supplierSku: row.supplier_sku,
+        productId: row.product_id,
+        productName: row.product_name,
+        canonicalCode: row.canonical_code,
+        currency: row.currency_code,
+        unitCost: row.unit_cost === null ? null : Number(row.unit_cost),
+        minimumOrderQuantity: Number(row.minimum_order_quantity),
+        leadTimeDays: row.lead_time_days === null ? null : Number(row.lead_time_days),
+        stockStatus: row.stock_status,
+        externalStockQuantity:
+          row.external_stock_quantity === null
+            ? null
+            : Number(row.external_stock_quantity),
+        sourceUpdatedAt: row.source_updated_at,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -3653,6 +3966,50 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_create_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/supplier-offers")) {
+    try {
+      const supplierId = event?.queryStringParameters?.supplierId || "";
+      const offers = await listSupplierOffers(supplierId);
+      return response(200, {
+        source: "postgresql",
+        total: offers.length,
+        offers
+      });
+    } catch (error) {
+      console.error("Supplier offers list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_offers_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/supplier-offers")) {
+    try {
+      const offer = await createSupplierOffer(parseBody(event));
+      return response(200, {
+        source: "postgresql",
+        offer
+      });
+    } catch (error) {
+      console.error("Supplier offer upsert failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_offer_upsert_failed"
       });
     }
   }
