@@ -18,7 +18,7 @@ class NodeSha256 {
   private readonly secret?: Buffer;
   private chunks: Buffer[] = [];
 
-  constructor(secret?: string | Uint8Array | ArrayBuffer) {
+  constructor(secret?: any) {
     if (secret !== undefined) {
       this.secret =
         typeof secret === "string"
@@ -29,7 +29,7 @@ class NodeSha256 {
     }
   }
 
-  update(data: string | Uint8Array | ArrayBuffer) {
+  update(data: any) {
     this.chunks.push(
       typeof data === "string"
         ? Buffer.from(data)
