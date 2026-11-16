@@ -1653,6 +1653,108 @@ async function listInventory(marketCode = "GB") {
   }
 }
 
+async function listReturnsOverview() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            o.id,
+            o.order_number,
+            o.customer_name,
+            o.customer_email,
+            o.market_code,
+            o.currency_code,
+            o.total,
+            o.payment_status,
+            o.fulfilment_status,
+            o.source,
+            o.created_at,
+            pa.id AS payment_attempt_id,
+            pa.provider,
+            pa.provider_reference,
+            pa.status AS payment_attempt_status,
+            pa.provider_payload,
+            pa.updated_at AS payment_updated_at
+          FROM commerce_orders o
+          LEFT JOIN LATERAL (
+            SELECT
+              p.id,
+              p.provider,
+              p.provider_reference,
+              p.status,
+              p.provider_payload,
+              p.updated_at
+            FROM commerce_payment_attempts p
+            WHERE p.tenant_id = o.tenant_id
+              AND p.order_id = o.id
+            ORDER BY p.created_at DESC
+            LIMIT 1
+          ) pa ON true
+          WHERE o.tenant_id = $1
+            AND o.payment_status IN (
+              'paid',
+              'partially_refunded',
+              'refunded'
+            )
+          ORDER BY o.updated_at DESC, o.created_at DESC
+          LIMIT 250
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => {
+        const providerPayload = row.provider_payload || {};
+        const refundedMinor = Number(providerPayload.refunded_minor || 0);
+        const totalMinor = Math.round(Number(row.total) * 100);
+        const refundableMinor = Math.max(0, totalMinor - refundedMinor);
+        const hasProviderAttempt = Boolean(row.payment_attempt_id);
+        const isRefunded =
+          row.payment_status === "refunded" ||
+          row.payment_attempt_status === "refunded";
+        const partiallyRefunded =
+          row.payment_status === "partially_refunded" ||
+          row.payment_attempt_status === "partially_refunded";
+
+        return {
+          orderId: row.id,
+          orderNumber: row.order_number,
+          customerName: row.customer_name,
+          customerEmail: row.customer_email,
+          marketCode: row.market_code,
+          currency: row.currency_code,
+          total: Number(row.total),
+          paymentStatus: row.payment_status,
+          fulfilmentStatus: row.fulfilment_status,
+          source: row.source,
+          provider: row.provider || null,
+          providerReference: row.provider_reference || null,
+          paymentAttemptStatus: row.payment_attempt_status || null,
+          refundedMinor,
+          refundableMinor,
+          refundState: isRefunded
+            ? "refunded"
+            : partiallyRefunded
+              ? "partially_refunded"
+              : "not_refunded",
+          refundEligible:
+            hasProviderAttempt &&
+            !isRefunded &&
+            refundableMinor > 0 &&
+            ["paid", "partially_refunded"].includes(row.payment_status),
+          paymentUpdatedAt: row.payment_updated_at,
+          createdAt: row.created_at
+        };
+      });
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -2994,6 +3096,28 @@ exports.handler = async (event, context) => {
       message:
         "Supplier management is ready for configuration; no supplier records are currently active."
     });
+  }
+
+  if (method === "GET" && routePath.endsWith("/returns")) {
+    try {
+      const returns = await listReturnsOverview();
+      return response(200, {
+        source: "postgresql",
+        total: returns.length,
+        returns,
+        actionsEnabled: false,
+        message:
+          "Returns and refunds are read-only in this phase. Provider refund actions remain separately controlled."
+      });
+    } catch (error) {
+      console.error("Returns overview failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "returns_unavailable"
+      });
+    }
   }
 
   if (method === "GET" && routePath.endsWith("/payment-connections/kredal")) {
