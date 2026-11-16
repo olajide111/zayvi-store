@@ -369,7 +369,12 @@ export default function AdminSuppliersPage() {
                 className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_110px_150px_120px_100px]"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{supplier.name}</div>
+                  <a
+                    href={`/admin/suppliers/${supplier.id}`}
+                    className="truncate text-sm font-semibold text-[#23432d] hover:underline"
+                  >
+                    {supplier.name}
+                  </a>
                   <div className="mt-1 text-xs text-gray-400">
                     {supplier.supplierCode}
                     {supplier.contactEmail ? ` · ${supplier.contactEmail}` : ""}
