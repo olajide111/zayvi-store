@@ -2078,6 +2078,191 @@ async function getCommerceAnalytics() {
 }
 
 
+async function listSuppliers() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            s.id,
+            s.supplier_code,
+            s.name,
+            s.supplier_type,
+            s.market_code,
+            s.fulfilment_model,
+            s.status,
+            s.verification_status,
+            s.contact_name,
+            s.contact_email,
+            s.contact_phone,
+            s.website,
+            s.created_at,
+            s.updated_at,
+            COUNT(o.id)::int AS active_offers
+          FROM commerce_suppliers s
+          LEFT JOIN commerce_supplier_offers o
+            ON o.tenant_id = s.tenant_id
+           AND o.supplier_id = s.id
+           AND o.status = 'active'
+          WHERE s.tenant_id = $1
+            AND s.status <> 'archived'
+          GROUP BY s.id
+          ORDER BY s.updated_at DESC, s.name ASC
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        supplierCode: row.supplier_code,
+        name: row.name,
+        supplierType: row.supplier_type,
+        marketCode: row.market_code,
+        fulfilmentModel: row.fulfilment_model,
+        status: row.status,
+        verificationStatus: row.verification_status,
+        contactName: row.contact_name,
+        contactEmail: row.contact_email,
+        contactPhone: row.contact_phone,
+        website: row.website,
+        activeOffers: Number(row.active_offers || 0),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function createSupplier(input) {
+  const name = String(input?.name || "").trim();
+  const supplierType = String(input?.supplierType || "").trim();
+  const marketCode = String(input?.marketCode || "").trim().toUpperCase();
+  const fulfilmentModel = String(
+    input?.fulfilmentModel || "supplier_fulfilled"
+  ).trim();
+  const contactName = String(input?.contactName || "").trim() || null;
+  const contactEmail = String(input?.contactEmail || "").trim().toLowerCase() || null;
+  const contactPhone = String(input?.contactPhone || "").trim() || null;
+  const website = String(input?.website || "").trim() || null;
+
+  if (!name || name.length > 160) {
+    const error = new Error("Supplier name is required and must be 160 characters or fewer.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["dropship","wholesale","manufacturer","3pl"].includes(supplierType)) {
+    const error = new Error("Unsupported supplier type.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["GB","NG"].includes(marketCode)) {
+    const error = new Error("Supplier market must be GB or NG.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["supplier_fulfilled","zayvi_fulfilled","3pl_fulfilled"].includes(fulfilmentModel)) {
+    const error = new Error("Unsupported fulfilment model.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    const error = new Error("Supplier contact email is invalid.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const storeResult = await tx.query(
+        "SELECT id FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active' LIMIT 1",
+        [tenantId]
+      );
+
+      if (storeResult.rowCount === 0) {
+        throw new Error("Active main store not found.");
+      }
+
+      const supplierCode =
+        "SUP-" +
+        crypto
+          .createHash("sha256")
+          .update(name + ":" + Date.now().toString())
+          .digest("hex")
+          .slice(0, 10)
+          .toUpperCase();
+
+      const result = await tx.query(
+        `
+          INSERT INTO commerce_suppliers (
+            tenant_id,
+            store_id,
+            supplier_code,
+            name,
+            supplier_type,
+            market_code,
+            fulfilment_model,
+            verification_status,
+            contact_name,
+            contact_email,
+            contact_phone,
+            website
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            'pending_review', $8, $9, $10, $11
+          )
+          RETURNING *
+        `,
+        [
+          tenantId,
+          storeResult.rows[0].id,
+          supplierCode,
+          name,
+          supplierType,
+          marketCode,
+          fulfilmentModel,
+          contactName,
+          contactEmail,
+          contactPhone,
+          website
+        ]
+      );
+
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        supplierCode: row.supplier_code,
+        name: row.name,
+        supplierType: row.supplier_type,
+        marketCode: row.market_code,
+        fulfilmentModel: row.fulfilment_model,
+        status: row.status,
+        verificationStatus: row.verification_status,
+        contactName: row.contact_name,
+        contactEmail: row.contact_email,
+        contactPhone: row.contact_phone,
+        website: row.website,
+        activeOffers: 0,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -3433,13 +3618,43 @@ exports.handler = async (event, context) => {
   }
 
   if (method === "GET" && routePath.endsWith("/suppliers")) {
-    return response(200, {
-      source: "preview_supplier_setup_pending",
-      total: 0,
-      suppliers: [],
-      message:
-        "Supplier management is ready for configuration; no supplier records are currently active."
-    });
+    try {
+      const suppliers = await listSuppliers();
+      return response(200, {
+        source: "postgresql",
+        total: suppliers.length,
+        suppliers
+      });
+    } catch (error) {
+      console.error("Supplier list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "suppliers_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/suppliers")) {
+    try {
+      const supplier = await createSupplier(parseBody(event));
+      return response(201, {
+        source: "postgresql",
+        supplier
+      });
+    } catch (error) {
+      console.error("Supplier create failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_create_failed"
+      });
+    }
   }
 
   if (method === "GET" && routePath.endsWith("/analytics")) {
