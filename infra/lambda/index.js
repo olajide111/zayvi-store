@@ -1755,6 +1755,107 @@ async function listReturnsOverview() {
 }
 
 
+async function getCommerceAnalytics() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const summaryResult = await tx.query(
+        `
+          SELECT
+            COUNT(*)::int AS order_count,
+            COUNT(*) FILTER (WHERE payment_status = 'paid')::int AS paid_orders,
+            COUNT(*) FILTER (WHERE payment_status = 'pending')::int AS pending_orders,
+            COUNT(*) FILTER (WHERE payment_status = 'failed')::int AS failed_orders,
+            COUNT(*) FILTER (WHERE payment_status = 'partially_refunded')::int AS partial_refunds,
+            COUNT(*) FILTER (WHERE payment_status = 'refunded')::int AS refunded_orders
+          FROM commerce_orders
+          WHERE tenant_id = $1
+        `,
+        [tenantId]
+      );
+
+      const marketResult = await tx.query(
+        `
+          SELECT
+            market_code,
+            currency_code,
+            COUNT(*)::int AS order_count,
+            COUNT(*) FILTER (WHERE payment_status = 'paid')::int AS paid_orders,
+            COALESCE(
+              SUM(total) FILTER (WHERE payment_status = 'paid'),
+              0
+            )::numeric AS paid_value,
+            COALESCE(
+              SUM(total) FILTER (
+                WHERE payment_status IN ('partially_refunded','refunded')
+              ),
+              0
+            )::numeric AS refunded_order_value
+          FROM commerce_orders
+          WHERE tenant_id = $1
+          GROUP BY market_code, currency_code
+          ORDER BY market_code ASC
+        `,
+        [tenantId]
+      );
+
+      const recentResult = await tx.query(
+        `
+          SELECT
+            o.id,
+            o.order_number,
+            o.market_code,
+            o.currency_code,
+            o.total,
+            o.payment_status,
+            o.fulfilment_status,
+            o.created_at
+          FROM commerce_orders o
+          WHERE o.tenant_id = $1
+          ORDER BY o.created_at DESC
+          LIMIT 12
+        `,
+        [tenantId]
+      );
+
+      const summary = summaryResult.rows[0];
+
+      return {
+        orders: {
+          total: Number(summary.order_count || 0),
+          paid: Number(summary.paid_orders || 0),
+          pending: Number(summary.pending_orders || 0),
+          failed: Number(summary.failed_orders || 0),
+          partiallyRefunded: Number(summary.partial_refunds || 0),
+          refunded: Number(summary.refunded_orders || 0)
+        },
+        markets: marketResult.rows.map((row) => ({
+          marketCode: row.market_code,
+          currency: row.currency_code,
+          orderCount: Number(row.order_count || 0),
+          paidOrders: Number(row.paid_orders || 0),
+          paidValue: Number(row.paid_value || 0),
+          refundedOrderValue: Number(row.refunded_order_value || 0)
+        })),
+        recentOrders: recentResult.rows.map((row) => ({
+          id: row.id,
+          orderNumber: row.order_number,
+          marketCode: row.market_code,
+          currency: row.currency_code,
+          total: Number(row.total),
+          paymentStatus: row.payment_status,
+          fulfilmentStatus: row.fulfilment_status,
+          createdAt: row.created_at
+        }))
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -3096,6 +3197,25 @@ exports.handler = async (event, context) => {
       message:
         "Supplier management is ready for configuration; no supplier records are currently active."
     });
+  }
+
+  if (method === "GET" && routePath.endsWith("/analytics")) {
+    try {
+      const analytics = await getCommerceAnalytics();
+      return response(200, {
+        source: "postgresql",
+        generatedAt: new Date().toISOString(),
+        ...analytics
+      });
+    } catch (error) {
+      console.error("Commerce analytics failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "analytics_unavailable"
+      });
+    }
   }
 
   if (method === "GET" && routePath.endsWith("/returns")) {
