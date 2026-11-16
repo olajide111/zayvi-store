@@ -1977,7 +1977,15 @@ async function getKredalPaymentAttempt(orderId) {
 
 async function applyVerifiedKredalPayment(input) {
   const orderId = String(input?.orderId || "").trim();
-  const providerStatus = String(input?.providerStatus || "").trim();
+  const providerPaymentState = String(
+    input?.providerPaymentState || ""
+  ).trim();
+  const providerHoldState =
+    input?.providerHoldState === null ||
+    input?.providerHoldState === undefined ||
+    input?.providerHoldState === ""
+      ? null
+      : String(input.providerHoldState).trim();
   const providerPayload =
     input?.providerPayload &&
     typeof input.providerPayload === "object" &&
@@ -1985,23 +1993,18 @@ async function applyVerifiedKredalPayment(input) {
       ? input.providerPayload
       : {};
 
-  const statusMap = {
-    pending: { attempt: "pending", order: "pending" },
-    held: { attempt: "held", order: "pending" },
-    paid: { attempt: "captured", order: "paid" },
-    released: { attempt: "captured", order: "paid" },
-    failed: { attempt: "failed", order: "failed" },
-    cancelled: { attempt: "cancelled", order: "failed" },
-    partially_refunded: {
-      attempt: "partially_refunded",
-      order: "partially_refunded"
-    },
-    refunded: { attempt: "refunded", order: "refunded" }
-  };
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
+    const error = new Error("A valid Zayvi order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
 
-  const mapped = statusMap[providerStatus];
+  const mapped = mapKredalPaymentState({
+    payment_state: providerPaymentState,
+    hold_state: providerHoldState
+  });
 
-  if (!mapped || !/^[0-9a-f-]{36}$/i.test(orderId)) {
+  if (!mapped) {
     const error = new Error("Unsupported verified Kredal payment state.");
     error.statusCode = 400;
     throw error;
@@ -2038,13 +2041,13 @@ async function applyVerifiedKredalPayment(input) {
       }
 
       const state = current.rows[0];
-      const terminalRefund =
+      const refundTerminal =
         ["refunded", "partially_refunded"].includes(state.payment_status) ||
         ["refunded", "partially_refunded"].includes(state.attempt_status);
 
       if (
-        terminalRefund &&
-        ["pending", "held", "paid", "released"].includes(providerStatus)
+        refundTerminal &&
+        ["created", "pending", "succeeded"].includes(providerPaymentState)
       ) {
         return {
           ignored: true,
@@ -2063,116 +2066,63 @@ async function applyVerifiedKredalPayment(input) {
             AND id = $4
         `,
         [
-          mapped.attempt,
+          mapped.attemptStatus,
           JSON.stringify(providerPayload),
           tenantId,
           state.id
         ]
       );
 
+      let nextOrderStatus = state.order_status;
+
+      if (mapped.orderStatusMode === "confirm") {
+        if (
+          state.order_status === "draft" ||
+          state.order_status === "pending_payment"
+        ) {
+          nextOrderStatus = "confirmed";
+        }
+      } else if (mapped.orderStatusMode === "cancel") {
+        if (state.order_status !== "completed") {
+          nextOrderStatus = "cancelled";
+        }
+      } else if (
+        mapped.orderStatusMode === "keep_pending" &&
+        state.order_status === "draft"
+      ) {
+        nextOrderStatus = "pending_payment";
+      }
+
       await tx.query(
         `
           UPDATE commerce_orders
           SET
             payment_status = $1,
-            order_status =
-              CASE
-                WHEN $1 = 'paid' AND order_status = 'pending_payment'
-                  THEN 'confirmed'
-                WHEN $1 IN ('failed','refunded') AND order_status = 'pending_payment'
-                  THEN 'cancelled'
-                ELSE order_status
-              END,
+            order_status = $2,
             updated_at = now()
-          WHERE tenant_id = $2
-            AND id = $3
+          WHERE tenant_id = $3
+            AND id = $4
         `,
-        [mapped.order, tenantId, orderId]
+        [
+          mapped.orderPaymentStatus,
+          nextOrderStatus,
+          tenantId,
+          orderId
+        ]
       );
 
       return {
         ignored: false,
-        attemptStatus: mapped.attempt,
-        orderPaymentStatus: mapped.order
+        attemptStatus: mapped.attemptStatus,
+        orderPaymentStatus: mapped.orderPaymentStatus,
+        orderStatus: nextOrderStatus,
+        providerPaymentState,
+        providerHoldState
       };
     });
   } finally {
     client.release();
   }
-}
-
-function mapKredalPaymentState(payment) {
-  const paymentState = String(payment?.payment_state || "").trim();
-  const holdState =
-    payment?.hold_state === null || payment?.hold_state === undefined
-      ? null
-      : String(payment.hold_state).trim();
-
-  if (paymentState === "created" || paymentState === "pending") {
-    return {
-      attemptStatus: "pending",
-      orderPaymentStatus: "pending",
-      orderStatusMode: "keep_pending"
-    };
-  }
-
-  if (paymentState === "succeeded") {
-    if (holdState === "held" || holdState === "disputed") {
-      return {
-        attemptStatus: "held",
-        orderPaymentStatus: "pending",
-        orderStatusMode: "keep_pending"
-      };
-    }
-
-    return {
-      attemptStatus: "captured",
-      orderPaymentStatus: "paid",
-      orderStatusMode: "confirm"
-    };
-  }
-
-  if (paymentState === "failed") {
-    return {
-      attemptStatus: "failed",
-      orderPaymentStatus: "failed",
-      orderStatusMode: "keep_pending"
-    };
-  }
-
-  if (paymentState === "cancelled") {
-    return {
-      attemptStatus: "cancelled",
-      orderPaymentStatus: "failed",
-      orderStatusMode: "cancel"
-    };
-  }
-
-  if (paymentState === "expired") {
-    return {
-      attemptStatus: "failed",
-      orderPaymentStatus: "failed",
-      orderStatusMode: "keep_pending"
-    };
-  }
-
-  if (paymentState === "partially_refunded") {
-    return {
-      attemptStatus: "partially_refunded",
-      orderPaymentStatus: "partially_refunded",
-      orderStatusMode: "preserve"
-    };
-  }
-
-  if (paymentState === "refunded") {
-    return {
-      attemptStatus: "refunded",
-      orderPaymentStatus: "refunded",
-      orderStatusMode: "preserve"
-    };
-  }
-
-  return null;
 }
 
 async function storeKredalEvent(input) {
