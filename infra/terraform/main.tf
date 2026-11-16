@@ -311,11 +311,18 @@ resource "aws_iam_role_policy" "vercel_api_invoke" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["execute-api:Invoke"]
-      Resource = "${aws_apigatewayv2_api.http.execution_arn}/*/*/*"
-    }]
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["execute-api:Invoke"]
+        Resource = "${aws_apigatewayv2_api.http.execution_arn}/*/*/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:InvokeFunction"]
+        Resource = aws_lambda_function.api.arn
+      }
+    ]
   })
 }
 
