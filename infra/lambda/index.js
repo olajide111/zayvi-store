@@ -3850,6 +3850,152 @@ async function updateFulfilmentExecution(orderId, allocationId, input) {
 }
 
 
+async function updateSupplierVerification(supplierId, input) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const toStatus = String(input?.verificationStatus || "").trim();
+  const reviewNote = String(input?.reviewNote || "").trim().slice(0, 1000) || null;
+
+  if (!["pending_review", "verified", "rejected"].includes(toStatus)) {
+    const error = new Error("Unsupported supplier verification status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (toStatus === "rejected" && !reviewNote) {
+    const error = new Error("A review note is required when rejecting a supplier.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const supplierResult = await tx.query(
+        `
+          SELECT
+            id,
+            verification_status,
+            status
+          FROM commerce_suppliers
+          WHERE tenant_id = $1
+            AND id = $2
+          FOR UPDATE
+        `,
+        [tenantId, supplierId]
+      );
+
+      if (supplierResult.rowCount === 0) {
+        const error = new Error("Supplier not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const supplier = supplierResult.rows[0];
+
+      if (supplier.status === "archived") {
+        const error = new Error("Archived suppliers cannot be verified.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (supplier.verification_status === toStatus) {
+        const error = new Error("Supplier is already in that verification state.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_suppliers
+          SET verification_status = $1, updated_at = now()
+          WHERE tenant_id = $2 AND id = $3
+        `,
+        [toStatus, tenantId, supplierId]
+      );
+
+      await tx.query(
+        `
+          INSERT INTO commerce_supplier_verification_events (
+            tenant_id,
+            supplier_id,
+            from_status,
+            to_status,
+            review_note,
+            actor
+          )
+          VALUES ($1,$2,$3,$4,$5,'admin')
+        `,
+        [
+          tenantId,
+          supplierId,
+          supplier.verification_status,
+          toStatus,
+          reviewNote
+        ]
+      );
+
+      return {
+        supplierId,
+        verificationStatus: toStatus,
+        previousVerificationStatus: supplier.verification_status,
+        reviewNote
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function listSupplierVerificationEvents(supplierId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            from_status,
+            to_status,
+            review_note,
+            actor,
+            created_at
+          FROM commerce_supplier_verification_events
+          WHERE tenant_id = $1
+            AND supplier_id = $2
+          ORDER BY created_at DESC
+          LIMIT 100
+        `,
+        [tenantId, supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        fromStatus: row.from_status,
+        toStatus: row.to_status,
+        reviewNote: row.review_note,
+        actor: row.actor,
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -5240,6 +5386,62 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_create_failed"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    /\/suppliers\/[0-9a-f-]{36}\/verification-events$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const supplierId = parts[parts.length - 2];
+      const events = await listSupplierVerificationEvents(supplierId);
+      return response(200, {
+        source: "postgresql",
+        total: events.length,
+        events
+      });
+    } catch (error) {
+      console.error("Supplier verification history failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_verification_history_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "PATCH" &&
+    /\/suppliers\/[0-9a-f-]{36}\/verification$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const supplierId = parts[parts.length - 2];
+      const verification = await updateSupplierVerification(
+        supplierId,
+        parseBody(event)
+      );
+      return response(200, {
+        source: "postgresql",
+        verification
+      });
+    } catch (error) {
+      console.error("Supplier verification update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_verification_update_failed"
       });
     }
   }
