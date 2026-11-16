@@ -3996,6 +3996,193 @@ async function listSupplierVerificationEvents(supplierId) {
 }
 
 
+async function getReplenishmentWatchlist(marketCode = "GB") {
+  const normalizedMarket = String(marketCode || "GB").trim().toUpperCase();
+
+  if (!["GB", "NG"].includes(normalizedMarket)) {
+    const error = new Error("Replenishment market must be GB or NG.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            tcp.id AS tenant_product_id,
+            cp.id AS product_id,
+            cp.name AS product_name,
+            cp.canonical_code,
+            cp.attributes,
+            tpm.customer_price,
+            tpm.currency_code,
+            tpm.publication_status,
+            tpm.availability_status,
+            il.id AS inventory_level_id,
+            il.on_hand,
+            il.reserved,
+            il.safety_stock,
+            il.updated_at AS inventory_updated_at,
+            loc.name AS location_name,
+            fallback.supplier_id,
+            fallback.supplier_name,
+            fallback.supplier_offer_id,
+            fallback.supplier_sku,
+            fallback.unit_cost,
+            fallback.lead_time_days,
+            fallback.stock_status,
+            fallback.external_stock_quantity,
+            fallback.source_updated_at
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          LEFT JOIN tenant_product_markets tpm
+            ON tpm.tenant_id = tcp.tenant_id
+           AND tpm.tenant_catalogue_product_id = tcp.id
+           AND tpm.market_code = $2
+          LEFT JOIN commerce_inventory_locations loc
+            ON loc.tenant_id = tcp.tenant_id
+           AND loc.store_id = tcp.store_id
+           AND loc.market_code = $2
+           AND loc.location_type = 'own_stock'
+           AND loc.status = 'active'
+          LEFT JOIN commerce_inventory_levels il
+            ON il.tenant_id = tcp.tenant_id
+           AND il.location_id = loc.id
+           AND il.tenant_catalogue_product_id = tcp.id
+          LEFT JOIN LATERAL (
+            SELECT
+              s.id AS supplier_id,
+              s.name AS supplier_name,
+              so.id AS supplier_offer_id,
+              so.supplier_sku,
+              so.unit_cost,
+              so.lead_time_days,
+              so.stock_status,
+              so.external_stock_quantity,
+              so.source_updated_at
+            FROM commerce_supplier_offers so
+            JOIN commerce_suppliers s
+              ON s.tenant_id = so.tenant_id
+             AND s.id = so.supplier_id
+            WHERE so.tenant_id = tcp.tenant_id
+              AND so.tenant_catalogue_product_id = tcp.id
+              AND so.status = 'active'
+              AND s.status = 'active'
+              AND s.market_code = $2
+              AND s.verification_status = 'verified'
+              AND so.currency_code = COALESCE(
+                tpm.currency_code,
+                CASE WHEN $2 = 'NG' THEN 'NGN' ELSE 'GBP' END
+              )
+              AND so.stock_status IN ('in_stock','limited')
+              AND (
+                so.external_stock_quantity IS NULL
+                OR so.external_stock_quantity > 0
+              )
+            ORDER BY
+              so.unit_cost ASC NULLS LAST,
+              so.lead_time_days ASC NULLS LAST,
+              so.updated_at DESC
+            LIMIT 1
+          ) fallback ON true
+          WHERE tcp.tenant_id = $1
+            AND tcp.status <> 'archived'
+          ORDER BY cp.name ASC
+        `,
+        [tenantId, normalizedMarket]
+      );
+
+      return result.rows
+        .map((row) => {
+          const onHand = row.on_hand === null ? null : Number(row.on_hand);
+          const reserved = row.reserved === null ? 0 : Number(row.reserved);
+          const safetyStock =
+            row.safety_stock === null ? 0 : Number(row.safety_stock);
+          const availableToSell =
+            onHand === null
+              ? null
+              : Math.max(0, onHand - reserved - safetyStock);
+
+          let attentionReason = null;
+          let severity = null;
+
+          if (row.inventory_level_id === null) {
+            attentionReason = "inventory_not_tracked";
+            severity = "setup";
+          } else if (availableToSell <= 0) {
+            attentionReason = "no_sellable_stock";
+            severity = "critical";
+          } else if (onHand - reserved <= safetyStock) {
+            attentionReason = "at_safety_threshold";
+            severity = "warning";
+          }
+
+          if (!attentionReason) return null;
+
+          return {
+            tenantProductId: row.tenant_product_id,
+            productId: row.product_id,
+            productName: row.product_name,
+            canonicalCode: row.canonical_code,
+            image: row.attributes?.image || "",
+            marketCode: normalizedMarket,
+            currency:
+              row.currency_code ||
+              (normalizedMarket === "NG" ? "NGN" : "GBP"),
+            sellingPrice:
+              row.customer_price === null
+                ? null
+                : Number(row.customer_price),
+            publicationStatus:
+              row.publication_status || "not_listed",
+            availabilityStatus:
+              row.availability_status || "unknown",
+            inventoryTracked: row.inventory_level_id !== null,
+            inventoryLevelId: row.inventory_level_id || null,
+            locationName: row.location_name || null,
+            onHand,
+            reserved,
+            safetyStock,
+            availableToSell,
+            attentionReason,
+            severity,
+            inventoryUpdatedAt: row.inventory_updated_at,
+            fallbackSupplier: row.supplier_id
+              ? {
+                  supplierId: row.supplier_id,
+                  supplierName: row.supplier_name,
+                  supplierOfferId: row.supplier_offer_id,
+                  supplierSku: row.supplier_sku,
+                  unitCost:
+                    row.unit_cost === null
+                      ? null
+                      : Number(row.unit_cost),
+                  leadTimeDays:
+                    row.lead_time_days === null
+                      ? null
+                      : Number(row.lead_time_days),
+                  stockStatus: row.stock_status,
+                  externalStockQuantity:
+                    row.external_stock_quantity === null
+                      ? null
+                      : Number(row.external_stock_quantity),
+                  sourceUpdatedAt: row.source_updated_at
+                }
+              : null
+          };
+        })
+        .filter(Boolean);
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -5513,6 +5700,32 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "sourcing_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/replenishment")) {
+    try {
+      const marketCode = event?.queryStringParameters?.market || "GB";
+      const items = await getReplenishmentWatchlist(marketCode);
+      return response(200, {
+        source: "postgresql",
+        marketCode: String(marketCode).toUpperCase(),
+        generatedAt: new Date().toISOString(),
+        autoReorderEnabled: false,
+        total: items.length,
+        items
+      });
+    } catch (error) {
+      console.error("Replenishment watchlist failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "replenishment_unavailable"
       });
     }
   }
