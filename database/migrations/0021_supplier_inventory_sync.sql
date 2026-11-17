@@ -89,8 +89,11 @@ CREATE POLICY commerce_supplier_inventory_snapshots_isolation
   USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
 
+GRANT SELECT, INSERT, UPDATE ON
+  commerce_supplier_inventory_sync_runs
+TO zayvi_app;
+
 GRANT SELECT, INSERT ON
-  commerce_supplier_inventory_sync_runs,
   commerce_supplier_inventory_snapshots
 TO zayvi_app;
 
