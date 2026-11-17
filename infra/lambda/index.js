@@ -7585,7 +7585,8 @@ function requiredSchemaMigrationsForRoute(routePath) {
   ) {
     return [
       "0012_supplier_registry.sql",
-      "0015_supplier_verification_audit.sql"
+      "0015_supplier_verification_audit.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -7635,7 +7636,8 @@ function requiredSchemaMigrationsForRoute(routePath) {
       "0012_supplier_registry.sql",
       "0016_purchase_orders.sql",
       "0019_vendor_portal_access.sql",
-      "0023_vendor_purchase_order_updates.sql"
+      "0023_vendor_purchase_order_updates.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -7643,7 +7645,8 @@ function requiredSchemaMigrationsForRoute(routePath) {
     return [
       "0011_inventory_ledger.sql",
       "0012_supplier_registry.sql",
-      "0016_purchase_orders.sql"
+      "0016_purchase_orders.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -7662,7 +7665,8 @@ function requiredSchemaMigrationsForRoute(routePath) {
   ) {
     return [
       "0012_supplier_registry.sql",
-      "0017_supplier_feed_discovery.sql"
+      "0017_supplier_feed_discovery.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -7686,7 +7690,8 @@ function requiredSchemaMigrationsForRoute(routePath) {
   if (routePath.includes("/returns")) {
     return [
       "0011_inventory_ledger.sql",
-      "0022_returns_reverse_inventory.sql"
+      "0022_returns_reverse_inventory.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
