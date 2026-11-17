@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { cartStorageKey } from "@/lib/storefront-market";
 import type { ContentMarket } from "@/lib/storefront-content";
 import type { DraftOrderDetails, DraftOrderReceipt } from "@/lib/delivery";
 import { useState, useEffect, useRef } from "react";
@@ -18,7 +19,6 @@ import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
 const STORE_COLOR = "#171714";
-const CART_STORAGE_KEY = "zayvi-cart-v2";
 const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v2";
 
 export default function Storefront({ marketCode }: { marketCode: ContentMarket }) {
@@ -86,7 +86,7 @@ export default function Storefront({ marketCode }: { marketCode: ContentMarket }
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(`${CART_STORAGE_KEY}-${marketCode}`);
+      const raw = window.localStorage.getItem(cartStorageKey(marketCode));
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -105,7 +105,7 @@ export default function Storefront({ marketCode }: { marketCode: ContentMarket }
         }
       }
     } catch {
-      window.localStorage.removeItem(`${CART_STORAGE_KEY}-${marketCode}`);
+      window.localStorage.removeItem(cartStorageKey(marketCode));
     } finally {
       setCartHydrated(true);
     }
@@ -114,7 +114,7 @@ export default function Storefront({ marketCode }: { marketCode: ContentMarket }
   useEffect(() => {
     if (!cartHydrated) return;
 
-    window.localStorage.setItem(`${CART_STORAGE_KEY}-${marketCode}`, JSON.stringify(cart));
+    window.localStorage.setItem(cartStorageKey(marketCode), JSON.stringify(cart));
 
     if (cart.length === 0) {
       setVerifiedSubtotal(0);
@@ -335,7 +335,7 @@ export default function Storefront({ marketCode }: { marketCode: ContentMarket }
     }
 
     setCart([]);
-    window.localStorage.removeItem(`${CART_STORAGE_KEY}-${marketCode}`);
+    window.localStorage.removeItem(cartStorageKey(marketCode));
     window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
     showToast(`Draft order ${orderNumber} created`);
 

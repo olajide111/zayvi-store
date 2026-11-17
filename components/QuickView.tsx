@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
+import { productPath } from "@/lib/storefront-market";
 
 const STORE_COLOR = "#16a34a";
 
@@ -181,7 +182,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
             </div>
 
             <Link
-              href={`/product/${product.id}`}
+              href={productPath(product.id, product.marketCode)}
               onClick={onClose}
               style={{
                 marginTop: 14,
