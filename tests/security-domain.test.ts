@@ -17,6 +17,16 @@ import {
   parseKredalSignatureHeader,
   verifyKredalWebhookSignature,
 } from "../lib/kredal-signature";
+import {
+  createSupplierApiKey,
+  hashSupplierApiKey,
+  isSupplierApiKey,
+} from "../lib/supplier-api-key";
+import {
+  createVendorSession,
+  verifyVendorSessionValue,
+  VENDOR_SESSION_MAX_AGE,
+} from "../lib/vendor-auth";
 
 const basePublication = {
   productId: "product-1",
@@ -257,4 +267,75 @@ test("Kredal webhook signature rejects stale, malformed and tampered events", ()
     }),
     false,
   );
+});
+
+
+test("supplier API keys use the expected format and stable hash", () => {
+  const first = createSupplierApiKey();
+  const second = createSupplierApiKey();
+
+  assert.equal(isSupplierApiKey(first.apiKey), true);
+  assert.equal(isSupplierApiKey(second.apiKey), true);
+  assert.match(first.secretHash, /^[a-f0-9]{64}$/);
+  assert.equal(hashSupplierApiKey(first.apiKey), first.secretHash);
+  assert.notEqual(first.apiKey, second.apiKey);
+  assert.notEqual(first.secretHash, second.secretHash);
+  assert.equal(isSupplierApiKey("zv_vendor_invalid"), false);
+});
+
+test("vendor session accepts valid signed state and rejects tampering and expiry", () => {
+  const previousSecret = process.env.ZAYVI_UPLOAD_SECRET;
+  process.env.ZAYVI_UPLOAD_SECRET = "vendor-session-test-secret";
+
+  try {
+    const now = 1_800_000_000;
+    const session = createVendorSession(
+      {
+        accountId: "11111111-1111-1111-1111-111111111111",
+        supplierId: "22222222-2222-2222-2222-222222222222",
+        role: "editor",
+        email: "vendor@example.com",
+      },
+      now
+    );
+
+    const verified = verifyVendorSessionValue(session, now + 60);
+    assert.equal(verified?.role, "editor");
+    assert.equal(verified?.email, "vendor@example.com");
+
+    const [payload, signature] = session.split(".");
+    assert.ok(payload);
+    assert.ok(signature);
+
+    const tamperedPayload =
+      Buffer.from(
+        JSON.stringify({
+          accountId: "11111111-1111-1111-1111-111111111111",
+          supplierId: "99999999-9999-9999-9999-999999999999",
+          role: "owner",
+          email: "vendor@example.com",
+          exp: now + VENDOR_SESSION_MAX_AGE,
+        }),
+        "utf8"
+      ).toString("base64url");
+
+    assert.equal(
+      verifyVendorSessionValue(`${tamperedPayload}.${signature}`, now + 60),
+      null
+    );
+
+    assert.equal(
+      verifyVendorSessionValue(
+        session,
+        now + VENDOR_SESSION_MAX_AGE + 1
+      ),
+      null
+    );
+  } finally {
+    if (previousSecret === undefined) {
+      delete process.env.ZAYVI_UPLOAD_SECRET;
+    } else {
+      process.env.ZAYVI_UPLOAD_SECRET = previousSecret;
+    }
+  }
 });
