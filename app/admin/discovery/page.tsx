@@ -46,6 +46,31 @@ type CandidatesResponse = {
   autoPublishEnabled: boolean;
 };
 
+type FeedBatch = {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  marketCode: "GB" | "NG";
+  sourceType: string;
+  sourceReference?: string | null;
+  itemCount: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  status: string;
+  payloadChecksum?: string | null;
+  acceptedDetails: Array<{
+    id?: string;
+    externalProductId?: string | null;
+    status?: string;
+  }>;
+  rejectionDetails: Array<{
+    index: number;
+    externalProductId?: string | null;
+    errors: string[];
+  }>;
+  createdAt: string;
+};
+
 const sampleFeed = JSON.stringify(
   [
     {
@@ -200,13 +225,14 @@ export default function ProductDiscoveryPage() {
   const [workingId, setWorkingId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [batches, setBatches] = useState<FeedBatch[]>([]);
 
   async function load() {
     setLoading(true);
     setError("");
 
     try {
-      const [supplierResponse, candidateResponse] = await Promise.all([
+      const [supplierResponse, candidateResponse, batchResponse] = await Promise.all([
         fetch("/api/admin/suppliers", {
           credentials: "include",
           cache: "no-store",
@@ -219,15 +245,24 @@ export default function ProductDiscoveryPage() {
             cache: "no-store",
           }
         ),
+        fetch("/api/admin/discovery/batches", {
+          credentials: "include",
+          cache: "no-store",
+        }),
       ]);
 
-      if (supplierResponse.status === 401 || candidateResponse.status === 401) {
+      if (
+        supplierResponse.status === 401 ||
+        candidateResponse.status === 401 ||
+        batchResponse.status === 401
+      ) {
         window.location.href = "/admin";
         return;
       }
 
       const supplierPayload = await supplierResponse.json();
       const candidatePayload = await candidateResponse.json();
+      const batchPayload = await batchResponse.json();
 
       if (!supplierResponse.ok) {
         throw new Error(supplierPayload?.error || "Unable to load suppliers.");
@@ -235,6 +270,11 @@ export default function ProductDiscoveryPage() {
       if (!candidateResponse.ok) {
         throw new Error(
           candidatePayload?.error || "Unable to load discovery candidates."
+        );
+      }
+      if (!batchResponse.ok) {
+        throw new Error(
+          batchPayload?.error || "Unable to load supplier-feed history."
         );
       }
 
@@ -249,6 +289,9 @@ export default function ProductDiscoveryPage() {
         Array.isArray(candidatePayload.candidates)
           ? candidatePayload.candidates
           : []
+      );
+      setBatches(
+        Array.isArray(batchPayload.batches) ? batchPayload.batches : []
       );
 
       if (!supplierId && verified.length > 0) {
@@ -533,6 +576,7 @@ export default function ProductDiscoveryPage() {
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
+          <div className="space-y-6">
           <aside className="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 className="text-sm font-semibold">Import supplier feed</h2>
             <p className="mt-1 text-xs leading-5 text-gray-400">
@@ -597,6 +641,90 @@ export default function ProductDiscoveryPage() {
               {ingesting ? "Processing feed..." : "Import to review queue"}
             </button>
           </aside>
+
+          <aside className="rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold">Feed history</h2>
+                <p className="mt-1 text-xs text-gray-400">
+                  Recent supplier ingestion batches and validation outcomes.
+                </p>
+              </div>
+              <a
+                href="/admin/discovery"
+                className="text-[11px] font-semibold text-[#31543b] hover:underline"
+              >
+                Refresh
+              </a>
+            </div>
+
+            {batches.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-4 text-xs text-gray-500">
+                No supplier feed batches recorded yet.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {batches.slice(0, 8).map((batch) => (
+                  <details
+                    key={batch.id}
+                    className="rounded-xl border border-gray-100 bg-[#fafbf9] p-3"
+                  >
+                    <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-semibold">
+                            {batch.supplierName}
+                          </div>
+                          <div className="mt-1 text-[11px] text-gray-400">
+                            {new Date(batch.createdAt).toLocaleString("en-GB")} · {batch.sourceType}
+                          </div>
+                        </div>
+                        <div className="text-right text-[11px]">
+                          <div className="font-semibold capitalize">
+                            {batch.status.replaceAll("_", " ")}
+                          </div>
+                          <div className="mt-1 text-gray-400">
+                            {batch.acceptedCount} accepted · {batch.rejectedCount} rejected
+                          </div>
+                        </div>
+                      </div>
+                    </summary>
+
+                    <div className="mt-3 border-t border-gray-100 pt-3 text-[11px] text-gray-500">
+                      <div>
+                        Items: {batch.itemCount} · Market: {batch.marketCode}
+                      </div>
+                      {batch.sourceReference && (
+                        <div className="mt-1">
+                          Source: {batch.sourceReference}
+                        </div>
+                      )}
+                      {batch.rejectionDetails.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <div className="font-semibold text-red-700">
+                            Rejected rows
+                          </div>
+                          {batch.rejectionDetails.slice(0, 5).map((rejection) => (
+                            <div
+                              key={`${batch.id}-${rejection.index}`}
+                              className="rounded-lg bg-red-50 p-2 text-red-700"
+                            >
+                              Row {rejection.index + 1}
+                              {rejection.externalProductId
+                                ? ` · ${rejection.externalProductId}`
+                                : ""}
+                              : {rejection.errors.join("; ")}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            )}
+          </aside>
+          </div>
 
           <div>
             <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
