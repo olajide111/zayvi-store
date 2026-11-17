@@ -13,7 +13,7 @@ type MigrationReadiness = {
 type ReadinessResponse = {
   source: string;
   generatedAt: string;
-  ledgerAvailable: boolean;
+  readinessSource: "schema_markers";
   allReady: boolean;
   appliedCount: number;
   pendingCount: number;
@@ -111,9 +111,9 @@ export default function SystemReadinessPage() {
                   (data.allReady ? "text-emerald-700" : "text-amber-700")
                 }
               >
-                This status comes directly from the PostgreSQL migration ledger.
-                Pending features should not be treated as activated until their
-                migrations are applied through the reviewed Preview bootstrap process.
+                This status is verified from the PostgreSQL tables and columns each
+                migration creates. Pending features should not be treated as activated
+                until their migrations are applied through the reviewed Preview bootstrap process.
               </p>
             </div>
 
@@ -138,7 +138,7 @@ export default function SystemReadinessPage() {
               <div className="border-b border-gray-100 px-5 py-4">
                 <h2 className="text-sm font-semibold">Feature migration readiness</h2>
                 <p className="mt-1 text-xs text-gray-400">
-                  Current application features that depend on migrations 0011–0018.
+                  Current application features that depend on migrations 0011–0018. Readiness is based on actual schema markers, not privileged migration-ledger access.
                 </p>
               </div>
 
