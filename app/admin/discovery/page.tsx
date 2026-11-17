@@ -32,6 +32,12 @@ type Candidate = {
   reviewNote?: string | null;
   approvedProductId?: string | null;
   updatedAt: string;
+  qualityFlags: string[];
+  potentialDuplicate?: {
+    productId: string;
+    productName: string;
+    matchType: "supplier_sku" | "name";
+  } | null;
 };
 
 type CandidatesResponse = {
@@ -68,6 +74,119 @@ function money(value: number | null, currency: string) {
     currency,
     maximumFractionDigits: currency === "NGN" ? 0 : 2,
   }).format(value);
+}
+
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+
+    if (char === "," && !quoted) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell);
+      if (row.some((value) => value.trim() !== "")) rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell);
+  if (row.some((value) => value.trim() !== "")) rows.push(row);
+
+  if (rows.length < 2) {
+    throw new Error("CSV must include a header row and at least one product row.");
+  }
+
+  const normalizeHeader = (value: string) =>
+    value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const headers = rows[0].map(normalizeHeader);
+
+  const aliases: Record<string, string[]> = {
+    externalProductId: ["externalproductid", "externalid", "productid", "id"],
+    supplierSku: ["suppliersku", "sku"],
+    name: ["name", "productname", "title"],
+    category: ["category", "productcategory", "type"],
+    description: ["description", "desc"],
+    imageUrl: ["imageurl", "image", "imageuri"],
+    currency: ["currency", "currencycode"],
+    unitCost: ["unitcost", "cost", "suppliercost"],
+    minimumOrderQuantity: ["minimumorderquantity", "moq"],
+    leadTimeDays: ["leadtimedays", "leadtime"],
+    stockStatus: ["stockstatus", "availability", "status"],
+    externalStockQuantity: [
+      "externalstockquantity",
+      "stockquantity",
+      "quantity",
+      "qty",
+    ],
+  };
+
+  const indexFor = (key: string) =>
+    headers.findIndex((header) => aliases[key]?.includes(header));
+
+  const required = ["externalProductId", "name", "category"];
+  for (const key of required) {
+    if (indexFor(key) < 0) {
+      throw new Error(
+        `CSV is missing required column: ${key}. Required columns are externalProductId, name and category.`
+      );
+    }
+  }
+
+  const get = (values: string[], key: string) => {
+    const position = indexFor(key);
+    return position < 0 ? "" : (values[position] || "").trim();
+  };
+
+  return rows.slice(1).map((values) => ({
+    externalProductId: get(values, "externalProductId"),
+    supplierSku: get(values, "supplierSku") || undefined,
+    name: get(values, "name"),
+    category: get(values, "category"),
+    description: get(values, "description") || undefined,
+    imageUrl: get(values, "imageUrl") || undefined,
+    currency: get(values, "currency") || undefined,
+    unitCost: get(values, "unitCost") === "" ? undefined : Number(get(values, "unitCost")),
+    minimumOrderQuantity:
+      get(values, "minimumOrderQuantity") === ""
+        ? 1
+        : Number(get(values, "minimumOrderQuantity")),
+    leadTimeDays:
+      get(values, "leadTimeDays") === ""
+        ? undefined
+        : Number(get(values, "leadTimeDays")),
+    stockStatus: get(values, "stockStatus") || "unknown",
+    externalStockQuantity:
+      get(values, "externalStockQuantity") === ""
+        ? undefined
+        : Number(get(values, "externalStockQuantity")),
+  }));
 }
 
 export default function ProductDiscoveryPage() {
@@ -171,6 +290,25 @@ export default function ProductDiscoveryPage() {
     }
   }, [supplierId]);
 
+  async function loadCsvFile(file: File) {
+    setError("");
+    setNotice("");
+
+    try {
+      const text = await file.text();
+      const parsed = parseCsv(text);
+      const currency = selectedSupplier?.marketCode === "NG" ? "NGN" : "GBP";
+      const normalized = parsed.map((item) => ({
+        ...item,
+        currency,
+      }));
+      setFeedText(JSON.stringify(normalized, null, 2));
+      setNotice(`${normalized.length} CSV row(s) loaded. Review the JSON, then import to the review queue.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to parse CSV file.");
+    }
+  }
+
   async function ingest() {
     if (!supplierId) {
       setError("Select a verified supplier first.");
@@ -227,6 +365,16 @@ export default function ProductDiscoveryPage() {
   }
 
   async function approve(candidate: Candidate) {
+    let confirmDuplicateReview = false;
+
+    if (candidate.potentialDuplicate) {
+      const confirmed = window.confirm(
+        `Potential duplicate detected: ${candidate.potentialDuplicate.productName} (${candidate.potentialDuplicate.matchType.replaceAll("_", " ")}). Approve this candidate anyway after review?`
+      );
+
+      if (!confirmed) return;
+      confirmDuplicateReview = true;
+    }
     const defaultPrice =
       candidate.unitCost === null
         ? ""
@@ -250,8 +398,18 @@ export default function ProductDiscoveryPage() {
       return;
     }
 
-    const note = window.prompt("Approval note (optional)", "");
+    const note = window.prompt(
+      candidate.potentialDuplicate
+        ? "Approval note (required for potential duplicate)"
+        : "Approval note (optional)",
+      ""
+    );
     if (note === null) return;
+
+    if (candidate.potentialDuplicate && !note.trim()) {
+      setError("A review note is required when approving a potential duplicate.");
+      return;
+    }
 
     setWorkingId(candidate.id);
     setError("");
@@ -267,6 +425,7 @@ export default function ProductDiscoveryPage() {
           body: JSON.stringify({
             customerPrice,
             reviewNote: note.trim() || null,
+            confirmDuplicateReview,
           }),
         }
       );
@@ -398,6 +557,25 @@ export default function ProductDiscoveryPage() {
                 </option>
               ))}
             </select>
+
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-gray-500">
+                Supplier CSV
+              </label>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void loadCsvFile(file);
+                  event.currentTarget.value = "";
+                }}
+                className="mt-1 block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[#edf4ed] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#31543b]"
+              />
+              <p className="mt-1 text-[11px] leading-4 text-gray-400">
+                Required CSV columns: externalProductId, name, category. Common aliases such as id, title, sku, cost, moq and quantity are supported.
+              </p>
+            </div>
 
             <label className="mt-4 block text-xs font-medium text-gray-500">
               Feed JSON
@@ -541,6 +719,33 @@ export default function ProductDiscoveryPage() {
                           </div>
                         </div>
                       </div>
+
+                      {candidate.qualityFlags.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {candidate.qualityFlags.map((flag) => (
+                            <span
+                              key={flag}
+                              className={
+                                "rounded-full px-2.5 py-1 text-[10px] font-semibold " +
+                                (flag === "potential_duplicate"
+                                  ? "bg-red-50 text-red-700"
+                                  : flag === "missing_unit_cost" || flag === "out_of_stock"
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-gray-100 text-gray-600")
+                              }
+                            >
+                              {flag.replaceAll("_", " ")}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {candidate.potentialDuplicate && (
+                        <div className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
+                          Potential duplicate: {candidate.potentialDuplicate.productName} · matched by{" "}
+                          {candidate.potentialDuplicate.matchType.replaceAll("_", " ")}
+                        </div>
+                      )}
 
                       {candidate.description && (
                         <p className="mt-4 text-xs leading-5 text-gray-500">

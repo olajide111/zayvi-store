@@ -2129,7 +2129,21 @@ async function listSuppliers() {
         website: row.website,
         activeOffers: Number(row.active_offers || 0),
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        qualityFlags: [
+          ...(row.image_url ? [] : ["missing_image"]),
+          ...(row.unit_cost === null ? ["missing_unit_cost"] : []),
+          ...(row.stock_status === "unknown" ? ["unknown_stock"] : []),
+          ...(row.stock_status === "out_of_stock" ? ["out_of_stock"] : []),
+          ...(row.potential_duplicate_product_id ? ["potential_duplicate"] : [])
+        ],
+        potentialDuplicate: row.potential_duplicate_product_id
+          ? {
+              productId: row.potential_duplicate_product_id,
+              productName: row.potential_duplicate_product_name,
+              matchType: row.potential_duplicate_match_type
+            }
+          : null
       }));
     });
   } finally {
@@ -5130,11 +5144,52 @@ async function listDiscoveryCandidates(status = "pending_review") {
             c.updated_at,
             s.id AS supplier_id,
             s.name AS supplier_name,
-            s.market_code
+            s.market_code,
+            dup.product_id AS potential_duplicate_product_id,
+            dup.product_name AS potential_duplicate_product_name,
+            dup.match_type AS potential_duplicate_match_type
           FROM commerce_product_discovery_candidates c
           JOIN commerce_suppliers s
             ON s.tenant_id = c.tenant_id
            AND s.id = c.supplier_id
+          LEFT JOIN LATERAL (
+            SELECT
+              cp.id AS product_id,
+              cp.name AS product_name,
+              CASE
+                WHEN c.supplier_sku IS NOT NULL
+                 AND so.supplier_sku = c.supplier_sku
+                 AND so.supplier_id = c.supplier_id
+                  THEN 'supplier_sku'
+                ELSE 'name'
+              END AS match_type
+            FROM tenant_catalogue_products tcp
+            JOIN catalogue_products cp
+              ON cp.id = tcp.product_id
+            LEFT JOIN commerce_supplier_offers so
+              ON so.tenant_id = tcp.tenant_id
+             AND so.tenant_catalogue_product_id = tcp.id
+            WHERE tcp.tenant_id = c.tenant_id
+              AND tcp.status <> 'archived'
+              AND (
+                lower(cp.name) = lower(c.name)
+                OR (
+                  c.supplier_sku IS NOT NULL
+                  AND so.supplier_id = c.supplier_id
+                  AND so.supplier_sku = c.supplier_sku
+                )
+              )
+            ORDER BY
+              CASE
+                WHEN c.supplier_sku IS NOT NULL
+                 AND so.supplier_sku = c.supplier_sku
+                 AND so.supplier_id = c.supplier_id
+                  THEN 0
+                ELSE 1
+              END,
+              tcp.updated_at DESC
+            LIMIT 1
+          ) dup ON true
           WHERE c.tenant_id = $1
             ${filter}
           ORDER BY c.updated_at DESC
@@ -5170,7 +5225,21 @@ async function listDiscoveryCandidates(status = "pending_review") {
         approvedAt: row.approved_at,
         rejectedAt: row.rejected_at,
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        qualityFlags: [
+          ...(row.image_url ? [] : ["missing_image"]),
+          ...(row.unit_cost === null ? ["missing_unit_cost"] : []),
+          ...(row.stock_status === "unknown" ? ["unknown_stock"] : []),
+          ...(row.stock_status === "out_of_stock" ? ["out_of_stock"] : []),
+          ...(row.potential_duplicate_product_id ? ["potential_duplicate"] : [])
+        ],
+        potentialDuplicate: row.potential_duplicate_product_id
+          ? {
+              productId: row.potential_duplicate_product_id,
+              productName: row.potential_duplicate_product_name,
+              matchType: row.potential_duplicate_match_type
+            }
+          : null
       }));
     });
   } finally {
@@ -5187,6 +5256,7 @@ async function approveDiscoveryCandidate(candidateId, input) {
 
   const customerPrice = Number(input?.customerPrice);
   const reviewNote = String(input?.reviewNote || "").trim().slice(0, 1000) || null;
+  const confirmDuplicateReview = input?.confirmDuplicateReview === true;
 
   if (!Number.isFinite(customerPrice) || customerPrice < 0) {
     const error = new Error("An explicit non-negative customer price is required.");
@@ -5238,6 +5308,72 @@ async function approveDiscoveryCandidate(candidateId, input) {
         const error = new Error("Supplier must remain verified and active before approval.");
         error.statusCode = 409;
         throw error;
+      }
+
+      const duplicateResult = await tx.query(
+        `
+          SELECT
+            cp.id AS product_id,
+            cp.name AS product_name,
+            CASE
+              WHEN $4::text IS NOT NULL
+               AND so.supplier_sku = $4
+               AND so.supplier_id = $3
+                THEN 'supplier_sku'
+              ELSE 'name'
+            END AS match_type
+          FROM tenant_catalogue_products tcp
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          LEFT JOIN commerce_supplier_offers so
+            ON so.tenant_id = tcp.tenant_id
+           AND so.tenant_catalogue_product_id = tcp.id
+          WHERE tcp.tenant_id = $1
+            AND tcp.status <> 'archived'
+            AND (
+              lower(cp.name) = lower($2)
+              OR (
+                $4::text IS NOT NULL
+                AND so.supplier_id = $3
+                AND so.supplier_sku = $4
+              )
+            )
+          ORDER BY
+            CASE
+              WHEN $4::text IS NOT NULL
+               AND so.supplier_sku = $4
+               AND so.supplier_id = $3
+                THEN 0
+              ELSE 1
+            END,
+            tcp.updated_at DESC
+          LIMIT 1
+        `,
+        [
+          tenantId,
+          candidate.name,
+          candidate.supplier_id,
+          candidate.supplier_sku
+        ]
+      );
+
+      if (duplicateResult.rowCount > 0) {
+        if (!confirmDuplicateReview) {
+          const duplicate = duplicateResult.rows[0];
+          const error = new Error(
+            `Potential duplicate detected: ${duplicate.product_name} (${duplicate.match_type}). Confirm duplicate review before approval.`
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (!reviewNote) {
+          const error = new Error(
+            "A review note is required when approving a potential duplicate."
+          );
+          error.statusCode = 400;
+          throw error;
+        }
       }
 
       const canonicalCode =
