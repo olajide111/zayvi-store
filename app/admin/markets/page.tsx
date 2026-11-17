@@ -340,7 +340,7 @@ export default function AdminMarketsPage() {
                   return (
                     <div
                       key={product.id}
-                      className="grid gap-4 px-5 py-5 lg:grid-cols-[minmax(220px,1fr)_180px_180px_180px_auto] lg:items-center"
+                      className="grid gap-4 px-5 py-5 xl:grid-cols-[minmax(0,1fr)_142px_142px_142px_auto] lg:items-center"
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         {product.image ? (

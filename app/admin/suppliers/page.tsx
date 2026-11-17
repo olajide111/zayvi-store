@@ -354,19 +354,19 @@ export default function AdminSuppliersPage() {
 
         {!loading && !error && visible.length > 0 && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1fr)_120px_110px_150px_120px_100px]">
+            <div className="grid grid-cols-[1fr_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 xl:grid-cols-[minmax(0,1fr)_105px_95px_124px_105px_85px]">
               <span>Supplier</span>
-              <span className="hidden md:block">Market</span>
-              <span className="hidden md:block">Type</span>
-              <span className="hidden md:block">Fulfilment</span>
-              <span className="hidden md:block">Verification</span>
+              <span className="hidden xl:block">Market</span>
+              <span className="hidden xl:block">Type</span>
+              <span className="hidden xl:block">Fulfilment</span>
+              <span className="hidden xl:block">Verification</span>
               <span>Offers</span>
             </div>
 
             {visible.map((supplier) => (
               <div
                 key={supplier.id}
-                className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_110px_150px_120px_100px]"
+                className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 xl:grid-cols-[minmax(0,1fr)_105px_95px_124px_105px_85px]"
               >
                 <div className="min-w-0">
                   <a
@@ -389,7 +389,7 @@ export default function AdminSuppliersPage() {
                 <div className="hidden text-xs capitalize text-gray-600 md:block">
                   {supplier.fulfilmentModel.replaceAll("_", " ")}
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden xl:block">
                   <StatusPill value={supplier.verificationStatus} />
                 </div>
                 <div className="text-sm font-semibold">{supplier.activeOffers}</div>

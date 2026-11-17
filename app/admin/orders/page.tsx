@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowUpRight, Package } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 type Order = {
   id: string;
@@ -11,6 +14,7 @@ type Order = {
   currency: string;
   paymentStatus: string;
   fulfilmentStatus: string;
+  orderStatus?: string;
   createdAt: string;
 };
 
@@ -21,6 +25,10 @@ type OrdersResponse = {
   purchasingEnabled: boolean;
   message?: string;
 };
+
+function money(value: number, currency: string) {
+  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", { style: "currency", currency }).format(value);
+}
 
 function StatusPill({ value }: { value: string }) {
   const normalized = value.toLowerCase();
@@ -43,7 +51,8 @@ function StatusPill({ value }: { value: string }) {
 export default function AdminOrdersPage() {
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("All");
+  const [status, setStatus] = useState("all");
+  const [currency, setCurrency] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -77,167 +86,116 @@ export default function AdminOrdersPage() {
     loadOrders();
   }, []);
 
-  const visibleOrders = useMemo(() => {
-    const orders = data?.orders ?? [];
-    const normalized = query.trim().toLowerCase();
-
-    return orders.filter((order) => {
-      const matchesSearch =
-        !normalized ||
-        order.orderNumber.toLowerCase().includes(normalized) ||
-        order.customerName.toLowerCase().includes(normalized) ||
-        order.customerEmail.toLowerCase().includes(normalized);
-
-      const matchesStatus =
-        status === "All" ||
-        order.paymentStatus === status ||
-        order.fulfilmentStatus === status;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [data, query, status]);
-
-  const paid = data?.orders.filter((order) => order.paymentStatus === "paid").length ?? 0;
-  const unfulfilled =
-    data?.orders.filter((order) => order.fulfilmentStatus === "unfulfilled").length ?? 0;
-  const revenue =
-    data?.orders.reduce((sum, order) => sum + Number(order.total || 0), 0) ?? 0;
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+  const currencies = [...new Set(orders.map((order) => order.currency))].sort();
+  const currencyOrders = orders.filter((order) => currency === "all" || order.currency === currency);
+  const normalized = query.trim().toLowerCase();
+  const visibleOrders = currencyOrders.filter((order) => {
+    const matchesSearch = !normalized || [order.orderNumber, order.customerName, order.customerEmail]
+      .some((value) => value?.toLowerCase().includes(normalized));
+    const matchesStatus = status === "all" || [
+      order.paymentStatus, order.fulfilmentStatus, order.orderStatus,
+    ].includes(status);
+    return matchesSearch && matchesStatus;
+  });
+  const paid = currencyOrders.filter((order) => order.paymentStatus === "paid").length;
+  const unfulfilled = currencyOrders.filter((order) => order.fulfilmentStatus === "unfulfilled").length;
+  const totals = new Map<string, number>();
+  for (const order of currencyOrders) {
+    totals.set(order.currency, (totals.get(order.currency) ?? 0) + Number(order.total));
+  }
 
   return (
-    <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Orders</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Orders</h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+    <main className="min-h-screen">
+      <AdminPageHeading section="Workspace" title="Orders" description="Track payment and fulfilment for Preview orders.">
+        <Link href="/admin/payments" prefetch={false} className={adminAction}>Payments</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
-          <div className="text-sm font-semibold text-[#23432d]">
-            Orders workspace is connected to the Preview backend
-          </div>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-[#55705b]">
-            Order persistence is now part of the Preview commerce model. Customer
-            checkout and payment processing remain disabled until fulfilment and
-            payment controls are completed.
-          </p>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Total orders</div>
-            <div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Paid</div>
-            <div className="mt-2 text-3xl font-semibold">{paid}</div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Unfulfilled</div>
-            <div className="mt-2 text-3xl font-semibold">{unfulfilled}</div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Order value</div>
-            <div className="mt-2 text-3xl font-semibold">£{revenue.toFixed(2)}</div>
+      <section className="mx-auto max-w-[1500px] space-y-5 px-4 py-5 sm:px-7 lg:px-8">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {[
+            { label: "Loaded orders", value: currencyOrders.length },
+            { label: "Paid", value: paid },
+            { label: "Unfulfilled", value: unfulfilled },
+          ].map(({ label, value }) => (
+            <div key={label} className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
+              <p className="text-xs font-medium text-[#52635b]">{label}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{data ? value : "—"}</p>
+            </div>
+          ))}
+          <div className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
+            <p className="text-xs font-medium text-[#52635b]">Order value · all payment statuses</p>
+            {totals.size ? (
+              <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                {[...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, amount]) => (
+                  <div key={code} className="min-w-0">
+                    <dt className="text-[11px] font-semibold text-[#52635b]">{code}</dt>
+                    <dd className="font-semibold break-words tabular-nums">{money(amount, code)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : <p className="mt-2 text-xl font-semibold">—</p>}
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 md:flex-row">
+        <div className="grid gap-2 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
           <input
+            aria-label="Search orders"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search order, customer or email"
-            className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+            className="min-h-11 min-w-0 rounded-lg border border-[#dfe6e1] px-3 text-sm"
           />
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
-          >
-            <option>All</option>
+          <select aria-label="Payment or fulfilment status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm">
+            <option value="all">All statuses</option>
             <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
             <option value="pending">Pending payment</option>
             <option value="unfulfilled">Unfulfilled</option>
             <option value="fulfilled">Fulfilled</option>
             <option value="cancelled">Cancelled</option>
           </select>
+          <select aria-label="Currency" value={currency} onChange={(event) => setCurrency(event.target.value)} className="min-h-11 rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm">
+            <option value="all">All currencies</option>
+            {currencies.map((code) => <option key={code} value={code}>{code}</option>)}
+          </select>
         </div>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-gray-400">Loading orders...</div>
-        )}
-
-        {error && (
-          <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && visibleOrders.length > 0 && (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_110px_120px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[150px_minmax(0,1fr)_130px_130px_120px_120px]">
-              <span>Order</span>
-              <span className="hidden md:block">Customer</span>
-              <span className="hidden md:block">Payment</span>
-              <span className="hidden md:block">Fulfilment</span>
-              <span>Total</span>
-              <span>Date</span>
-            </div>
-
+        {loading && <p role="status" className="py-8 text-center text-sm text-[#52635b]">Loading orders…</p>}
+        {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {!loading && !error && (visibleOrders.length ? (
+          <ul className="divide-y divide-[#e4eae5] rounded-xl border border-[#dfe6e1] bg-white" aria-label="Orders">
             {visibleOrders.map((order) => (
-              <div
-                key={order.id}
-                className="grid grid-cols-[1fr_110px_120px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[150px_minmax(0,1fr)_130px_130px_120px_120px]"
-              >
-                <a href={`/admin/orders/${order.id}`} className="text-sm font-semibold text-[#23432d] hover:underline">{order.orderNumber}</a>
-                <div className="hidden min-w-0 md:block">
-                  <div className="truncate text-sm font-medium">{order.customerName}</div>
-                  <div className="mt-1 truncate text-xs text-gray-400">
-                    {order.customerEmail}
+              <li key={order.id} className="min-w-0">
+                <Link href={`/admin/orders/${encodeURIComponent(order.id)}`} prefetch={false} className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] items-start gap-x-3 gap-y-2 rounded-lg px-3 py-3.5 hover:bg-[#f5f8f5] sm:px-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold break-words text-[#215241]">{order.orderNumber}</p>
+                    <p className="mt-0.5 truncate text-xs text-[#52635b]">{order.customerName || order.customerEmail || "Guest"}</p>
                   </div>
-                </div>
-                <div className="hidden md:block">
-                  <StatusPill value={order.paymentStatus} />
-                </div>
-                <div className="hidden md:block">
-                  <StatusPill value={order.fulfilmentStatus} />
-                </div>
-                <div className="text-sm font-semibold">
-                  {order.currency === "GBP" ? "£" : ""}
-                  {Number(order.total).toFixed(2)}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {new Date(order.createdAt).toLocaleDateString("en-GB")}
-                </div>
-              </div>
+                  <div className="col-start-2 row-start-1 text-right xl:col-start-3">
+                    <p className="flex items-start justify-end gap-1.5 text-sm font-semibold break-words tabular-nums">
+                      <span className="min-w-0">{money(order.total, order.currency)}</span>
+                      <ArrowUpRight size={15} className="shrink-0 text-[#52635b]" aria-hidden="true" />
+                    </p>
+                    <time dateTime={order.createdAt} className="text-xs text-[#52635b]">
+                      {new Date(order.createdAt).toLocaleDateString("en-GB")}
+                    </time>
+                  </div>
+                  <div className="col-span-2 flex flex-wrap gap-1.5 xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:pt-1">
+                    <StatusPill value={order.paymentStatus} />
+                    <StatusPill value={order.fulfilmentStatus} />
+                  </div>
+                </Link>
+              </li>
             ))}
+          </ul>
+        ) : (
+          <div className="rounded-xl border border-[#dfe6e1] bg-white px-5 py-8 text-center">
+            <Package size={27} className="mx-auto text-[#215241]" aria-hidden="true" />
+            <h2 className="mt-3 font-semibold">{orders.length ? "No matching orders" : "No orders yet"}</h2>
+            <p className="mt-1 text-sm text-[#52635b]">{orders.length ? "Try another search or clear the filters." : data?.message || "Orders will appear here once they are placed."}</p>
           </div>
-        )}
-
-        {!loading && !error && visibleOrders.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf4ed] text-xl text-[#31543b]">
-              ▤
-            </div>
-            <h2 className="mt-5 text-base font-semibold">No orders yet</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500">
-              {data?.message ||
-                "Orders will appear here when customers begin purchasing from the storefront."}
-            </p>
-            <div className="mt-5 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-              Payments disabled in Preview
-            </div>
-          </div>
-        )}
+        ))}
       </section>
     </main>
   );

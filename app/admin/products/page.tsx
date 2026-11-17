@@ -1,5 +1,7 @@
 "use client";
 
+import AdminPageHeading, { adminPrimaryAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useMemo, useState } from "react";
 
 type Product = {
@@ -174,43 +176,13 @@ export default function AdminProductsPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Catalogue</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Products & Catalogue
-            </h1>
-          </div>
-          <div className="flex gap-2">
-            <a
-              href="/admin/dashboard"
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              Back to overview
-            </a>
-            <button
-              type="button"
-              onClick={formOpen ? closeForm : openCreate}
-              className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
-            >
-              {formOpen ? "Close form" : "Add product"}
-            </button>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Catalogue" title="Products & catalogue" description="Manage products, prices and publication status.">
+        <button type="button" onClick={formOpen ? closeForm : openCreate} className={adminPrimaryAction}>
+          {formOpen ? "Close form" : "Add product"}
+        </button>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
-          <div className="text-sm font-semibold text-[#23432d]">
-            Catalogue management is active in Preview
-          </div>
-          <p className="mt-1 text-xs leading-5 text-[#55705b]">
-            Products now read from PostgreSQL. Create and edit actions write through
-            the signed Zayvi AWS Preview API and do not affect Production.
-          </p>
-        </div>
-
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         {formOpen && (
           <form
             onSubmit={saveProduct}
@@ -220,7 +192,7 @@ export default function AdminProductsPage() {
               <h2 className="text-sm font-semibold">
                 {editing ? `Edit ${editing.name}` : "Add product"}
               </h2>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-[#52635b]">
                 {editing
                   ? "Update catalogue, pricing and publication state."
                   : "Create a new product in the Preview PostgreSQL catalogue."}
@@ -334,17 +306,17 @@ export default function AdminProductsPage() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Products</div>
-            <div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div>
+            <div className="text-xs text-[#52635b]">Products</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{data?.total ?? "—"}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Categories</div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div className="text-xs text-[#52635b]">Categories</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {data?.categories.length ?? "—"}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Environment</div>
+            <div className="text-xs text-[#52635b]">Environment</div>
             <div className="mt-2 text-lg font-semibold text-[#31543b]">Preview</div>
           </div>
         </div>
@@ -353,11 +325,11 @@ export default function AdminProductsPage() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search products"
+            aria-label="Search products" placeholder="Search products"
             className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
           />
           <select
-            value={category}
+            aria-label="Category" value={category}
             onChange={(event) => setCategory(event.target.value)}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
           >
@@ -382,44 +354,47 @@ export default function AdminProductsPage() {
 
         {!loading && !error && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_auto] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1.4fr)_130px_110px_130px_90px]">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 xl:grid-cols-[minmax(0,1fr)_110px_95px_125px_68px]">
               <span>Product</span>
-              <span className="hidden md:block">Category</span>
-              <span className="hidden md:block">Price</span>
-              <span className="hidden md:block">Publication</span>
+              <span className="hidden xl:block">Category</span>
+              <span className="hidden xl:block">Price</span>
+              <span className="hidden xl:block">Publication</span>
               <span>Action</span>
             </div>
 
             {visibleProducts.map((product) => (
               <div
                 key={product.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1.4fr)_130px_110px_130px_90px]"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 border-b border-gray-100 px-3 py-3.5 sm:gap-4 sm:px-5 last:border-b-0 xl:grid-cols-[minmax(0,1fr)_110px_95px_125px_68px]"
               >
-                <div className="flex min-w-0 items-center gap-4">
+                <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
                   <img
                     src={product.image}
                     alt=""
-                    className="h-14 w-14 shrink-0 rounded-xl border border-gray-100 object-cover"
+                    className="size-10 shrink-0 sm:size-14 rounded-xl border border-gray-100 object-cover"
                   />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">
                       {product.name}
                     </div>
-                    <div className="mt-1 truncate text-xs text-gray-400">
+                    <div className="mt-1 truncate text-xs text-[#52635b]">
                       {product.desc}
                     </div>
                     <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                       {product.status}
                     </div>
+                    <p className="mt-1 text-xs text-[#52635b] xl:hidden">
+                      £{Number(product.price).toFixed(2)} · {product.publicationStatus.replaceAll("_", " ")}
+                    </p>
                   </div>
                 </div>
-                <div className="hidden text-sm text-gray-500 md:block">
+                <div className="hidden text-sm text-gray-500 xl:block">
                   {product.category}
                 </div>
-                <div className="hidden text-sm font-semibold md:block">
+                <div className="hidden text-sm font-semibold xl:block">
                   £{Number(product.price).toFixed(2)}
                 </div>
-                <div className="hidden text-xs text-gray-500 md:block">
+                <div className="hidden text-xs text-gray-500 xl:block">
                   {product.publicationStatus.replaceAll("_", " ")}
                 </div>
                 <button

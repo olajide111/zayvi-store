@@ -1,5 +1,9 @@
 "use client";
 
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 
 type OrderSummary = {
@@ -265,47 +269,23 @@ export default function AdminReturnsPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Returns</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Returns & reverse inventory
-            </h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Operations" title="Returns" description="Review requests, reconcile refunds and inspect goods before restocking.">
+        <Link href="/admin/orders" prefetch={false} className={adminAction}>Orders</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-          <div className="text-sm font-semibold text-blue-800">
-            Review and inspection required
-          </div>
-          <p className="mt-1 max-w-4xl text-xs leading-5 text-blue-700">
-            Creating a return does not restock goods or change payment state.
-            Stock only re-enters owned inventory after receipt and inspection.
-            Refund reconciliation reads provider-controlled order payment state.
-          </p>
-        </div>
-
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Active returns</div>
-            <div className="mt-2 text-3xl font-semibold">{activeCount}</div>
+            <div className="text-xs text-[#52635b]">Active returns</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{activeCount}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Refund pending provider</div>
-            <div className="mt-2 text-3xl font-semibold">{pendingRefunds}</div>
+            <div className="text-xs text-[#52635b]">Refund pending provider</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{pendingRefunds}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Units restocked</div>
-            <div className="mt-2 text-3xl font-semibold">{restocked}</div>
+            <div className="text-xs text-[#52635b]">Units restocked</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{restocked}</div>
           </div>
         </div>
 
@@ -320,96 +300,108 @@ export default function AdminReturnsPage() {
           </div>
         )}
 
-        <form
-          onSubmit={createReturn}
-          className="mt-6 rounded-2xl border border-gray-200 bg-white p-5"
-        >
-          <div>
-            <h2 className="text-sm font-semibold">Create return request</h2>
-            <p className="mt-1 text-xs text-gray-400">
-              Select a paid order and the exact quantities being returned.
-            </p>
-          </div>
-
-          <select
-            value={orderId}
-            onChange={(event) => setOrderId(event.target.value)}
-            className="mt-4 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+        {orders.length > 0 && (
+          <form
+            onSubmit={createReturn}
+            className="mt-6 rounded-2xl border border-gray-200 bg-white p-5"
           >
-            <option value="">Select paid order</option>
-            {orders.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.orderNumber} · {item.customerName} ·{" "}
-                {money(item.total, item.currency)}
-              </option>
-            ))}
-          </select>
-
-          {order && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
-              {order.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid gap-3 border-b border-gray-100 px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_140px]"
-                >
-                  <div>
-                    <div className="text-sm font-semibold">{item.productName}</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      {item.sku || "No SKU"} · ordered {item.quantity} ·{" "}
-                      {money(item.unitPrice, item.currency)} each
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500 md:text-right">
-                    {money(item.lineTotal, item.currency)}
-                  </div>
-                  <input
-                    type="number"
-                    min="0"
-                    max={item.quantity}
-                    step="1"
-                    value={quantities[item.id] || "0"}
-                    onChange={(event) =>
-                      setQuantities((current) => ({
-                        ...current,
-                        [item.id]: event.target.value,
-                      }))
-                    }
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    aria-label={`Return quantity for ${item.productName}`}
-                  />
-                </div>
-              ))}
+            <div>
+              <h2 className="text-sm font-semibold">Create return request</h2>
+              <p className="mt-1 text-xs text-[#52635b]">
+                Select a paid order and the exact quantities being returned.
+              </p>
             </div>
-          )}
 
-          <textarea
-            required
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            rows={3}
-            placeholder="Reason for return"
-            className="mt-4 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm"
-          />
-
-          <div className="mt-4 flex justify-end">
-            <button
-              type="submit"
-              disabled={working || !order}
-              className="rounded-xl bg-[#17251e] px-5 py-3 text-xs font-semibold text-white disabled:opacity-40"
+            <select
+              aria-label="Paid order"
+              value={orderId}
+              onChange={(event) => setOrderId(event.target.value)}
+              className="mt-4 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
             >
-              {working ? "Creating..." : "Create return"}
-            </button>
+              <option value="">Select paid order</option>
+              {orders.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.orderNumber} · {item.customerName} ·{" "}
+                  {money(item.total, item.currency)}
+                </option>
+              ))}
+            </select>
+
+            {order && (
+              <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+                {order.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="grid gap-3 border-b border-gray-100 px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_140px]"
+                  >
+                    <div>
+                      <div className="text-sm font-semibold">{item.productName}</div>
+                      <div className="mt-1 text-xs text-[#52635b]">
+                        {item.sku || "No SKU"} · ordered {item.quantity} ·{" "}
+                        {money(item.unitPrice, item.currency)} each
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 md:text-right">
+                      {money(item.lineTotal, item.currency)}
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      max={item.quantity}
+                      step="1"
+                      value={quantities[item.id] || "0"}
+                      onChange={(event) =>
+                        setQuantities((current) => ({
+                          ...current,
+                          [item.id]: event.target.value,
+                        }))
+                      }
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      aria-label={`Return quantity for ${item.productName}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <textarea
+              required
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={3}
+              aria-label="Reason for return"
+              placeholder="Reason for return"
+              className="mt-4 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm"
+            />
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="submit"
+                disabled={working || !order}
+                className="rounded-xl bg-[#17251e] px-5 py-3 text-xs font-semibold text-white disabled:opacity-40"
+              >
+                {working ? "Creating..." : "Create return"}
+              </button>
+            </div>
+          </form>
+        )}
+        {!loading && !error && orders.length === 0 && (
+          <div className="mt-5 rounded-xl border border-[#dfe6e1] bg-white p-4">
+            <h2 className="text-sm font-semibold">No paid orders available for a return</h2>
+            <p className="mt-1 text-sm text-[#52635b]">You can start a return when an eligible paid order appears in Preview.</p>
           </div>
-        </form>
+        )}
 
         <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 md:flex-row">
           <input
+            aria-label="Search returns"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search return, order or customer"
             className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm"
           />
           <select
+            aria-label="Return status"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
@@ -442,19 +434,19 @@ export default function AdminReturnsPage() {
                 <a
                   key={item.id}
                   href={`/admin/returns/${item.id}`}
-                  className="grid gap-4 px-5 py-4 hover:bg-[#fafbf9] md:grid-cols-[160px_minmax(0,1fr)_140px_140px_140px]"
+                  className="grid gap-4 px-5 py-4 hover:bg-[#fafbf9] xl:grid-cols-[135px_minmax(0,1fr)_112px_120px_110px]"
                 >
                   <div>
                     <div className="text-sm font-semibold text-[#23432d]">
                       {item.returnNumber}
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {item.orderNumber}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm font-medium">{item.customerName}</div>
-                    <div className="mt-1 truncate text-xs text-gray-400">
+                    <div className="mt-1 truncate text-xs text-[#52635b]">
                       {item.reason}
                     </div>
                   </div>
@@ -469,7 +461,7 @@ export default function AdminReturnsPage() {
                     </span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-400">Refund</div>
+                    <div className="text-xs text-[#52635b]">Refund</div>
                     <div className="mt-1 text-sm font-semibold">
                       {money(item.requestedRefundAmount, item.currency)}
                     </div>

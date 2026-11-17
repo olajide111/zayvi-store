@@ -1,5 +1,9 @@
 "use client";
 
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
+import Link from "next/link";
+
 import { useEffect, useState } from "react";
 
 type ConnectionResponse = {
@@ -340,32 +344,17 @@ export default function AdminPaymentsPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Finance</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Payments
-            </h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Finance" title="Payments" description="Manage provider connections and verify Preview payment events.">
+        <Link href="/admin/orders" prefetch={false} className={adminAction}>Orders</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
           <div className="text-sm font-semibold text-amber-800">
             Test payments only
           </div>
           <p className="mt-1 text-xs leading-5 text-amber-700">
-            Kredal integration is restricted to test mode. Test-paid orders are
-            blocked from real fulfilment even when their simulated provider
-            status is paid.
+            Use an eligible Nigeria Preview order to test Kredal Pay. Test payments cannot trigger real fulfilment.
           </p>
         </div>
 
@@ -381,7 +370,7 @@ export default function AdminPaymentsPage() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 xl:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
               Kredal Pay
@@ -394,7 +383,7 @@ export default function AdminPaymentsPage() {
               </span>
             </div>
             {connection?.connection?.externalConnectionId && (
-              <div className="mt-3 break-all text-xs text-gray-400">
+              <div className="mt-3 break-all text-xs text-[#52635b]">
                 {connection.connection.externalConnectionId}
               </div>
             )}
@@ -470,12 +459,12 @@ export default function AdminPaymentsPage() {
             the payment attempt before any status can affect the order.
           </p>
 
-          <div className="mt-5 flex flex-col gap-3 lg:flex-row">
+          <div className="mt-5 flex flex-wrap gap-3">
             {eligibleOrders.length > 0 ? (
               <select
                 value={orderId}
                 onChange={(event) => setOrderId(event.target.value)}
-                className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+                className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 bg-white px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               >
                 <option value="">Select a Preview Nigeria order</option>
                 {eligibleOrders.map((order) => (
@@ -489,7 +478,7 @@ export default function AdminPaymentsPage() {
                 value={orderId}
                 onChange={(event) => setOrderId(event.target.value)}
                 placeholder="No eligible NGN orders found — paste order UUID"
-                className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
+                className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               />
             )}
             <button
@@ -534,14 +523,14 @@ export default function AdminPaymentsPage() {
         </div>
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold">
                 Kredal webhook event ledger
               </h2>
               <p className="mt-1 text-xs text-gray-500">
                 Signed events are stored once by event id and applied in Kredal
-                sequence order. Missed events can be recovered from Kredal's
+                sequence order. Missed events can be recovered from the Kredal
                 event feed without replaying older state.
               </p>
             </div>

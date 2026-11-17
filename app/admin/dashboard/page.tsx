@@ -3,10 +3,9 @@
 import Link from "next/link";
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck,
-  ClipboardList, ExternalLink, Inbox, RefreshCw, ShoppingBag,
+  ClipboardList, Inbox, RefreshCw, ShoppingBag,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { adminGroups, adminPrimary } from "@/components/admin/admin-navigation";
 
 const markets = [
   { code: "GB", name: "United Kingdom", shortName: "UK", currency: "GBP" },
@@ -149,48 +148,6 @@ function PanelHeading({ title, subtitle, href, linkLabel }: {
 
 function PanelNotice({ children }: { children: ReactNode }) {
   return <p role="status" className="px-4 py-5 text-sm text-[#52635b] sm:px-5">{children}</p>;
-}
-
-function DashboardSidebar() {
-  return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col bg-[#142e26] text-white lg:flex">
-      <Link href="/admin/dashboard" className="mx-4 mt-4 mb-2 flex items-center gap-3 rounded-xl px-3 py-3">
-        <span className="grid size-9 place-items-center rounded-xl bg-[#dce9d4] text-lg font-bold text-[#173a2e]" aria-hidden="true">Z</span>
-        <span>
-          <span className="block text-sm font-semibold">Zayvi Store</span>
-          <span className="block text-xs text-[#b0c6b8]">Admin workspace</span>
-        </span>
-      </Link>
-      <nav aria-label="Admin sidebar" className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4">
-        {[{ label: "Workspace", items: adminPrimary }, ...adminGroups].map(({ label, items }) => (
-          <div key={label}>
-            <p className="mb-1.5 px-3 text-xs font-medium text-[#acc6b8]">{label}</p>
-            <div className="space-y-0.5">
-              {items.map(({ title, href, icon: Icon }) => {
-                const active = href === "/admin/dashboard";
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    prefetch={false}
-                    aria-current={active ? "page" : undefined}
-                    className={"flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[13px] " +
-                      (active ? "bg-[#e1eedc] font-semibold text-[#173a2e]" : "text-[#dfebe3] hover:bg-white/10")}
-                  >
-                    <Icon size={17} strokeWidth={1.75} aria-hidden="true" />
-                    {title}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
-      <Link href="/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 border-t border-white/15 px-7 py-4 text-sm text-[#dfebe3] hover:bg-white/10">
-        <ExternalLink size={16} aria-hidden="true" /> View storefront
-      </Link>
-    </aside>
-  );
 }
 
 function OperationsPanel({ source }: { source: Source<Operations> }) {
@@ -378,64 +335,61 @@ export default function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-[#f2f5f1] font-sans text-[#172a21]">
-      <DashboardSidebar />
-      <div className="lg:pl-60">
-        <header className="flex min-h-14 items-center justify-between gap-2 border-b border-[#dfe6e1] bg-white px-4 sm:px-7 lg:px-8">
-          <span className="text-sm font-semibold lg:hidden">Zayvi Store</span>
-          <span className="hidden text-sm font-medium text-[#52635b] lg:inline">Workspace <span aria-hidden="true">/</span> Overview</span>
-          <div className="flex items-center gap-2.5">
-            <Link href="/admin/system-readiness" prefetch={false} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#52635b] hover:text-[#215241]">
-              <span className="size-1.5 rounded-full bg-[#92713f]" aria-hidden="true" /> Preview
-            </Link>
-            <button
-              type="button"
-              aria-label={loading ? "Refreshing dashboard" : "Refresh dashboard"}
-              aria-busy={loading}
-              disabled={loading}
-              onClick={() => setRevision((previous) => previous + 1)}
-              className="grid size-11 place-items-center rounded-xl text-[#215241] hover:bg-[#edf3ee] disabled:opacity-60"
-            >
-              <RefreshCw size={18} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />
-            </button>
+      <header className="flex min-h-14 items-center justify-between gap-2 border-b border-[#dfe6e1] bg-white px-4 sm:px-7 lg:px-8">
+        <span className="text-sm font-semibold lg:hidden">Zayvi Store</span>
+        <span className="hidden text-sm font-medium text-[#52635b] lg:inline">Workspace <span aria-hidden="true">/</span> Overview</span>
+        <div className="flex items-center gap-2.5">
+          <Link href="/admin/system-readiness" prefetch={false} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#52635b] hover:text-[#215241]">
+            <span className="size-1.5 rounded-full bg-[#92713f]" aria-hidden="true" /> Preview
+          </Link>
+          <button
+            type="button"
+            aria-label={loading ? "Refreshing dashboard" : "Refresh dashboard"}
+            aria-busy={loading}
+            disabled={loading}
+            onClick={() => setRevision((previous) => previous + 1)}
+            className="grid size-11 place-items-center rounded-xl text-[#215241] hover:bg-[#edf3ee] disabled:opacity-60"
+          >
+            <RefreshCw size={18} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      <div className="mx-auto max-w-[1490px] px-4 pt-5 pb-8 sm:px-7 sm:pt-7 lg:px-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
+          <div>
+            <h1 className="text-[clamp(1.75rem,4vw,2.75rem)] leading-tight font-semibold tracking-[-0.045em]">Store overview</h1>
+            <p className="mt-1 text-sm text-[#52635b]">Orders, stock and outstanding work.</p>
           </div>
-        </header>
-        <div className="mx-auto max-w-[1490px] px-4 pt-5 pb-8 sm:px-7 sm:pt-7 lg:px-8">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
-            <div>
-              <h1 className="text-[clamp(1.75rem,4vw,2.75rem)] leading-tight font-semibold tracking-[-0.045em]">Store overview</h1>
-              <p className="mt-1 text-sm text-[#52635b]">Orders, stock and outstanding work.</p>
-            </div>
-            <Link href="/admin/operations-audit" prefetch={false} className="hidden min-h-11 items-center gap-2 rounded-xl border border-[#dbe5dd] bg-white px-3 text-sm font-semibold text-[#215241] hover:bg-[#eaf2ec] sm:inline-flex">
-              Operations audit <ArrowUpRight size={16} aria-hidden="true" />
-            </Link>
-          </div>
-          <div className="grid items-start gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-            <OperationsPanel source={operations} />
-            <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <div role="group" aria-label="Market filter" className="inline-flex max-w-full gap-0.5 rounded-xl border border-[#dfe6e1] bg-white p-1">
-                  {([{ code: "all", shortName: "All markets" }, ...markets] as const).map(({ code, shortName }) => (
-                    <button
-                      key={code}
-                      type="button"
-                      aria-pressed={market === code}
-                      onClick={() => setMarket(code)}
-                      className={"min-h-11 rounded-lg px-2.5 whitespace-nowrap sm:px-3.5 " +
-                        (market === code ? "bg-[#e6f0e9] text-[#16372e]" : "text-[#52635b] hover:bg-[#f1f5f2]")}
-                    >
-                      <span className="text-xs font-semibold">{shortName}</span>
-                    </button>
-                  ))}
-                </div>
-                <Link className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#215241] sm:hidden" href="/admin/operations-audit" prefetch={false}>
-                  Audit <ArrowUpRight size={14} aria-hidden="true" />
-                </Link>
+          <Link href="/admin/operations-audit" prefetch={false} className="hidden min-h-11 items-center gap-2 rounded-xl border border-[#dbe5dd] bg-white px-3 text-sm font-semibold text-[#215241] hover:bg-[#eaf2ec] sm:inline-flex">
+            Operations audit <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="grid items-start gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <OperationsPanel source={operations} />
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <div role="group" aria-label="Market filter" className="inline-flex max-w-full gap-0.5 rounded-xl border border-[#dfe6e1] bg-white p-1">
+                {([{ code: "all", shortName: "All markets" }, ...markets] as const).map(({ code, shortName }) => (
+                  <button
+                    key={code}
+                    type="button"
+                    aria-pressed={market === code}
+                    onClick={() => setMarket(code)}
+                    className={"min-h-11 rounded-lg px-2.5 whitespace-nowrap sm:px-3.5 " +
+                      (market === code ? "bg-[#e6f0e9] text-[#16372e]" : "text-[#52635b] hover:bg-[#f1f5f2]")}
+                  >
+                    <span className="text-xs font-semibold">{shortName}</span>
+                  </button>
+                ))}
               </div>
-              <PerformancePanel source={analytics} market={market} />
+              <Link className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#215241] sm:hidden" href="/admin/operations-audit" prefetch={false}>
+                Audit <ArrowUpRight size={14} aria-hidden="true" />
+              </Link>
             </div>
-            <OrdersPanel source={analytics} market={market} />
-            <InventoryPanel sources={{ GB: stockGB, NG: stockNG }} market={market} />
+            <PerformancePanel source={analytics} market={market} />
           </div>
+          <OrdersPanel source={analytics} market={market} />
+          <InventoryPanel sources={{ GB: stockGB, NG: stockNG }} market={market} />
         </div>
       </div>
     </main>
