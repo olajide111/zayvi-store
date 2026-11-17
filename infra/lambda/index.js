@@ -2947,17 +2947,17 @@ async function getSupplierPerformance() {
 
           LEFT JOIN LATERAL (
             SELECT
-              COUNT(DISTINCT p.id)::int AS po_count,
-              COUNT(DISTINCT p.id) FILTER (
+              COUNT(*)::int AS po_count,
+              COUNT(*) FILTER (
                 WHERE p.submitted_at IS NOT NULL
               )::int AS submitted_po_count,
-              COUNT(DISTINCT p.id) FILTER (
+              COUNT(*) FILTER (
                 WHERE p.supplier_ack_status = 'acknowledged'
               )::int AS acknowledged_po_count,
-              COUNT(DISTINCT p.id) FILTER (
+              COUNT(*) FILTER (
                 WHERE p.supplier_ack_status = 'unable_to_fulfil'
               )::int AS unable_po_count,
-              COUNT(DISTINCT p.id) FILTER (
+              COUNT(*) FILTER (
                 WHERE p.status IN ('submitted','partially_received')
                   AND p.supplier_ack_status = 'pending'
               )::int AS pending_ack_count,
@@ -2970,12 +2970,17 @@ async function getSupplierPerformance() {
                   AND p.supplier_acknowledged_at IS NOT NULL
               ) AS avg_ack_hours,
               MAX(p.latest_shipped_at) AS last_shipped_at,
-              COALESCE(SUM(i.quantity), 0)::int AS ordered_units,
-              COALESCE(SUM(i.received_quantity), 0)::int AS received_units
+              COALESCE(SUM(items.ordered_units), 0)::int AS ordered_units,
+              COALESCE(SUM(items.received_units), 0)::int AS received_units
             FROM commerce_purchase_orders p
-            LEFT JOIN commerce_purchase_order_items i
-              ON i.tenant_id = p.tenant_id
-             AND i.purchase_order_id = p.id
+            LEFT JOIN LATERAL (
+              SELECT
+                COALESCE(SUM(i.quantity), 0)::int AS ordered_units,
+                COALESCE(SUM(i.received_quantity), 0)::int AS received_units
+              FROM commerce_purchase_order_items i
+              WHERE i.tenant_id = p.tenant_id
+                AND i.purchase_order_id = p.id
+            ) items ON true
             WHERE p.tenant_id = s.tenant_id
               AND p.supplier_id = s.id
               AND p.status <> 'cancelled'
