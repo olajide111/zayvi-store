@@ -475,8 +475,8 @@ export default function SupplierPortalAccessPage({
                 {newApiKey}
               </div>
               <div className="mt-2 text-[11px] leading-4 text-amber-700">
-                Endpoint: POST /api/vendor-feed/v1/ingest · Header:
-                Authorization: Bearer &lt;API_KEY&gt;
+                Endpoints depend on scope: POST /api/vendor-feed/v1/ingest and/or
+                POST /api/vendor-inventory/v1/sync · Header: Authorization: Bearer &lt;API_KEY&gt;
               </div>
               <button
                 type="button"
