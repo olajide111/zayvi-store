@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasAdminSession } from "@/lib/admin-auth";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { reconcileKredalTestPayment } from "@/lib/kredal-test-reconciliation";
 import {
   cancelKredalPayment,
   createKredalPayment,
@@ -296,34 +297,16 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const applied = await callZayviAwsApi(
-      "/payment-attempts/kredal",
-      {
-        method: "PUT",
-        body: {
-          orderId,
-          providerPaymentState,
-          providerHoldState,
-          providerPayload: {
-            ...payment,
-            mode: "test",
-            verifiedAt: new Date().toISOString(),
-          },
-        },
-      }
+    const reconciliation = await reconcileKredalTestPayment(
+      orderId, payment, providerPaymentState, providerHoldState
     );
-
-    if (!applied.ok) {
-      throw new Error("Kredal verified but Zayvi could not apply the state.");
-    }
 
     return NextResponse.json({
       verified: true,
-      applied: true,
+      ...reconciliation,
       providerPaymentState,
       providerHoldState,
       payment,
-      state: (applied.data as { state?: unknown }).state || null,
       testMode: true,
     });
   } catch (error) {
@@ -363,24 +346,14 @@ export async function DELETE(request: NextRequest) {
       attempt.providerReference
     );
 
-    if (payment.payment_state === "cancelled") {
-      await callZayviAwsApi("/payment-attempts/kredal", {
-        method: "PUT",
-        body: {
-          orderId,
-          providerPaymentState: "cancelled",
-          providerHoldState: payment.hold_state ?? null,
-          providerPayload: {
-            ...payment,
-            mode: "test",
-            verifiedAt: new Date().toISOString(),
-          },
-        },
-      });
-    }
+    const cancelled = payment.payment_state === "cancelled";
+    const reconciliation = cancelled
+      ? await reconcileKredalTestPayment(orderId, payment, "cancelled", payment.hold_state ?? null)
+      : { applied: false };
 
     return NextResponse.json({
-      cancelled: payment.payment_state === "cancelled",
+      cancelled,
+      ...reconciliation,
       providerPaymentState: payment.payment_state || "unknown",
       providerHoldState: payment.hold_state ?? null,
       payment,

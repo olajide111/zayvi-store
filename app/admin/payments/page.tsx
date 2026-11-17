@@ -57,13 +57,15 @@ type TestPaymentResult = {
   providerPaymentState?: string;
   providerHoldState?: string | null;
   testMode?: boolean;
+  applied?: boolean;
+  message?: string;
   error?: string;
 };
 
 export default function AdminPaymentsPage() {
   const [connection, setConnection] = useState<ConnectionResponse | null>(null);
   const [events, setEvents] = useState<KredalEvent[]>([]);
-  const [eligibleOrders, setEligibleOrders] = useState<OrderSummary[]>([]);
+  const [nigeriaOrders, setNigeriaOrders] = useState<OrderSummary[]>([]);
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
@@ -123,18 +125,12 @@ export default function AdminPaymentsPage() {
       }
 
       const ngnOrders = Array.isArray(ordersPayload.orders)
-        ? ordersPayload.orders.filter(
-            (order) =>
-              order.currency === "NGN" &&
-              !["paid", "refunded", "cancelled"].includes(
-                order.paymentStatus.toLowerCase()
-              )
-          )
+        ? ordersPayload.orders.filter((order) => order.currency === "NGN")
         : [];
 
       setConnection(connectionPayload);
       setEvents(Array.isArray(eventPayload.events) ? eventPayload.events : []);
-      setEligibleOrders(ngnOrders);
+      setNigeriaOrders(ngnOrders);
 
       if (!orderId && ngnOrders.length === 1) {
         setOrderId(ngnOrders[0].id);
@@ -249,12 +245,13 @@ export default function AdminPaymentsPage() {
       if (method === "POST" && payload.checkoutUrl) {
         setNotice("Kredal test checkout created. Opening hosted checkout.");
         window.open(payload.checkoutUrl, "_blank", "noopener,noreferrer");
-      } else if (method === "PUT") {
-        setNotice(
-          "Kredal payment status verified from the provider and reconciled."
-        );
+      } else if (method === "POST") {
+        setNotice("Kredal created a test payment without a hosted checkout link. Use Verify payment to check its status.");
       } else {
-        setNotice("Kredal test payment cancellation checked and reconciled.");
+        const state = payload.providerPaymentState || "unknown";
+        setNotice(payload.applied
+          ? `Kredal status ${state} saved to the Zayvi order.`
+          : payload.message || `Kredal reports ${state}. Zayvi left the order status unchanged.`);
       }
 
       await load();
@@ -294,7 +291,10 @@ export default function AdminPaymentsPage() {
       }
 
       setTestPayment(payload);
-      setNotice("Kredal test refund requested and provider status checked.");
+      const state = payload.providerPaymentState || "unknown";
+      setNotice(payload.applied
+        ? `Kredal status ${state} saved to the Zayvi order.`
+        : payload.message || `Refund requested. Kredal reports ${state}. Use Verify payment to check for an update.`);
       await load();
     } catch (err) {
       setError(
@@ -335,6 +335,14 @@ export default function AdminPaymentsPage() {
     }
   }
 
+  const selectedOrder = nigeriaOrders.find((order) => order.id === orderId);
+  const hasOrder = Boolean(orderId.trim());
+  const isUnpaidOrder = hasOrder && (
+    !selectedOrder || ["unpaid", "pending"].includes(selectedOrder.paymentStatus)
+  );
+  const isRefundableOrder = hasOrder && (
+    !selectedOrder || ["paid", "partially_refunded"].includes(selectedOrder.paymentStatus)
+  );
   const connectionStatus = connection?.connection?.status || "not_connected";
   const approvalUrl =
     connection?.approveUrl ||
@@ -460,14 +468,14 @@ export default function AdminPaymentsPage() {
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            {eligibleOrders.length > 0 ? (
+            {nigeriaOrders.length > 0 ? (
               <select
                 value={orderId}
                 onChange={(event) => setOrderId(event.target.value)}
                 className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 bg-white px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               >
                 <option value="">Select a Preview Nigeria order</option>
-                {eligibleOrders.map((order) => (
+                {nigeriaOrders.map((order) => (
                   <option key={order.id} value={order.id}>
                     {order.orderNumber} · NGN {Number(order.total).toFixed(2)} · {order.paymentStatus}
                   </option>
@@ -477,13 +485,13 @@ export default function AdminPaymentsPage() {
               <input
                 value={orderId}
                 onChange={(event) => setOrderId(event.target.value)}
-                placeholder="No eligible NGN orders found — paste order UUID"
+                placeholder="No NGN orders found — paste order UUID"
                 className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               />
             )}
             <button
               type="button"
-              disabled={Boolean(working) || connectionStatus !== "active"}
+              disabled={Boolean(working) || connectionStatus !== "active" || !isUnpaidOrder}
               onClick={() => void paymentAction("POST", "create")}
               className="rounded-xl bg-[#17251e] px-4 py-3 text-xs font-semibold text-white disabled:opacity-40"
             >
@@ -491,7 +499,7 @@ export default function AdminPaymentsPage() {
             </button>
             <button
               type="button"
-              disabled={Boolean(working)}
+              disabled={Boolean(working) || !hasOrder}
               onClick={() => void paymentAction("PUT", "verify")}
               className="rounded-xl border border-gray-200 px-4 py-3 text-xs font-semibold text-gray-700 disabled:opacity-40"
             >
@@ -499,7 +507,7 @@ export default function AdminPaymentsPage() {
             </button>
             <button
               type="button"
-              disabled={Boolean(working)}
+              disabled={Boolean(working) || !isUnpaidOrder}
               onClick={() => void paymentAction("DELETE", "cancel")}
               className="rounded-xl border border-gray-200 px-4 py-3 text-xs font-semibold text-gray-700 disabled:opacity-40"
             >
@@ -507,7 +515,7 @@ export default function AdminPaymentsPage() {
             </button>
             <button
               type="button"
-              disabled={Boolean(working)}
+              disabled={Boolean(working) || !isRefundableOrder}
               onClick={() => void refundTestPayment()}
               className="rounded-xl border border-gray-200 px-4 py-3 text-xs font-semibold text-gray-700 disabled:opacity-40"
             >
