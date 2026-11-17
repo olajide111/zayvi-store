@@ -18,6 +18,11 @@ type Draft = { slug: string; kind: ContentKind; title: string; summary: string; 
 const newDraft: Draft = { slug: "", kind: "page", title: "", summary: "", body: "", revision: 0 };
 const field = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#9eafa3] bg-white px-3 py-2 text-base";
 
+function slugFromTitle(title: string) {
+  return title.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+/, "").slice(0, 80).replace(/-+$/, "");
+}
+
 async function requestContent<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: "no-store", ...options });
   if (response.status === 401) window.location.replace("/admin");
@@ -38,6 +43,7 @@ function ContentEditor({ market, dirty, setDirty }: {
 }) {
   const [entries, setEntries] = useState<EntrySummary[] | null>(null);
   const [draft, setDraft] = useState<Draft>(newDraft);
+  const [customSlug, setCustomSlug] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -59,8 +65,13 @@ function ContentEditor({ market, dirty, setDirty }: {
     setNotice("");
   }
 
+  function changeTitle(title: string) {
+    change(!draft.revision && !customSlug ? { title, slug: slugFromTitle(title) } : { title });
+  }
+
   function start(slug = "") {
     const starter = starterPages[slug];
+    setCustomSlug(Boolean(starter));
     setDraft(starter ? { ...newDraft, slug, title: starter.title, body: starter.body } : newDraft);
     setDirty(Boolean(starter));
     setError("");
@@ -75,6 +86,7 @@ function ContentEditor({ market, dirty, setDirty }: {
       const { entry } = await requestContent<{ entry: EntrySummary & { draft: { title: string; summary: string; body: string } } }>(
         url + "&slug=" + encodeURIComponent(slug)
       );
+      setCustomSlug(true);
       setDraft({ slug: entry.slug, kind: entry.kind, revision: entry.revision, ...entry.draft });
       setDirty(false);
     } catch (err) {
@@ -155,12 +167,30 @@ function ContentEditor({ market, dirty, setDirty }: {
                       <option value="article">Article</option>
                     </select>
                   </label>
-                  <label className="block min-w-0">URL slug
-                    <input required maxLength={80} pattern="[a-z0-9]+(-[a-z0-9]+)*" className={field} readOnly={draft.revision > 0} value={draft.slug} onChange={(event) => change({ slug: event.target.value })} />
-                  </label>
+                  <div className="min-w-0">
+                    <label htmlFor="content-slug">URL slug</label>
+                    <input
+                      id="content-slug" required maxLength={80} pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                      aria-describedby="content-slug-help" placeholder="test-blog-post"
+                      className={field} readOnly={draft.revision > 0} value={draft.slug}
+                      onChange={(event) => { setCustomSlug(true); change({ slug: event.target.value }); }}
+                    />
+                    <p id="content-slug-help" className="mt-1 text-xs text-[#52635b]">
+                      {draft.revision ? "The slug is fixed after the first save." : "Use lowercase letters, numbers and hyphens. Example: test-blog-post."}
+                    </p>
+                    {/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug) && (
+                      <p className="mt-1 break-all text-xs text-[#52635b]">Storefront link <code>{contentUrl(market, draft.slug)}</code></p>
+                    )}
+                    {!draft.revision && customSlug && (
+                      <button type="button" className="mt-1 min-h-8 text-xs font-semibold text-[#215241] underline" onClick={() => {
+                        setCustomSlug(false);
+                        change({ slug: slugFromTitle(draft.title) });
+                      }}>Use title for slug</button>
+                    )}
+                  </div>
                 </div>
                 <label className="block">Title
-                  <input required maxLength={120} className={field} value={draft.title} onChange={(event) => change({ title: event.target.value })} />
+                  <input required maxLength={120} className={field} value={draft.title} onChange={(event) => changeTitle(event.target.value)} />
                 </label>
                 <label className="block">Summary (optional)
                   <textarea rows={2} maxLength={300} className={field} value={draft.summary} onChange={(event) => change({ summary: event.target.value })} />
