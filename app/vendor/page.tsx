@@ -382,6 +382,128 @@ export default function VendorPortalPage() {
           </div>
         </div>
 
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+          <section className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h2 className="text-sm font-semibold">Submit product feed</h2>
+            <p className="mt-1 text-xs leading-5 text-gray-400">
+              Feed products go to Zayvi Admin for review. Submission never publishes
+              products or sets customer prices automatically.
+            </p>
+
+            {canEdit ? (
+              <>
+                <div className="mt-4">
+                  <label className="block text-xs font-medium text-gray-500">
+                    Supplier CSV
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void loadCsvFile(file);
+                      event.currentTarget.value = "";
+                    }}
+                    className="mt-1 block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[#edf4ed] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#31543b]"
+                  />
+                  <p className="mt-1 text-[11px] leading-4 text-gray-400">
+                    Required columns: externalProductId, name and category. SKU,
+                    cost, MOQ, lead time, stock state and stock quantity are optional.
+                  </p>
+                </div>
+
+                <label className="mt-4 block text-xs font-medium text-gray-500">
+                  Feed JSON
+                </label>
+                <textarea
+                  value={feedText}
+                  onChange={(event) => setFeedText(event.target.value)}
+                  rows={12}
+                  spellCheck={false}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-3 font-mono text-xs leading-5 outline-none focus:border-[#78927d]"
+                />
+
+                <button
+                  type="button"
+                  disabled={submittingFeed}
+                  onClick={() => void submitFeed()}
+                  className="mt-4 rounded-xl bg-[#17251e] px-5 py-3 text-xs font-semibold text-white disabled:opacity-40"
+                >
+                  {submittingFeed ? "Submitting..." : "Submit to Zayvi review"}
+                </button>
+              </>
+            ) : (
+              <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+                Viewer accounts are read-only and cannot submit supplier feeds.
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h2 className="text-sm font-semibold">Feed submission history</h2>
+            <p className="mt-1 text-xs leading-5 text-gray-400">
+              Recent validation outcomes for this supplier only.
+            </p>
+
+            {feedBatches.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+                No product-feed submissions yet.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {feedBatches.slice(0, 8).map((batch) => (
+                  <details
+                    key={batch.id}
+                    className="rounded-xl border border-gray-100 bg-[#fafbf9] p-3"
+                  >
+                    <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-semibold capitalize">
+                            {batch.status.replaceAll("_", " ")}
+                          </div>
+                          <div className="mt-1 text-[11px] text-gray-400">
+                            {new Date(batch.createdAt).toLocaleString("en-GB")}
+                          </div>
+                        </div>
+                        <div className="text-right text-[11px] text-gray-500">
+                          {batch.acceptedCount} accepted
+                          <br />
+                          {batch.rejectedCount} rejected
+                        </div>
+                      </div>
+                    </summary>
+
+                    <div className="mt-3 border-t border-gray-100 pt-3 text-[11px] text-gray-500">
+                      <div>
+                        Items: {batch.itemCount} · Source:{" "}
+                        {batch.sourceReference || batch.sourceType}
+                      </div>
+
+                      {batch.rejectionDetails.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {batch.rejectionDetails.slice(0, 5).map((rejection) => (
+                            <div
+                              key={`${batch.id}-${rejection.index}`}
+                              className="rounded-lg bg-red-50 p-2 text-red-700"
+                            >
+                              Row {rejection.index + 1}
+                              {rejection.externalProductId
+                                ? ` · ${rejection.externalProductId}`
+                                : ""}
+                              : {rejection.errors.join("; ")}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-5 py-4">
             <h2 className="text-sm font-semibold">Your product offers</h2>
