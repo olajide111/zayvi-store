@@ -27,10 +27,10 @@ The bootstrap runner is checksum-protected and only applies migrations not alrea
 
 ## Preconditions
 
-1. Work from the current `main` branch.
+1. Check out the revision selected for the Preview rollout.
 2. AWS CLI must be authenticated to account `001961766018`.
 3. AWS region must be `eu-west-2`.
-4. Terraform must initialise against the existing remote Preview state.
+4. Use Terraform 1.10 or later for S3 state locking, and initialise against the existing remote Preview state.
 5. `enable_db_bootstrap=true` must remain enabled for this migration apply.
 6. Review the saved Terraform plan before applying it.
 7. Do not change the S3, CloudFront, RDS deletion-protection or production-payment configuration as part of this operation.
