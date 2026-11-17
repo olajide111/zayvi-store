@@ -18,6 +18,13 @@ type PurchaseOrder = {
   approvedBy?: string | null;
   approvedAt?: string | null;
   submittedAt?: string | null;
+  supplierAckStatus?: string;
+  supplierAcknowledgedAt?: string | null;
+  supplierReference?: string | null;
+  latestCarrier?: string | null;
+  latestTrackingNumber?: string | null;
+  latestShippedAt?: string | null;
+  expectedDeliveryAt?: string | null;
   createdAt: string;
 };
 
@@ -95,21 +102,29 @@ export default function PurchaseOrdersPage() {
 
         {!loading && !error && data && data.purchaseOrders.length > 0 && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[150px_minmax(0,1fr)_110px_120px_120px_130px]">
+            <div className="grid grid-cols-[1fr_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[145px_minmax(0,1fr)_100px_110px_120px_150px_120px]">
               <span>PO</span>
               <span className="hidden md:block">Supplier</span>
               <span className="hidden md:block">Market</span>
-              <span className="hidden md:block">Status</span>
-              <span className="hidden md:block">Received</span>
+              <span className="hidden md:block">PO status</span>
+              <span className="hidden md:block">Supplier</span>
+              <span className="hidden md:block">Shipment</span>
               <span>Total</span>
             </div>
             {data.purchaseOrders.map((po) => (
-              <div key={po.id} className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[150px_minmax(0,1fr)_110px_120px_120px_130px]">
+              <div key={po.id} className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[145px_minmax(0,1fr)_100px_110px_120px_150px_120px]">
                 <a href={`/admin/purchase-orders/${po.id}`} className="text-sm font-semibold text-[#23432d] hover:underline">{po.poNumber}</a>
                 <div className="hidden truncate text-sm text-gray-700 md:block">{po.supplierName}</div>
                 <div className="hidden text-xs text-gray-500 md:block">{po.marketCode}</div>
                 <div className="hidden text-xs capitalize text-gray-600 md:block">{po.status.replaceAll("_", " ")}</div>
-                <div className="hidden text-xs text-gray-600 md:block">{po.receivedUnits}/{po.orderedUnits}</div>
+                <div className="hidden text-xs capitalize text-gray-600 md:block">
+                  {(po.supplierAckStatus || "pending").replaceAll("_", " ")}
+                </div>
+                <div className="hidden text-xs text-gray-600 md:block">
+                  {po.latestTrackingNumber || po.latestCarrier
+                    ? [po.latestCarrier, po.latestTrackingNumber].filter(Boolean).join(" · ")
+                    : "—"}
+                </div>
                 <div className="text-sm font-semibold">{money(po.totalValue, po.currency)}</div>
               </div>
             ))}
