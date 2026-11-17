@@ -4817,6 +4817,670 @@ async function receivePurchaseOrderItem(poId, itemId, input) {
 }
 
 
+async function ingestSupplierFeed(input) {
+  const supplierId = String(input?.supplierId || "").trim();
+  const sourceType = String(input?.sourceType || "manual").trim();
+  const sourceReference = String(input?.sourceReference || "").trim().slice(0, 500) || null;
+  const items = Array.isArray(input?.items) ? input.items : [];
+
+  if (!/^[0-9a-f-]{36}$/i.test(supplierId)) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["manual","api","file","connector"].includes(sourceType)) {
+    const error = new Error("Unsupported supplier feed source type.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (items.length < 1 || items.length > 100) {
+    const error = new Error("Supplier feed must contain between 1 and 100 items.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const supplierResult = await tx.query(
+        `
+          SELECT id, market_code, verification_status, status
+          FROM commerce_suppliers
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, supplierId]
+      );
+
+      if (supplierResult.rowCount === 0) {
+        const error = new Error("Supplier not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const supplier = supplierResult.rows[0];
+
+      if (
+        supplier.status !== "active" ||
+        supplier.verification_status !== "verified"
+      ) {
+        const error = new Error("Only verified active suppliers can ingest product feeds.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const expectedCurrency =
+        supplier.market_code === "NG" ? "NGN" : "GBP";
+
+      const batchResult = await tx.query(
+        `
+          INSERT INTO commerce_supplier_feed_batches (
+            tenant_id,
+            supplier_id,
+            source_type,
+            source_reference,
+            item_count,
+            accepted_count,
+            rejected_count,
+            status
+          )
+          VALUES ($1,$2,$3,$4,$5,0,0,'processed')
+          RETURNING id
+        `,
+        [tenantId, supplierId, sourceType, sourceReference, items.length]
+      );
+
+      const batchId = batchResult.rows[0].id;
+      const accepted = [];
+      const rejected = [];
+
+      for (let index = 0; index < items.length; index += 1) {
+        const raw = items[index] || {};
+        const externalProductId = String(
+          raw.externalProductId || raw.external_id || raw.id || ""
+        ).trim();
+        const supplierSku = String(raw.supplierSku || raw.sku || "").trim() || null;
+        const name = String(raw.name || "").trim();
+        const category = String(raw.category || "").trim();
+        const description = String(raw.description || raw.desc || "").trim() || null;
+        const imageUrl = String(raw.imageUrl || raw.image || "").trim() || null;
+        const currency = String(raw.currency || expectedCurrency).trim().toUpperCase();
+        const unitCost =
+          raw.unitCost === null || raw.unitCost === undefined || raw.unitCost === ""
+            ? null
+            : Number(raw.unitCost);
+        const minimumOrderQuantity = Number(raw.minimumOrderQuantity ?? raw.moq ?? 1);
+        const leadTimeDays =
+          raw.leadTimeDays === null ||
+          raw.leadTimeDays === undefined ||
+          raw.leadTimeDays === ""
+            ? null
+            : Number(raw.leadTimeDays);
+        const stockStatus = String(raw.stockStatus || "unknown").trim();
+        const externalStockQuantity =
+          raw.externalStockQuantity === null ||
+          raw.externalStockQuantity === undefined ||
+          raw.externalStockQuantity === ""
+            ? null
+            : Number(raw.externalStockQuantity);
+
+        const problems = [];
+
+        if (!externalProductId) problems.push("externalProductId is required");
+        if (!name) problems.push("name is required");
+        if (!category) problems.push("category is required");
+        if (currency !== expectedCurrency) {
+          problems.push(`currency must be ${expectedCurrency}`);
+        }
+        if (unitCost !== null && (!Number.isFinite(unitCost) || unitCost < 0)) {
+          problems.push("unitCost must be non-negative");
+        }
+        if (
+          !Number.isSafeInteger(minimumOrderQuantity) ||
+          minimumOrderQuantity < 1
+        ) {
+          problems.push("minimumOrderQuantity must be a positive whole number");
+        }
+        if (
+          leadTimeDays !== null &&
+          (!Number.isSafeInteger(leadTimeDays) || leadTimeDays < 0)
+        ) {
+          problems.push("leadTimeDays must be a non-negative whole number");
+        }
+        if (!["unknown","in_stock","limited","out_of_stock","preorder"].includes(stockStatus)) {
+          problems.push("stockStatus is invalid");
+        }
+        if (
+          externalStockQuantity !== null &&
+          (!Number.isSafeInteger(externalStockQuantity) || externalStockQuantity < 0)
+        ) {
+          problems.push("externalStockQuantity must be a non-negative whole number");
+        }
+
+        if (problems.length > 0) {
+          rejected.push({
+            index,
+            externalProductId: externalProductId || null,
+            errors: problems
+          });
+          continue;
+        }
+
+        const candidateResult = await tx.query(
+          `
+            INSERT INTO commerce_product_discovery_candidates (
+              tenant_id,
+              supplier_id,
+              feed_batch_id,
+              external_product_id,
+              supplier_sku,
+              name,
+              category,
+              description,
+              image_url,
+              currency_code,
+              unit_cost,
+              minimum_order_quantity,
+              lead_time_days,
+              stock_status,
+              external_stock_quantity,
+              status,
+              raw_payload
+            )
+            VALUES (
+              $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+              'pending_review',$16::jsonb
+            )
+            ON CONFLICT (tenant_id, supplier_id, external_product_id)
+            DO UPDATE SET
+              feed_batch_id = EXCLUDED.feed_batch_id,
+              supplier_sku = EXCLUDED.supplier_sku,
+              name = EXCLUDED.name,
+              category = EXCLUDED.category,
+              description = EXCLUDED.description,
+              image_url = EXCLUDED.image_url,
+              currency_code = EXCLUDED.currency_code,
+              unit_cost = EXCLUDED.unit_cost,
+              minimum_order_quantity = EXCLUDED.minimum_order_quantity,
+              lead_time_days = EXCLUDED.lead_time_days,
+              stock_status = EXCLUDED.stock_status,
+              external_stock_quantity = EXCLUDED.external_stock_quantity,
+              raw_payload = EXCLUDED.raw_payload,
+              status = CASE
+                WHEN commerce_product_discovery_candidates.status = 'approved'
+                  THEN 'approved'
+                ELSE 'pending_review'
+              END,
+              updated_at = now()
+            RETURNING id, status
+          `,
+          [
+            tenantId,
+            supplierId,
+            batchId,
+            externalProductId,
+            supplierSku,
+            name,
+            category,
+            description,
+            imageUrl,
+            currency,
+            unitCost,
+            minimumOrderQuantity,
+            leadTimeDays,
+            stockStatus,
+            externalStockQuantity,
+            JSON.stringify(raw)
+          ]
+        );
+
+        accepted.push({
+          id: candidateResult.rows[0].id,
+          externalProductId,
+          status: candidateResult.rows[0].status
+        });
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_supplier_feed_batches
+          SET
+            accepted_count = $1,
+            rejected_count = $2,
+            status = $3
+          WHERE tenant_id = $4
+            AND id = $5
+        `,
+        [
+          accepted.length,
+          rejected.length,
+          rejected.length === 0
+            ? "processed"
+            : accepted.length === 0
+              ? "failed"
+              : "partial",
+          tenantId,
+          batchId
+        ]
+      );
+
+      return {
+        batchId,
+        supplierId,
+        itemCount: items.length,
+        acceptedCount: accepted.length,
+        rejectedCount: rejected.length,
+        accepted,
+        rejected
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function listDiscoveryCandidates(status = "pending_review") {
+  const allowedStatuses = new Set(["pending_review","approved","rejected","all"]);
+  const normalizedStatus = String(status || "pending_review").trim();
+
+  if (!allowedStatuses.has(normalizedStatus)) {
+    const error = new Error("Unsupported discovery status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const params = [tenantId];
+      let filter = "";
+
+      if (normalizedStatus !== "all") {
+        params.push(normalizedStatus);
+        filter = "AND c.status = $2";
+      }
+
+      const result = await tx.query(
+        `
+          SELECT
+            c.id,
+            c.external_product_id,
+            c.supplier_sku,
+            c.name,
+            c.category,
+            c.description,
+            c.image_url,
+            c.currency_code,
+            c.unit_cost,
+            c.minimum_order_quantity,
+            c.lead_time_days,
+            c.stock_status,
+            c.external_stock_quantity,
+            c.status,
+            c.review_note,
+            c.approved_product_id,
+            c.approved_at,
+            c.rejected_at,
+            c.created_at,
+            c.updated_at,
+            s.id AS supplier_id,
+            s.name AS supplier_name,
+            s.market_code
+          FROM commerce_product_discovery_candidates c
+          JOIN commerce_suppliers s
+            ON s.tenant_id = c.tenant_id
+           AND s.id = c.supplier_id
+          WHERE c.tenant_id = $1
+            ${filter}
+          ORDER BY c.updated_at DESC
+          LIMIT 500
+        `,
+        params
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        externalProductId: row.external_product_id,
+        supplierId: row.supplier_id,
+        supplierName: row.supplier_name,
+        supplierSku: row.supplier_sku,
+        marketCode: row.market_code,
+        name: row.name,
+        category: row.category,
+        description: row.description,
+        imageUrl: row.image_url,
+        currency: row.currency_code,
+        unitCost: row.unit_cost === null ? null : Number(row.unit_cost),
+        minimumOrderQuantity: Number(row.minimum_order_quantity),
+        leadTimeDays:
+          row.lead_time_days === null ? null : Number(row.lead_time_days),
+        stockStatus: row.stock_status,
+        externalStockQuantity:
+          row.external_stock_quantity === null
+            ? null
+            : Number(row.external_stock_quantity),
+        status: row.status,
+        reviewNote: row.review_note,
+        approvedProductId: row.approved_product_id,
+        approvedAt: row.approved_at,
+        rejectedAt: row.rejected_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function approveDiscoveryCandidate(candidateId, input) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(candidateId || ""))) {
+    const error = new Error("A valid discovery candidate id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const customerPrice = Number(input?.customerPrice);
+  const reviewNote = String(input?.reviewNote || "").trim().slice(0, 1000) || null;
+
+  if (!Number.isFinite(customerPrice) || customerPrice < 0) {
+    const error = new Error("An explicit non-negative customer price is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const candidateResult = await tx.query(
+        `
+          SELECT
+            c.*,
+            s.store_id,
+            s.market_code,
+            s.status AS supplier_status,
+            s.verification_status
+          FROM commerce_product_discovery_candidates c
+          JOIN commerce_suppliers s
+            ON s.tenant_id = c.tenant_id
+           AND s.id = c.supplier_id
+          WHERE c.tenant_id = $1
+            AND c.id = $2
+          FOR UPDATE
+        `,
+        [tenantId, candidateId]
+      );
+
+      if (candidateResult.rowCount === 0) {
+        const error = new Error("Discovery candidate not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const candidate = candidateResult.rows[0];
+
+      if (candidate.status !== "pending_review") {
+        const error = new Error("Only pending discovery candidates can be approved.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (
+        candidate.supplier_status !== "active" ||
+        candidate.verification_status !== "verified"
+      ) {
+        const error = new Error("Supplier must remain verified and active before approval.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const canonicalCode =
+        `DISC-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+      const slugBase = slugify(candidate.name) || "product";
+      const slug =
+        `${slugBase}-${crypto.randomBytes(3).toString("hex")}`;
+
+      const attributes = {
+        category: candidate.category,
+        image: candidate.image_url || "",
+        desc: candidate.description || "",
+        longDesc: candidate.description || "",
+        discoverySource: "supplier_feed",
+        discoveryCandidateId: candidate.id,
+        supplierExternalProductId: candidate.external_product_id
+      };
+
+      const canonical = await tx.query(
+        `
+          INSERT INTO catalogue_products (
+            canonical_code,
+            slug,
+            name,
+            brand_name,
+            product_type,
+            lifecycle_status,
+            attributes
+          )
+          VALUES ($1,$2,$3,'ZAYVI',$4,'active',$5::jsonb)
+          RETURNING id
+        `,
+        [
+          canonicalCode,
+          slug,
+          candidate.name,
+          candidate.category,
+          JSON.stringify(attributes)
+        ]
+      );
+
+      const tenantProduct = await tx.query(
+        `
+          INSERT INTO tenant_catalogue_products (
+            tenant_id,
+            store_id,
+            product_id,
+            merchant_sku,
+            status,
+            listing_overrides
+          )
+          VALUES ($1,$2,$3,$4,'active','{}'::jsonb)
+          RETURNING id
+        `,
+        [
+          tenantId,
+          candidate.store_id,
+          canonical.rows[0].id,
+          canonicalCode
+        ]
+      );
+
+      const targetCurrency =
+        candidate.market_code === "NG" ? "NGN" : "GBP";
+
+      await tx.query(
+        `
+          INSERT INTO tenant_product_markets (
+            tenant_id,
+            tenant_catalogue_product_id,
+            market_code,
+            availability_status,
+            compliance_status,
+            publication_status,
+            requires_human_approval,
+            customer_price,
+            currency_code,
+            price_observed_at
+          )
+          VALUES (
+            $1,$2,$3,
+            CASE WHEN $4 IN ('in_stock','limited') THEN 'available' ELSE 'unknown' END,
+            'pending',
+            'pending_review',
+            true,
+            $5,
+            $6,
+            now()
+          )
+        `,
+        [
+          tenantId,
+          tenantProduct.rows[0].id,
+          candidate.market_code,
+          candidate.stock_status,
+          customerPrice,
+          targetCurrency
+        ]
+      );
+
+      const otherMarket = candidate.market_code === "NG" ? "GB" : "NG";
+      const otherCurrency = otherMarket === "NG" ? "NGN" : "GBP";
+
+      await tx.query(
+        `
+          INSERT INTO tenant_product_markets (
+            tenant_id,
+            tenant_catalogue_product_id,
+            market_code,
+            availability_status,
+            compliance_status,
+            publication_status,
+            requires_human_approval,
+            customer_price,
+            currency_code
+          )
+          VALUES (
+            $1,$2,$3,'unknown','not_assessed','not_listed',true,NULL,$4
+          )
+          ON CONFLICT (tenant_id, tenant_catalogue_product_id, market_code)
+          DO NOTHING
+        `,
+        [
+          tenantId,
+          tenantProduct.rows[0].id,
+          otherMarket,
+          otherCurrency
+        ]
+      );
+
+      await tx.query(
+        `
+          INSERT INTO commerce_supplier_offers (
+            tenant_id,
+            supplier_id,
+            tenant_catalogue_product_id,
+            supplier_sku,
+            currency_code,
+            unit_cost,
+            minimum_order_quantity,
+            lead_time_days,
+            stock_status,
+            external_stock_quantity,
+            source_updated_at,
+            status,
+            metadata
+          )
+          VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now(),'active',$11::jsonb
+          )
+          ON CONFLICT (tenant_id, supplier_id, tenant_catalogue_product_id)
+          DO NOTHING
+        `,
+        [
+          tenantId,
+          candidate.supplier_id,
+          tenantProduct.rows[0].id,
+          candidate.supplier_sku,
+          candidate.currency_code,
+          candidate.unit_cost,
+          candidate.minimum_order_quantity,
+          candidate.lead_time_days,
+          candidate.stock_status,
+          candidate.external_stock_quantity,
+          JSON.stringify({
+            discoveryCandidateId: candidate.id,
+            externalProductId: candidate.external_product_id
+          })
+        ]
+      );
+
+      await tx.query(
+        `
+          UPDATE commerce_product_discovery_candidates
+          SET
+            status = 'approved',
+            review_note = $1,
+            approved_product_id = $2,
+            approved_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $3 AND id = $4
+        `,
+        [reviewNote, canonical.rows[0].id, tenantId, candidateId]
+      );
+
+      return {
+        candidateId,
+        productId: canonical.rows[0].id,
+        tenantProductId: tenantProduct.rows[0].id,
+        canonicalCode,
+        customerPrice,
+        currency: targetCurrency,
+        publicationStatus: "pending_review"
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function rejectDiscoveryCandidate(candidateId, input) {
+  const reviewNote = String(input?.reviewNote || "").trim().slice(0, 1000);
+
+  if (!reviewNote) {
+    const error = new Error("A review note is required when rejecting a discovery candidate.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          UPDATE commerce_product_discovery_candidates
+          SET
+            status = 'rejected',
+            review_note = $1,
+            rejected_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $2
+            AND id = $3
+            AND status = 'pending_review'
+          RETURNING id
+        `,
+        [reviewNote, tenantId, candidateId]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Only pending discovery candidates can be rejected.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      return { candidateId, status: "rejected", reviewNote };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -6334,6 +6998,111 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "sourcing_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/supplier-feed/ingest")) {
+    try {
+      const result = await ingestSupplierFeed(parseBody(event));
+      return response(201, {
+        source: "postgresql",
+        ...result,
+        autoPublishEnabled: false
+      });
+    } catch (error) {
+      console.error("Supplier feed ingest failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_feed_ingest_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/discovery-candidates")) {
+    try {
+      const status = event?.queryStringParameters?.status || "pending_review";
+      const candidates = await listDiscoveryCandidates(status);
+      return response(200, {
+        source: "postgresql",
+        total: candidates.length,
+        candidates,
+        autoPublishEnabled: false
+      });
+    } catch (error) {
+      console.error("Discovery candidate list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "discovery_candidates_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/discovery-candidates\/[0-9a-f-]{36}\/approve$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const candidateId = parts[parts.length - 2];
+      const result = await approveDiscoveryCandidate(
+        candidateId,
+        parseBody(event)
+      );
+      return response(200, {
+        source: "postgresql",
+        ...result,
+        autoPublishEnabled: false
+      });
+    } catch (error) {
+      console.error("Discovery candidate approval failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "discovery_candidate_approval_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/discovery-candidates\/[0-9a-f-]{36}\/reject$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const candidateId = parts[parts.length - 2];
+      const result = await rejectDiscoveryCandidate(
+        candidateId,
+        parseBody(event)
+      );
+      return response(200, {
+        source: "postgresql",
+        ...result
+      });
+    } catch (error) {
+      console.error("Discovery candidate rejection failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "discovery_candidate_rejection_failed"
       });
     }
   }
