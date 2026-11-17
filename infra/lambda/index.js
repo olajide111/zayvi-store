@@ -160,11 +160,6 @@ async function listProducts(marketCode = "GB") {
     throw error;
   }
 
-  const payloadChecksum = crypto
-    .createHash("sha256")
-    .update(JSON.stringify(items))
-    .digest("hex");
-
   const client = await getPool().connect();
 
   try {
@@ -4859,6 +4854,11 @@ async function ingestSupplierFeed(input) {
     error.statusCode = 400;
     throw error;
   }
+
+  const payloadChecksum = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(items))
+    .digest("hex");
 
   const client = await getPool().connect();
 
