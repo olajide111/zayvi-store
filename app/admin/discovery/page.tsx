@@ -1,0 +1,599 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Supplier = {
+  id: string;
+  supplierCode: string;
+  name: string;
+  marketCode: "GB" | "NG";
+  verificationStatus: string;
+  status: string;
+};
+
+type Candidate = {
+  id: string;
+  externalProductId: string;
+  supplierId: string;
+  supplierName: string;
+  supplierSku?: string | null;
+  marketCode: "GB" | "NG";
+  name: string;
+  category: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  currency: string;
+  unitCost: number | null;
+  minimumOrderQuantity: number;
+  leadTimeDays: number | null;
+  stockStatus: string;
+  externalStockQuantity: number | null;
+  status: string;
+  reviewNote?: string | null;
+  approvedProductId?: string | null;
+  updatedAt: string;
+};
+
+type CandidatesResponse = {
+  total: number;
+  candidates: Candidate[];
+  autoPublishEnabled: boolean;
+};
+
+const sampleFeed = JSON.stringify(
+  [
+    {
+      externalProductId: "SUP-001",
+      supplierSku: "SKU-001",
+      name: "Example supplier product",
+      category: "General",
+      description: "Supplier-provided product description.",
+      imageUrl: "",
+      currency: "GBP",
+      unitCost: 10,
+      minimumOrderQuantity: 1,
+      leadTimeDays: 3,
+      stockStatus: "in_stock",
+      externalStockQuantity: 25,
+    },
+  ],
+  null,
+  2
+);
+
+function money(value: number | null, currency: string) {
+  if (value === null) return "—";
+  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: currency === "NGN" ? 0 : 2,
+  }).format(value);
+}
+
+export default function ProductDiscoveryPage() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [supplierId, setSupplierId] = useState("");
+  const [feedText, setFeedText] = useState(sampleFeed);
+  const [status, setStatus] = useState("pending_review");
+  const [loading, setLoading] = useState(true);
+  const [ingesting, setIngesting] = useState(false);
+  const [workingId, setWorkingId] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function load() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [supplierResponse, candidateResponse] = await Promise.all([
+        fetch("/api/admin/suppliers", {
+          credentials: "include",
+          cache: "no-store",
+        }),
+        fetch(
+          "/api/admin/discovery/candidates?status=" +
+            encodeURIComponent(status),
+          {
+            credentials: "include",
+            cache: "no-store",
+          }
+        ),
+      ]);
+
+      if (supplierResponse.status === 401 || candidateResponse.status === 401) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      const supplierPayload = await supplierResponse.json();
+      const candidatePayload = await candidateResponse.json();
+
+      if (!supplierResponse.ok) {
+        throw new Error(supplierPayload?.error || "Unable to load suppliers.");
+      }
+      if (!candidateResponse.ok) {
+        throw new Error(
+          candidatePayload?.error || "Unable to load discovery candidates."
+        );
+      }
+
+      const verified = (supplierPayload.suppliers || []).filter(
+        (supplier: Supplier) =>
+          supplier.verificationStatus === "verified" &&
+          supplier.status === "active"
+      );
+
+      setSuppliers(verified);
+      setCandidates(
+        Array.isArray(candidatePayload.candidates)
+          ? candidatePayload.candidates
+          : []
+      );
+
+      if (!supplierId && verified.length > 0) {
+        setSupplierId(verified[0].id);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to load product discovery."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, [status]);
+
+  const selectedSupplier = useMemo(
+    () => suppliers.find((supplier) => supplier.id === supplierId) || null,
+    [suppliers, supplierId]
+  );
+
+  useEffect(() => {
+    if (!selectedSupplier) return;
+
+    try {
+      const parsed = JSON.parse(feedText);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+      const currency = selectedSupplier.marketCode === "NG" ? "NGN" : "GBP";
+      const normalized = parsed.map((item) => ({
+        ...item,
+        currency,
+      }));
+      setFeedText(JSON.stringify(normalized, null, 2));
+    } catch {
+      // Leave user-edited JSON untouched if it is temporarily invalid.
+    }
+  }, [supplierId]);
+
+  async function ingest() {
+    if (!supplierId) {
+      setError("Select a verified supplier first.");
+      return;
+    }
+
+    let items: unknown;
+    try {
+      items = JSON.parse(feedText);
+    } catch {
+      setError("Feed JSON is invalid.");
+      return;
+    }
+
+    if (!Array.isArray(items)) {
+      setError("Feed payload must be a JSON array.");
+      return;
+    }
+
+    setIngesting(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/admin/discovery/ingest", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          supplierId,
+          sourceType: "manual",
+          sourceReference: "Admin JSON import",
+          items,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to ingest supplier feed.");
+      }
+
+      setNotice(
+        `Feed processed: ${payload.acceptedCount} accepted, ${payload.rejectedCount} rejected.`
+      );
+      setStatus("pending_review");
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to ingest supplier feed."
+      );
+    } finally {
+      setIngesting(false);
+    }
+  }
+
+  async function approve(candidate: Candidate) {
+    const defaultPrice =
+      candidate.unitCost === null
+        ? ""
+        : String(
+            Number(
+              (candidate.unitCost * 1.5).toFixed(
+                candidate.currency === "NGN" ? 0 : 2
+              )
+            )
+          );
+
+    const rawPrice = window.prompt(
+      `Set customer price for ${candidate.name} (${candidate.currency})`,
+      defaultPrice
+    );
+    if (rawPrice === null) return;
+
+    const customerPrice = Number(rawPrice);
+    if (!Number.isFinite(customerPrice) || customerPrice < 0) {
+      setError("Customer price must be a non-negative number.");
+      return;
+    }
+
+    const note = window.prompt("Approval note (optional)", "");
+    if (note === null) return;
+
+    setWorkingId(candidate.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/discovery/candidates/${candidate.id}/approve`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            customerPrice,
+            reviewNote: note.trim() || null,
+          }),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Unable to approve discovery candidate."
+        );
+      }
+
+      setNotice(
+        `${candidate.name} added to the catalogue in pending-review state.`
+      );
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to approve discovery candidate."
+      );
+    } finally {
+      setWorkingId("");
+    }
+  }
+
+  async function reject(candidate: Candidate) {
+    const note = window.prompt(
+      `Why are you rejecting ${candidate.name}?`,
+      ""
+    );
+    if (note === null) return;
+
+    if (!note.trim()) {
+      setError("A rejection note is required.");
+      return;
+    }
+
+    setWorkingId(candidate.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/discovery/candidates/${candidate.id}/reject`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ reviewNote: note.trim() }),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Unable to reject discovery candidate."
+        );
+      }
+
+      setNotice(`${candidate.name} rejected.`);
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to reject discovery candidate."
+      );
+    } finally {
+      setWorkingId("");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
+          <div>
+            <div className="text-xs text-gray-400">
+              Workspace / Product discovery
+            </div>
+            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
+              Supplier product discovery
+            </h1>
+          </div>
+          <a
+            href="/admin/products"
+            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
+          >
+            Products
+          </a>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+          <div className="text-sm font-semibold text-blue-800">
+            Review-first discovery
+          </div>
+          <p className="mt-1 max-w-4xl text-xs leading-5 text-blue-700">
+            Supplier feed items become review candidates only. Approval requires
+            an explicit customer price and creates a catalogue product in pending
+            review. Nothing is published automatically.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
+          <aside className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h2 className="text-sm font-semibold">Import supplier feed</h2>
+            <p className="mt-1 text-xs leading-5 text-gray-400">
+              This manual JSON importer is the first ingestion adapter. API,
+              file and connector sources can use the same backend contract later.
+            </p>
+
+            <label className="mt-5 block text-xs font-medium text-gray-500">
+              Verified supplier
+            </label>
+            <select
+              value={supplierId}
+              onChange={(event) => setSupplierId(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm"
+            >
+              {suppliers.length === 0 && (
+                <option value="">No verified suppliers</option>
+              )}
+              {suppliers.map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name} · {supplier.marketCode}
+                </option>
+              ))}
+            </select>
+
+            <label className="mt-4 block text-xs font-medium text-gray-500">
+              Feed JSON
+            </label>
+            <textarea
+              value={feedText}
+              onChange={(event) => setFeedText(event.target.value)}
+              rows={20}
+              spellCheck={false}
+              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-3 font-mono text-xs leading-5 outline-none focus:border-[#78927d]"
+            />
+
+            <button
+              type="button"
+              disabled={ingesting || !supplierId}
+              onClick={() => void ingest()}
+              className="mt-4 w-full rounded-xl bg-[#17251e] px-4 py-3 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              {ingesting ? "Processing feed..." : "Import to review queue"}
+            </button>
+          </aside>
+
+          <div>
+            <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-semibold">Discovery candidates</div>
+                <div className="mt-1 text-xs text-gray-400">
+                  {candidates.length} item(s) in this view
+                </div>
+              </div>
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs"
+              >
+                <option value="pending_review">Pending review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+
+            {notice && (
+              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
+                {notice}
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="py-16 text-center text-sm text-gray-400">
+                Loading discovery candidates...
+              </div>
+            ) : candidates.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-12 text-center">
+                <h2 className="text-base font-semibold">No candidates here</h2>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500">
+                  Import a feed from a verified supplier or switch the review
+                  status filter.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {candidates.map((candidate) => {
+                  return (
+                    <section
+                      key={candidate.id}
+                      className="rounded-2xl border border-gray-200 bg-white p-5"
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div className="flex min-w-0 gap-4">
+                          {candidate.imageUrl ? (
+                            <img
+                              src={candidate.imageUrl}
+                              alt=""
+                              className="h-16 w-16 rounded-xl border border-gray-100 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-400">
+                              No image
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold">
+                              {candidate.name}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-400">
+                              {candidate.supplierName} ·{" "}
+                              {candidate.supplierSku ||
+                                candidate.externalProductId}
+                            </div>
+                            <div className="mt-2 text-xs text-gray-600">
+                              {candidate.category}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-left md:text-right">
+                          <div className="text-[11px] uppercase tracking-wide text-gray-400">
+                            Supplier cost
+                          </div>
+                          <div className="mt-1 text-lg font-semibold">
+                            {money(candidate.unitCost, candidate.currency)}
+                          </div>
+                          <div className="mt-1 text-xs capitalize text-gray-500">
+                            {candidate.status.replaceAll("_", " ")}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 text-xs sm:grid-cols-4">
+                        <div>
+                          <div className="text-gray-400">Stock</div>
+                          <div className="mt-1 font-semibold capitalize">
+                            {candidate.stockStatus.replaceAll("_", " ")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Reported qty</div>
+                          <div className="mt-1 font-semibold">
+                            {candidate.externalStockQuantity ?? "Unknown"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">MOQ</div>
+                          <div className="mt-1 font-semibold">
+                            {candidate.minimumOrderQuantity}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Lead time</div>
+                          <div className="mt-1 font-semibold">
+                            {candidate.leadTimeDays === null
+                              ? "Unknown"
+                              : candidate.leadTimeDays + "d"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {candidate.description && (
+                        <p className="mt-4 text-xs leading-5 text-gray-500">
+                          {candidate.description}
+                        </p>
+                      )}
+
+                      {candidate.reviewNote && (
+                        <div className="mt-4 rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
+                          Review note: {candidate.reviewNote}
+                        </div>
+                      )}
+
+                      {candidate.status === "pending_review" && (
+                        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+                          <button
+                            type="button"
+                            disabled={workingId === candidate.id}
+                            onClick={() => void approve(candidate)}
+                            className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                          >
+                            Approve to catalogue
+                          </button>
+                          <button
+                            type="button"
+                            disabled={workingId === candidate.id}
+                            onClick={() => void reject(candidate)}
+                            className="rounded-lg border border-red-100 px-4 py-2 text-xs font-semibold text-red-600 disabled:opacity-40"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+
+                      {candidate.status === "approved" &&
+                        candidate.approvedProductId && (
+                          <div className="mt-4 border-t border-gray-100 pt-4">
+                            <a
+                              href="/admin/products"
+                              className="text-xs font-semibold text-[#23432d] hover:underline"
+                            >
+                              View catalogue →
+                            </a>
+                          </div>
+                        )}
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
