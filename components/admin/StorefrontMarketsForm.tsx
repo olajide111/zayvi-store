@@ -122,13 +122,16 @@ export default function StorefrontMarketsForm() {
               <span className="mt-1 block text-xs font-normal text-[#52635b]">Used when a shopper’s country is unknown or outside your markets.</span>
             </label>
             {draft.enabledMarkets.length > 1 && (
-              <label className="inline-flex min-h-11 items-center gap-3 text-sm font-medium">
+              <label className="inline-flex min-h-11 items-start gap-3 text-sm font-medium">
                 <input type="checkbox" checked={draft.showSwitcher}
                   onChange={(event) => {
                     setDraft({ ...draft, showSwitcher: event.target.checked });
                     setStatus("");
-                  }} className="size-4 accent-[#215241]" />
-                Show country switcher to shoppers
+                  }} className="mt-0.5 size-4 shrink-0 accent-[#215241]" />
+                <span>
+                  Let shoppers change country
+                  <span className="mt-1 block text-xs font-normal text-[#52635b]">The storefront shows the current country in a “Ship to” menu.</span>
+                </span>
               </label>
             )}
           </fieldset>
