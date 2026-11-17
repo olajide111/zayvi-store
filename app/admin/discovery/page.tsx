@@ -32,6 +32,12 @@ type Candidate = {
   reviewNote?: string | null;
   approvedProductId?: string | null;
   updatedAt: string;
+  qualityFlags: string[];
+  potentialDuplicate?: {
+    productId: string;
+    productName: string;
+    matchType: "supplier_sku" | "name";
+  } | null;
 };
 
 type CandidatesResponse = {
@@ -227,6 +233,16 @@ export default function ProductDiscoveryPage() {
   }
 
   async function approve(candidate: Candidate) {
+    let confirmDuplicateReview = false;
+
+    if (candidate.potentialDuplicate) {
+      const confirmed = window.confirm(
+        `Potential duplicate detected: ${candidate.potentialDuplicate.productName} (${candidate.potentialDuplicate.matchType.replaceAll("_", " ")}). Approve this candidate anyway after review?`
+      );
+
+      if (!confirmed) return;
+      confirmDuplicateReview = true;
+    }
     const defaultPrice =
       candidate.unitCost === null
         ? ""
@@ -250,8 +266,18 @@ export default function ProductDiscoveryPage() {
       return;
     }
 
-    const note = window.prompt("Approval note (optional)", "");
+    const note = window.prompt(
+      candidate.potentialDuplicate
+        ? "Approval note (required for potential duplicate)"
+        : "Approval note (optional)",
+      ""
+    );
     if (note === null) return;
+
+    if (candidate.potentialDuplicate && !note.trim()) {
+      setError("A review note is required when approving a potential duplicate.");
+      return;
+    }
 
     setWorkingId(candidate.id);
     setError("");
@@ -267,6 +293,7 @@ export default function ProductDiscoveryPage() {
           body: JSON.stringify({
             customerPrice,
             reviewNote: note.trim() || null,
+            confirmDuplicateReview,
           }),
         }
       );
@@ -541,6 +568,33 @@ export default function ProductDiscoveryPage() {
                           </div>
                         </div>
                       </div>
+
+                      {candidate.qualityFlags.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {candidate.qualityFlags.map((flag) => (
+                            <span
+                              key={flag}
+                              className={
+                                "rounded-full px-2.5 py-1 text-[10px] font-semibold " +
+                                (flag === "potential_duplicate"
+                                  ? "bg-red-50 text-red-700"
+                                  : flag === "missing_unit_cost" || flag === "out_of_stock"
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-gray-100 text-gray-600")
+                              }
+                            >
+                              {flag.replaceAll("_", " ")}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {candidate.potentialDuplicate && (
+                        <div className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
+                          Potential duplicate: {candidate.potentialDuplicate.productName} · matched by{" "}
+                          {candidate.potentialDuplicate.matchType.replaceAll("_", " ")}
+                        </div>
+                      )}
 
                       {candidate.description && (
                         <p className="mt-4 text-xs leading-5 text-gray-500">
