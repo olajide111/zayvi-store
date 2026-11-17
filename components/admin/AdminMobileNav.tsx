@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Ellipsis } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import AdminSignOut from "./AdminSignOut";
 import { adminGroups, adminPrimary, isAdminRouteActive } from "./admin-navigation";
 
 const tabClass = "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-semibold leading-tight";
@@ -105,6 +106,7 @@ export default function AdminMobileNav() {
               </div>
             </div>
           ))}
+          <AdminSignOut className="mt-2 border-t border-[#dfe6e1] text-[#215241]" />
         </div>
       </nav>
     </>

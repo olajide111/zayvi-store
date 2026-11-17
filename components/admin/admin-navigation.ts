@@ -39,7 +39,7 @@ export const adminGroups = [
       { title: "Customers", href: "/admin/customers", icon: Users },
       { title: "Markets", href: "/admin/markets", icon: Globe2 },
       { title: "Themes", href: "/admin/themes", icon: Palette },
-      { title: "Product Images", href: "/admin", icon: ImagePlus },
+      { title: "Product Images", href: "/admin/product-images", icon: ImagePlus },
       { title: "Shipping", href: "/admin/shipping", icon: Truck },
       { title: "System Readiness", href: "/admin/system-readiness", icon: ShieldCheck },
       { title: "Settings", href: "/admin/settings", icon: Settings },

@@ -1,6 +1,7 @@
 "use client";
 
-import AdminPageHeading, { adminPrimaryAction } from "@/components/admin/AdminPageHeading";
+import Link from "next/link";
+import AdminPageHeading, { adminAction, adminPrimaryAction } from "@/components/admin/AdminPageHeading";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -177,6 +178,7 @@ export default function AdminProductsPage() {
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
       <AdminPageHeading section="Catalogue" title="Products & catalogue" description="Manage products, prices and publication status.">
+        <Link href="/admin/product-images" prefetch={false} className={adminAction}>Product images</Link>
         <button type="button" onClick={formOpen ? closeForm : openCreate} className={adminPrimaryAction}>
           {formOpen ? "Close form" : "Add product"}
         </button>

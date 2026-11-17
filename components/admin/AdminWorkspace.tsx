@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, ExternalLink, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import AdminMobileNav from "./AdminMobileNav";
+import AdminSignOut from "./AdminSignOut";
 import { adminGroups, adminPrimary, isAdminRouteActive } from "./admin-navigation";
 
 type Destination = { title: string; href: string; icon: LucideIcon };
@@ -69,6 +70,7 @@ export default function AdminWorkspace({ children }: { children: ReactNode }) {
         <Link href="/" target="_blank" rel="noopener noreferrer" className="flex min-h-11 shrink-0 items-center gap-2.5 border-t border-white/15 px-5 text-sm text-[#dfebe3] hover:bg-white/10">
           <ExternalLink size={15} aria-hidden="true" /> View storefront
         </Link>
+        <AdminSignOut className="shrink-0 border-t border-white/15 px-3 text-[#dfebe3] hover:bg-white/10" />
       </aside>
       <div id="admin-content" tabIndex={-1} className="min-w-0 lg:ml-52 xl:ml-56">
         {children}

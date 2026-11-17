@@ -1,5 +1,7 @@
 "use client";
 
+import DispatchForm from "@/components/admin/DispatchForm";
+
 import Link from "next/link";
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
@@ -309,37 +311,12 @@ export default function AdminOrderDetailPage({
 
   async function executionAction(
     allocation: FulfilmentAllocation,
-    action: "dispatch" | "deliver"
+    action: "dispatch" | "deliver",
+    details?: { carrier: string | null; trackingNumber: string | null },
   ) {
     setAllocationWorkingId(allocation.id);
     setError("");
     setNotice("");
-
-    let carrier: string | null = allocation.carrier || null;
-    let trackingNumber: string | null = allocation.trackingNumber || null;
-
-    if (action === "dispatch") {
-      const enteredCarrier = window.prompt(
-        "Carrier (optional)",
-        allocation.carrier || ""
-      );
-      if (enteredCarrier === null) {
-        setAllocationWorkingId("");
-        return;
-      }
-
-      const enteredTracking = window.prompt(
-        "Tracking number (optional)",
-        allocation.trackingNumber || ""
-      );
-      if (enteredTracking === null) {
-        setAllocationWorkingId("");
-        return;
-      }
-
-      carrier = enteredCarrier.trim() || null;
-      trackingNumber = enteredTracking.trim() || null;
-    }
 
     try {
       const response = await fetch(
@@ -348,7 +325,7 @@ export default function AdminOrderDetailPage({
           method: "POST",
           credentials: "include",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action, carrier, trackingNumber }),
+          body: JSON.stringify({ action, ...details }),
         }
       );
 
@@ -512,14 +489,11 @@ export default function AdminOrderDetailPage({
                       {fulfilmentPlan.status === "approved" && (
                         <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
                           {allocation.executionStatus === "pending" && (
-                            <button
-                              type="button"
-                              disabled={allocationWorkingId === allocation.id}
-                              onClick={() => void executionAction(allocation, "dispatch")}
-                              className="rounded-lg bg-[#17251e] px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
-                            >
-                              Mark dispatched
-                            </button>
+                            <DispatchForm
+                              marketCode={order.marketCode}
+                              disabled={Boolean(allocationWorkingId)}
+                              onDispatch={(details) => void executionAction(allocation, "dispatch", details)}
+                            />
                           )}
 
                           {allocation.executionStatus === "dispatched" && (
@@ -536,7 +510,7 @@ export default function AdminOrderDetailPage({
                           {allocation.sourceType === "supplier" &&
                             allocation.executionStatus === "pending" && (
                               <span className="self-center text-[10px] text-amber-700">
-                                This confirms an external action already taken; Zayvi will not contact the supplier.
+                                Record dispatch after the supplier confirms the shipment.
                               </span>
                             )}
                         </div>
