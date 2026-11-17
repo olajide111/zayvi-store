@@ -160,6 +160,11 @@ async function listProducts(marketCode = "GB") {
     throw error;
   }
 
+  const payloadChecksum = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(items))
+    .digest("hex");
+
   const client = await getPool().connect();
 
   try {
@@ -4890,6 +4895,42 @@ async function ingestSupplierFeed(input) {
       const expectedCurrency =
         supplier.market_code === "NG" ? "NGN" : "GBP";
 
+      const existingBatch = await tx.query(
+        `
+          SELECT
+            id,
+            item_count,
+            accepted_count,
+            rejected_count,
+            status,
+            accepted_details,
+            rejection_details,
+            created_at
+          FROM commerce_supplier_feed_batches
+          WHERE tenant_id = $1
+            AND supplier_id = $2
+            AND payload_checksum = $3
+          LIMIT 1
+        `,
+        [tenantId, supplierId, payloadChecksum]
+      );
+
+      if (existingBatch.rowCount > 0) {
+        const row = existingBatch.rows[0];
+        return {
+          batchId: row.id,
+          supplierId,
+          duplicatePayload: true,
+          itemCount: Number(row.item_count || 0),
+          acceptedCount: Number(row.accepted_count || 0),
+          rejectedCount: Number(row.rejected_count || 0),
+          accepted: row.accepted_details || [],
+          rejected: row.rejection_details || [],
+          status: row.status,
+          createdAt: row.created_at
+        };
+      }
+
       const batchResult = await tx.query(
         `
           INSERT INTO commerce_supplier_feed_batches (
@@ -4900,12 +4941,20 @@ async function ingestSupplierFeed(input) {
             item_count,
             accepted_count,
             rejected_count,
-            status
+            status,
+            payload_checksum
           )
-          VALUES ($1,$2,$3,$4,$5,0,0,'processed')
+          VALUES ($1,$2,$3,$4,$5,0,0,'processed',$6)
           RETURNING id
         `,
-        [tenantId, supplierId, sourceType, sourceReference, items.length]
+        [
+          tenantId,
+          supplierId,
+          sourceType,
+          sourceReference,
+          items.length,
+          payloadChecksum
+        ]
       );
 
       const batchId = batchResult.rows[0].id;
@@ -5065,9 +5114,11 @@ async function ingestSupplierFeed(input) {
           SET
             accepted_count = $1,
             rejected_count = $2,
-            status = $3
-          WHERE tenant_id = $4
-            AND id = $5
+            status = $3,
+            accepted_details = $4::jsonb,
+            rejection_details = $5::jsonb
+          WHERE tenant_id = $6
+            AND id = $7
         `,
         [
           accepted.length,
@@ -5077,6 +5128,8 @@ async function ingestSupplierFeed(input) {
             : accepted.length === 0
               ? "failed"
               : "partial",
+          JSON.stringify(accepted),
+          JSON.stringify(rejected),
           tenantId,
           batchId
         ]
@@ -5089,13 +5142,70 @@ async function ingestSupplierFeed(input) {
         acceptedCount: accepted.length,
         rejectedCount: rejected.length,
         accepted,
-        rejected
+        rejected,
+        duplicatePayload: false
       };
     });
   } finally {
     client.release();
   }
 }
+
+async function listSupplierFeedBatches() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            b.id,
+            b.supplier_id,
+            b.source_type,
+            b.source_reference,
+            b.item_count,
+            b.accepted_count,
+            b.rejected_count,
+            b.status,
+            b.payload_checksum,
+            b.accepted_details,
+            b.rejection_details,
+            b.created_at,
+            s.name AS supplier_name,
+            s.market_code
+          FROM commerce_supplier_feed_batches b
+          JOIN commerce_suppliers s
+            ON s.tenant_id = b.tenant_id
+           AND s.id = b.supplier_id
+          WHERE b.tenant_id = $1
+          ORDER BY b.created_at DESC
+          LIMIT 100
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        supplierId: row.supplier_id,
+        supplierName: row.supplier_name,
+        marketCode: row.market_code,
+        sourceType: row.source_type,
+        sourceReference: row.source_reference,
+        itemCount: Number(row.item_count || 0),
+        acceptedCount: Number(row.accepted_count || 0),
+        rejectedCount: Number(row.rejected_count || 0),
+        status: row.status,
+        payloadChecksum: row.payload_checksum,
+        acceptedDetails: row.accepted_details || [],
+        rejectionDetails: row.rejection_details || [],
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
 
 async function listDiscoveryCandidates(status = "pending_review") {
   const allowedStatuses = new Set(["pending_review","approved","rejected","all"]);
@@ -7134,6 +7244,25 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "sourcing_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/supplier-feed/batches")) {
+    try {
+      const batches = await listSupplierFeedBatches();
+      return response(200, {
+        source: "postgresql",
+        total: batches.length,
+        batches
+      });
+    } catch (error) {
+      console.error("Supplier feed batch list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "supplier_feed_batches_unavailable"
       });
     }
   }
