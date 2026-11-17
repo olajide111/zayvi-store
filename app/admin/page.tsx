@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 type UploadResult = { key: string; url: string };
@@ -32,6 +33,10 @@ export default function AdminPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to sign in.");
+      if (new URLSearchParams(window.location.search).get("next") === "dashboard") {
+        window.location.replace("/admin/dashboard");
+        return;
+      }
       setAuthenticated(true);
       setPassword("");
       setMessage("");
@@ -85,15 +90,22 @@ export default function AdminPage() {
     <main style={{ minHeight: "100vh", background: "#f6f7f5", color: "#151515", padding: "40px 18px", fontFamily: "Arial, sans-serif" }}>
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 36 }}>
-          <a href="/" style={{ color: "#111", textDecoration: "none", fontSize: 25, fontWeight: 900, letterSpacing: "-1px" }}>ZAYVI<span style={{ color: "#16a34a" }}>.</span></a>
-          {authenticated && <button onClick={signOut} style={{ border: "1px solid #ddd", background: "#fff", borderRadius: 9, padding: "10px 15px", cursor: "pointer" }}>Sign out</button>}
+          <Link href="/" style={{ color: "#111", textDecoration: "none", fontSize: 25, fontWeight: 900, letterSpacing: "-1px" }}>ZAYVI<span style={{ color: "#16a34a" }}>.</span></Link>
+          {authenticated && (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Link href="/admin/dashboard" className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[#215241]">
+                Dashboard
+              </Link>
+              <button onClick={signOut} style={{ border: "1px solid #ddd", background: "#fff", borderRadius: 9, padding: "10px 15px", cursor: "pointer" }}>Sign out</button>
+            </div>
+          )}
         </header>
 
         {!authenticated ? (
           <section style={{ background: "#fff", border: "1px solid #e8e8e5", borderRadius: 18, padding: 28, maxWidth: 440, margin: "8vh auto" }}>
             <p style={{ color: "#16a34a", fontSize: 12, fontWeight: 800, letterSpacing: 1.4 }}>ZAYVI STORE</p>
             <h1 style={{ fontSize: 28, margin: "8px 0" }}>Admin sign in</h1>
-            <p style={{ color: "#666", lineHeight: 1.6, fontSize: 14, marginBottom: 24 }}>Sign in to manage product images and store assets.</p>
+            <p style={{ color: "#666", lineHeight: 1.6, fontSize: 14, marginBottom: 24 }}>Sign in to manage your Zayvi store.</p>
             <form onSubmit={signIn}>
               <label htmlFor="admin-password" style={{ display: "block", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Admin password</label>
               <input id="admin-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d9d9d5", borderRadius: 10, padding: 14, fontSize: 16, marginBottom: 16 }} />
