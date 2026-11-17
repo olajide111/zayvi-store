@@ -5225,7 +5225,21 @@ async function listDiscoveryCandidates(status = "pending_review") {
         approvedAt: row.approved_at,
         rejectedAt: row.rejected_at,
         createdAt: row.created_at,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        qualityFlags: [
+          ...(row.image_url ? [] : ["missing_image"]),
+          ...(row.unit_cost === null ? ["missing_unit_cost"] : []),
+          ...(row.stock_status === "unknown" ? ["unknown_stock"] : []),
+          ...(row.stock_status === "out_of_stock" ? ["out_of_stock"] : []),
+          ...(row.potential_duplicate_product_id ? ["potential_duplicate"] : [])
+        ],
+        potentialDuplicate: row.potential_duplicate_product_id
+          ? {
+              productId: row.potential_duplicate_product_id,
+              productName: row.potential_duplicate_product_name,
+              matchType: row.potential_duplicate_match_type
+            }
+          : null
       }));
     });
   } finally {
