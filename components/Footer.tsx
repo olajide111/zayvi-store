@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
+import { contentUrl, type ContentMarket } from "@/lib/storefront-content";
+
 type Props = {
-  onPage: (key: string) => void;
+  market: ContentMarket;
   onShopAll: () => void;
 };
 
-export default function Footer({ onPage, onShopAll }: Props) {
+export default function Footer({ market, onShopAll }: Props) {
   const cols = [
     {
       title: "Shop",
@@ -20,19 +23,21 @@ export default function Footer({ onPage, onShopAll }: Props) {
     {
       title: "Help",
       items: [
-        { label: "Shipping & Returns", action: () => onPage("shipping") },
-        { label: "FAQs", action: () => onPage("faqs") },
-        { label: "Order Tracking", action: () => onPage("tracking") },
-        { label: "Contact Us", action: () => onPage("contact") },
+        { label: "Shipping information", href: contentUrl(market, "shipping") },
+        { label: "FAQs", href: contentUrl(market, "faqs") },
+        { label: "Order Tracking", href: contentUrl(market, "tracking") },
+        { label: "Contact Us", href: contentUrl(market, "contact") },
       ],
     },
     {
       title: "Company",
       items: [
-        { label: "About Us", action: () => onPage("about") },
-        { label: "Privacy", action: () => onPage("privacy") },
-        { label: "Returns Policy", action: () => onPage("returns") },
-        { label: "Affiliate", action: () => onPage("affiliate") },
+        { label: "About Us", href: contentUrl(market, "about") },
+        { label: "Privacy", href: contentUrl(market, "privacy") },
+        { label: "Returns Policy", href: contentUrl(market, "returns") },
+        { label: "Terms of sale", href: contentUrl(market, "terms") },
+        { label: "Blog & guides", href: contentUrl(market) },
+        { label: "Affiliate", href: contentUrl(market, "affiliate") },
       ],
     },
   ];
@@ -53,26 +58,12 @@ export default function Footer({ onPage, onShopAll }: Props) {
             <div style={{ fontSize: 13, fontWeight: 800, color: "#111", marginBottom: 14 }}>
               {col.title}
             </div>
-            {col.items.map((item) => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                style={
-                  {
-                    display: "block",
-                    background: "none",
-                    border: "none",
-                    padding: "4px 0",
-                    fontSize: 13,
-                    color: "#666",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }
-                }
-              >
-                {item.label}
-              </button>
-            ))}
+            {col.items.map((item) => {
+              const className = "block py-1 text-left text-[13px] text-[#52635b] hover:underline";
+              return "href" in item
+                ? <Link key={item.label} href={item.href} className={className}>{item.label}</Link>
+                : <button key={item.label} type="button" onClick={item.action} className={className}>{item.label}</button>;
+            })}
           </div>
         ))}
         <div>

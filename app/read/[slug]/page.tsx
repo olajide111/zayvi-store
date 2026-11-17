@@ -1,0 +1,31 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { callZayviAwsApi } from "@/lib/aws-api";
+import { contentUrl, starterPages, type ContentCopy } from "@/lib/storefront-content";
+
+export default async function PublishedPage({ params, searchParams }: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ market?: string }>;
+}) {
+  const { slug } = await params;
+  const market = (await searchParams).market === "NG" ? "NG" : "GB";
+  if (slug.length > 80 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) notFound();
+  const result = await callZayviAwsApi(`/published-content?market=${market}&slug=${encodeURIComponent(slug)}`);
+  const published = result.ok ? (result.data as { entry?: ContentCopy })?.entry : undefined;
+  const entry = published ?? (Object.hasOwn(starterPages, slug) ? starterPages[slug] : undefined);
+  if (!entry) notFound();
+
+  return (
+    <main className="min-h-dvh bg-[#f5f7f3] px-5 py-8 text-[#172a21] sm:px-8">
+      <article className="mx-auto max-w-3xl">
+        <div className="flex flex-wrap gap-4 text-sm font-semibold text-[#215241]">
+          <Link className="underline" href={market === "NG" ? "/?market=NG" : "/"}>Zayvi Store</Link>
+          <Link className="underline" href={contentUrl(market)}>Blog &amp; guides</Link>
+        </div>
+        <h1 className="mt-7 text-3xl font-semibold tracking-tight break-words sm:text-5xl">{entry.title}</h1>
+        {entry.summary && <p className="mt-3 text-lg break-words text-[#52635b]">{entry.summary}</p>}
+        <div className="mt-6 rounded-xl border border-[#dfe6e1] bg-white p-5 text-base leading-relaxed whitespace-pre-wrap break-words sm:p-7">{entry.body}</div>
+      </article>
+    </main>
+  );
+}

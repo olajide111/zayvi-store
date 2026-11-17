@@ -1,5 +1,5 @@
 import {
-  Activity, Archive, BarChart3, Boxes, ClipboardList, CreditCard, Globe2,
+  Activity, Archive, BarChart3, Boxes, ClipboardList, CreditCard, FileText, Globe2,
   House, ImagePlus, Inbox, Layers3, Package, Palette, RotateCcw, ScanSearch, Settings,
   ShieldCheck, Truck, Users, Warehouse,
 } from "lucide-react";
@@ -38,6 +38,7 @@ export const adminGroups = [
     items: [
       { title: "Customers", href: "/admin/customers", icon: Users },
       { title: "Markets", href: "/admin/markets", icon: Globe2 },
+      { title: "Content publishing", href: "/admin/content", icon: FileText },
       { title: "Themes", href: "/admin/themes", icon: Palette },
       { title: "Product Images", href: "/admin/product-images", icon: ImagePlus },
       { title: "Shipping", href: "/admin/shipping", icon: Truck },

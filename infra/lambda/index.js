@@ -5,6 +5,9 @@ const { Pool } = require("pg");
 const { Signer } = require("@aws-sdk/rds-signer");
 const { checkoutError, deliveryMigration, normalizeDeliveryAddress, previewDeliveryQuote } = require("./checkout-delivery");
 
+const { contentMigration, queryStorefrontContent } = require("./storefront-content");
+const { reviewSupplierImage, storefrontImage } = require("./supplier-image-rights");
+
 let pool;
 
 function getPool() {
@@ -103,7 +106,7 @@ function normalizeProduct(row) {
     slug: row.slug,
     name: row.name,
     category: attributes.category || row.product_type || "Uncategorised",
-    image: attributes.image || "",
+    image: storefrontImage(attributes, row.market_code),
     emoji: attributes.emoji || "",
     desc: attributes.desc || "",
     longDesc: attributes.longDesc || "",
@@ -7228,9 +7231,11 @@ async function approveDiscoveryCandidate(candidateId, input) {
       const slug =
         `${slugBase}-${crypto.randomBytes(3).toString("hex")}`;
 
+      const { image, imageRights } = reviewSupplierImage(candidate, input);
       const attributes = {
         category: candidate.category,
-        image: candidate.image_url || "",
+        image,
+        ...(imageRights ? { imageRights } : {}),
         desc: candidate.description || "",
         longDesc: candidate.description || "",
         discoverySource: "supplier_feed",
@@ -7419,7 +7424,8 @@ async function approveDiscoveryCandidate(candidateId, input) {
           customerPrice,
           currency: targetCurrency,
           reviewNote,
-          duplicateReviewConfirmed: confirmDuplicateReview
+          duplicateReviewConfirmed: confirmDuplicateReview,
+          ...(imageRights ? { imageRights } : {})
         }
       });
 
@@ -7589,6 +7595,12 @@ const schemaMigrationDefinitions = [
     feature: "Checkout delivery",
     description: "Delivery address snapshots and market shipping fees for Preview draft orders.",
     probe: { type: "column", table: "commerce_orders", column: "delivery_address" }
+  },
+  {
+    name: contentMigration,
+    feature: "Storefront publishing",
+    description: "Market-specific page and article drafts with explicit publication.",
+    probe: { type: "table", table: "commerce_storefront_content" }
   }
 ];
 
@@ -7642,6 +7654,10 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if (/\/(store-content|published-content)$/.test(routePath)) {
+    return [contentMigration];
+  }
+
   if (routePath.endsWith("/delivery-settings")) {
     return [deliveryMigration];
   }
@@ -7753,7 +7769,7 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (/\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)) {
+  if (/\/discovery-candidates\/[0-9a-f-]{36}\/(approve|approve-with-image-review|reject)$/i.test(routePath)) {
     return [
       "0012_supplier_registry.sql",
       "0017_supplier_feed_discovery.sql",
@@ -11769,7 +11785,7 @@ exports.handler = async (event, context) => {
 
   if (
     method === "POST" &&
-    /\/discovery-candidates\/[0-9a-f-]{36}\/approve$/i.test(routePath)
+    /\/discovery-candidates\/[0-9a-f-]{36}\/(approve|approve-with-image-review)$/i.test(routePath)
   ) {
     try {
       const parts = routePath.split("/").filter(Boolean);
@@ -12484,6 +12500,20 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "order_update_failed"
+      });
+    }
+  }
+
+  const adminContentRoute = routePath.endsWith("/store-content");
+  const publicContentRoute = routePath.endsWith("/published-content");
+  if ((adminContentRoute && ["GET", "POST"].includes(method)) || (publicContentRoute && method === "GET")) {
+    try {
+      const input = method === "POST" ? parseBody(event) : event?.queryStringParameters;
+      const operation = method === "POST" ? "write" : publicContentRoute ? "public" : "admin";
+      return response(200, await queryStorefrontContent({ getPool, withTenant }, input, operation));
+    } catch (error) {
+      return response(error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Storefront content is unavailable."
       });
     }
   }

@@ -18,64 +18,6 @@ const STORE_COLOR = "#171714";
 const CART_STORAGE_KEY = "zayvi-cart-v2";
 const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v2";
 
-const PAGES: Record<string, { title: string; body: string }> = {
-  privacy: {
-    title: "Privacy Policy",
-    body: "Last updated: March 2025\n\nZAYVI is committed to protecting your privacy. We collect name, email and shipping address only to fulfil orders. Payment is handled securely — we never store card details.\n\nWe do not sell your data. Contact hello@zayvi.store for any requests.",
-  },
-  returns: {
-    title: "Returns Policy",
-    body: "Our returns terms are being finalised and will be published before purchasing is enabled. Please check back for the policy that applies to your destination market.",
-  },
-  shipping: {
-    title: "Shipping Information",
-    body: "Shipping availability, delivery estimates and charges will be confirmed for each destination market before checkout is enabled. No delivery estimate is currently being offered.",
-  },
-  tracking: {
-    title: "Track Your Order",
-    body: "Check your email for the tracking link once your order ships. Allow 24–48 hours for tracking to update.\n\nNeed help? Email hello@zayvi.store with your order number.",
-  },
-  contact: {
-    title: "Contact Us",
-    body: "Email: hello@zayvi.store\n\nWe aim to reply within 24 hours on business days. Include your order number for the fastest help.",
-  },
-  faqs: {
-    title: "FAQs",
-    body: "The store is in preview while products, market availability, delivery terms and returns policies are being verified. Purchasing is not currently enabled.",
-  },
-  about: {
-    title: "About ZAYVI",
-    body: "Zayvi is developing a considered retail experience for travel, everyday carry and daily living. The catalogue shown here is a design preview, not a live offer for sale.",
-  },
-  affiliate: {
-    title: "Affiliate Programme",
-    body: "Earn commission by sharing ZAYVI products. Email hello@zayvi.store to apply.",
-  },
-};
-
-function PageModal({ pageKey, onClose }: { pageKey: string; onClose: () => void }) {
-  const p = PAGES[pageKey];
-  if (!p) return null;
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 1400, backdropFilter: "blur(4px)" }} />
-      <div style={{ position: "fixed", inset: 0, zIndex: 1401, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 32px 80px rgba(0,0,0,.3)" }}>
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#fff" }}>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>{p.title}</div>
-            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid #eee", background: "#fafafa", cursor: "pointer" }}>✕</button>
-          </div>
-          <div style={{ padding: 24 }}>
-            {p.body.split("\n\n").map((para, i) => (
-              <p key={i} style={{ fontSize: 14, color: "#555", lineHeight: 1.8, marginBottom: 16, whiteSpace: "pre-line" }}>{para}</p>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 export default function Home() {
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [marketCode, setMarketCode] = useState<"GB" | "NG">("GB");
@@ -91,7 +33,6 @@ export default function Home() {
   const [cat, setCat] = useState("All");
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [page, setPage] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const bestRef = useRef<HTMLDivElement>(null);
 
@@ -479,7 +420,7 @@ export default function Home() {
       </section>
 
       <Newsletter />
-      <Footer onPage={setPage} onShopAll={() => { setCat("All"); scrollToGrid(); }} />
+      <Footer market={marketCode} onShopAll={() => { setCat("All"); scrollToGrid(); }} />
 
       <CartDrawer
         cart={cart}
@@ -495,7 +436,6 @@ export default function Home() {
 
       <QuickView product={qv} open={!!qv} onClose={() => setQv(null)} onAdd={addToCart} />
 
-      {page && <PageModal pageKey={page} onClose={() => setPage(null)} />}
 
       {toast && (
         <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "12px 24px", borderRadius: 40, fontSize: 13, fontWeight: 700, zIndex: 9999, boxShadow: "0 8px 28px rgba(0,0,0,.2)" }}>
