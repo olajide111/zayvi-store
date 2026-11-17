@@ -5783,6 +5783,12 @@ const schemaMigrationDefinitions = [
       table: "commerce_supplier_feed_batches",
       column: "payload_checksum"
     }
+  },
+  {
+    name: "0019_vendor_portal_access.sql",
+    feature: "Vendor portal",
+    description: "Invite-only supplier users and supplier-scoped portal access.",
+    probe: { type: "table", table: "commerce_supplier_users" }
   }
 ];
 
@@ -5908,6 +5914,16 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
+  if (
+    routePath.includes("/supplier-users") ||
+    routePath.includes("/vendor-portal")
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0019_vendor_portal_access.sql"
+    ];
+  }
+
   return [];
 }
 
@@ -5942,6 +5958,602 @@ async function getSystemReadiness() {
       latestAppliedMigration:
         readyNames.length > 0 ? readyNames[readyNames.length - 1] : null
     };
+  } finally {
+    client.release();
+  }
+}
+
+
+async function listSupplierUsers(supplierId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            u.id,
+            u.supplier_id,
+            u.email,
+            u.display_name,
+            u.role,
+            u.status,
+            u.invite_expires_at,
+            u.activated_at,
+            u.last_login_at,
+            u.revoked_at,
+            u.created_at,
+            u.updated_at
+          FROM commerce_supplier_users u
+          WHERE u.tenant_id = $1
+            AND u.supplier_id = $2
+          ORDER BY u.created_at ASC
+        `,
+        [tenantId, supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        supplierId: row.supplier_id,
+        email: row.email,
+        displayName: row.display_name,
+        role: row.role,
+        status: row.status,
+        inviteExpiresAt: row.invite_expires_at,
+        activatedAt: row.activated_at,
+        lastLoginAt: row.last_login_at,
+        revokedAt: row.revoked_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function createSupplierUserInvite(input) {
+  const supplierId = String(input?.supplierId || "").trim();
+  const email = String(input?.email || "").trim().toLowerCase();
+  const displayName = String(input?.displayName || "").trim().slice(0, 160) || null;
+  const role = String(input?.role || "editor").trim();
+  const inviteTokenHash = String(input?.inviteTokenHash || "").trim();
+  const inviteExpiresAt = input?.inviteExpiresAt
+    ? new Date(input.inviteExpiresAt)
+    : null;
+
+  if (!/^[0-9a-f-]{36}$/i.test(supplierId)) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const error = new Error("A valid vendor email is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["owner", "editor", "viewer"].includes(role)) {
+    const error = new Error("Unsupported vendor role.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[a-f0-9]{64}$/i.test(inviteTokenHash)) {
+    const error = new Error("A valid invite token hash is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!inviteExpiresAt || Number.isNaN(inviteExpiresAt.getTime())) {
+    const error = new Error("A valid invite expiry is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const supplierResult = await tx.query(
+        `
+          SELECT id, name, status
+          FROM commerce_suppliers
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, supplierId]
+      );
+
+      if (supplierResult.rowCount === 0) {
+        const error = new Error("Supplier not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      if (supplierResult.rows[0].status === "archived") {
+        const error = new Error("Archived suppliers cannot receive portal invitations.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const result = await tx.query(
+        `
+          INSERT INTO commerce_supplier_users (
+            tenant_id,
+            supplier_id,
+            email,
+            display_name,
+            role,
+            status,
+            invite_token_hash,
+            invite_expires_at
+          )
+          VALUES ($1,$2,$3,$4,$5,'invited',$6,$7)
+          ON CONFLICT (tenant_id, supplier_id, email)
+          DO UPDATE SET
+            display_name = EXCLUDED.display_name,
+            role = EXCLUDED.role,
+            status = 'invited',
+            invite_token_hash = EXCLUDED.invite_token_hash,
+            invite_expires_at = EXCLUDED.invite_expires_at,
+            activated_at = NULL,
+            revoked_at = NULL,
+            updated_at = now()
+          RETURNING id, email, display_name, role, status, invite_expires_at
+        `,
+        [
+          tenantId,
+          supplierId,
+          email,
+          displayName,
+          role,
+          inviteTokenHash,
+          inviteExpiresAt.toISOString()
+        ]
+      );
+
+      return {
+        ...result.rows[0],
+        supplierId,
+        supplierName: supplierResult.rows[0].name
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function activateSupplierUserInvite(inviteTokenHash) {
+  if (!/^[a-f0-9]{64}$/i.test(String(inviteTokenHash || ""))) {
+    const error = new Error("A valid vendor invite token is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            u.id,
+            u.supplier_id,
+            u.email,
+            u.display_name,
+            u.role,
+            u.status,
+            u.invite_expires_at,
+            s.name AS supplier_name,
+            s.market_code,
+            s.status AS supplier_status,
+            s.verification_status
+          FROM commerce_supplier_users u
+          JOIN commerce_suppliers s
+            ON s.tenant_id = u.tenant_id
+           AND s.id = u.supplier_id
+          WHERE u.tenant_id = $1
+            AND u.invite_token_hash = $2
+          FOR UPDATE
+        `,
+        [tenantId, inviteTokenHash]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Vendor invitation is invalid or has already been used.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const user = result.rows[0];
+
+      if (user.status !== "invited") {
+        const error = new Error("Vendor invitation is no longer active.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (
+        !user.invite_expires_at ||
+        new Date(user.invite_expires_at).getTime() < Date.now()
+      ) {
+        const error = new Error("Vendor invitation has expired.");
+        error.statusCode = 410;
+        throw error;
+      }
+
+      if (user.supplier_status !== "active") {
+        const error = new Error("Supplier account is not active.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_supplier_users
+          SET
+            status = 'active',
+            invite_token_hash = NULL,
+            invite_expires_at = NULL,
+            activated_at = COALESCE(activated_at, now()),
+            last_login_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, user.id]
+      );
+
+      return {
+        accountId: user.id,
+        supplierId: user.supplier_id,
+        supplierName: user.supplier_name,
+        marketCode: user.market_code,
+        verificationStatus: user.verification_status,
+        email: user.email,
+        displayName: user.display_name,
+        role: user.role
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function revokeSupplierUser(accountId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(accountId || ""))) {
+    const error = new Error("A valid supplier-user id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          UPDATE commerce_supplier_users
+          SET
+            status = 'revoked',
+            invite_token_hash = NULL,
+            invite_expires_at = NULL,
+            revoked_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $1
+            AND id = $2
+            AND status <> 'revoked'
+          RETURNING id, supplier_id, email
+        `,
+        [tenantId, accountId]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Active or invited supplier user not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      return {
+        accountId: result.rows[0].id,
+        supplierId: result.rows[0].supplier_id,
+        email: result.rows[0].email,
+        status: "revoked"
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function getVendorPortalContext(accountId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(accountId || ""))) {
+    const error = new Error("A valid vendor account id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const accountResult = await tx.query(
+        `
+          SELECT
+            u.id,
+            u.supplier_id,
+            u.email,
+            u.display_name,
+            u.role,
+            u.status,
+            s.name AS supplier_name,
+            s.supplier_code,
+            s.market_code,
+            s.verification_status,
+            s.status AS supplier_status
+          FROM commerce_supplier_users u
+          JOIN commerce_suppliers s
+            ON s.tenant_id = u.tenant_id
+           AND s.id = u.supplier_id
+          WHERE u.tenant_id = $1
+            AND u.id = $2
+          LIMIT 1
+        `,
+        [tenantId, accountId]
+      );
+
+      if (accountResult.rowCount === 0 || accountResult.rows[0].status !== "active") {
+        const error = new Error("Vendor session is no longer active.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const account = accountResult.rows[0];
+
+      if (account.supplier_status !== "active") {
+        const error = new Error("Supplier account is paused or archived.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const offersResult = await tx.query(
+        `
+          SELECT
+            so.id,
+            so.supplier_sku,
+            so.currency_code,
+            so.unit_cost,
+            so.minimum_order_quantity,
+            so.lead_time_days,
+            so.stock_status,
+            so.external_stock_quantity,
+            so.source_updated_at,
+            so.status,
+            cp.name AS product_name,
+            cp.canonical_code
+          FROM commerce_supplier_offers so
+          JOIN tenant_catalogue_products tcp
+            ON tcp.tenant_id = so.tenant_id
+           AND tcp.id = so.tenant_catalogue_product_id
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          WHERE so.tenant_id = $1
+            AND so.supplier_id = $2
+            AND so.status <> 'archived'
+          ORDER BY cp.name ASC
+        `,
+        [tenantId, account.supplier_id]
+      );
+
+      await tx.query(
+        `
+          UPDATE commerce_supplier_users
+          SET last_login_at = now(), updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, account.id]
+      );
+
+      return {
+        account: {
+          id: account.id,
+          supplierId: account.supplier_id,
+          supplierName: account.supplier_name,
+          supplierCode: account.supplier_code,
+          marketCode: account.market_code,
+          verificationStatus: account.verification_status,
+          email: account.email,
+          displayName: account.display_name,
+          role: account.role
+        },
+        offers: offersResult.rows.map((row) => ({
+          id: row.id,
+          supplierSku: row.supplier_sku,
+          productName: row.product_name,
+          canonicalCode: row.canonical_code,
+          currency: row.currency_code,
+          unitCost: row.unit_cost === null ? null : Number(row.unit_cost),
+          minimumOrderQuantity: Number(row.minimum_order_quantity),
+          leadTimeDays:
+            row.lead_time_days === null ? null : Number(row.lead_time_days),
+          stockStatus: row.stock_status,
+          externalStockQuantity:
+            row.external_stock_quantity === null
+              ? null
+              : Number(row.external_stock_quantity),
+          sourceUpdatedAt: row.source_updated_at,
+          status: row.status
+        }))
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function updateVendorPortalOffer(accountId, offerId, input) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(accountId || ""))) {
+    const error = new Error("A valid vendor account id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[0-9a-f-]{36}$/i.test(String(offerId || ""))) {
+    const error = new Error("A valid supplier offer id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const unitCost =
+    input?.unitCost === null || input?.unitCost === undefined || input?.unitCost === ""
+      ? null
+      : Number(input.unitCost);
+  const minimumOrderQuantity = Number(input?.minimumOrderQuantity ?? 1);
+  const leadTimeDays =
+    input?.leadTimeDays === null ||
+    input?.leadTimeDays === undefined ||
+    input?.leadTimeDays === ""
+      ? null
+      : Number(input.leadTimeDays);
+  const stockStatus = String(input?.stockStatus || "unknown").trim();
+  const externalStockQuantity =
+    input?.externalStockQuantity === null ||
+    input?.externalStockQuantity === undefined ||
+    input?.externalStockQuantity === ""
+      ? null
+      : Number(input.externalStockQuantity);
+
+  if (unitCost !== null && (!Number.isFinite(unitCost) || unitCost < 0)) {
+    const error = new Error("Unit cost must be non-negative.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Number.isSafeInteger(minimumOrderQuantity) || minimumOrderQuantity < 1) {
+    const error = new Error("MOQ must be a positive whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    leadTimeDays !== null &&
+    (!Number.isSafeInteger(leadTimeDays) || leadTimeDays < 0)
+  ) {
+    const error = new Error("Lead time must be a non-negative whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["unknown","in_stock","limited","out_of_stock","preorder"].includes(stockStatus)) {
+    const error = new Error("Unsupported stock status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    externalStockQuantity !== null &&
+    (!Number.isSafeInteger(externalStockQuantity) || externalStockQuantity < 0)
+  ) {
+    const error = new Error("Stock quantity must be a non-negative whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const accountResult = await tx.query(
+        `
+          SELECT id, supplier_id, role, status
+          FROM commerce_supplier_users
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, accountId]
+      );
+
+      if (accountResult.rowCount === 0 || accountResult.rows[0].status !== "active") {
+        const error = new Error("Vendor session is no longer active.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const account = accountResult.rows[0];
+
+      if (account.role === "viewer") {
+        const error = new Error("Viewer accounts cannot change supplier offers.");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const result = await tx.query(
+        `
+          UPDATE commerce_supplier_offers
+          SET
+            unit_cost = $1,
+            minimum_order_quantity = $2,
+            lead_time_days = $3,
+            stock_status = $4,
+            external_stock_quantity = $5,
+            source_updated_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $6
+            AND id = $7
+            AND supplier_id = $8
+            AND status = 'active'
+          RETURNING
+            id,
+            unit_cost,
+            minimum_order_quantity,
+            lead_time_days,
+            stock_status,
+            external_stock_quantity,
+            source_updated_at
+        `,
+        [
+          unitCost,
+          minimumOrderQuantity,
+          leadTimeDays,
+          stockStatus,
+          externalStockQuantity,
+          tenantId,
+          offerId,
+          account.supplier_id
+        ]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Active supplier offer not found for this vendor.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const row = result.rows[0];
+
+      return {
+        id: row.id,
+        unitCost: row.unit_cost === null ? null : Number(row.unit_cost),
+        minimumOrderQuantity: Number(row.minimum_order_quantity),
+        leadTimeDays:
+          row.lead_time_days === null ? null : Number(row.lead_time_days),
+        stockStatus: row.stock_status,
+        externalStockQuantity:
+          row.external_stock_quantity === null
+            ? null
+            : Number(row.external_stock_quantity),
+        sourceUpdatedAt: row.source_updated_at
+      };
+    });
   } finally {
     client.release();
   }
@@ -7428,6 +8040,153 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_verification_update_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/supplier-users")) {
+    try {
+      const supplierId = event?.queryStringParameters?.supplierId || "";
+      const users = await listSupplierUsers(supplierId);
+      return response(200, {
+        source: "postgresql",
+        total: users.length,
+        users
+      });
+    } catch (error) {
+      console.error("Supplier-user list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_users_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/supplier-users/invite")) {
+    try {
+      const invite = await createSupplierUserInvite(parseBody(event));
+      return response(201, {
+        source: "postgresql",
+        invite
+      });
+    } catch (error) {
+      console.error("Supplier-user invite failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_user_invite_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/supplier-users\/[0-9a-f-]{36}\/revoke$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const accountId = parts[parts.length - 2];
+      const revoked = await revokeSupplierUser(accountId);
+      return response(200, {
+        source: "postgresql",
+        revoked
+      });
+    } catch (error) {
+      console.error("Supplier-user revoke failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_user_revoke_failed"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/vendor-portal/activate")) {
+    try {
+      const body = parseBody(event);
+      const account = await activateSupplierUserInvite(
+        String(body?.inviteTokenHash || "")
+      );
+      return response(200, {
+        source: "postgresql",
+        account
+      });
+    } catch (error) {
+      console.error("Vendor invite activation failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_invite_activation_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/vendor-portal/context")) {
+    try {
+      const accountId = event?.queryStringParameters?.accountId || "";
+      const portal = await getVendorPortalContext(accountId);
+      return response(200, {
+        source: "postgresql",
+        portal
+      });
+    } catch (error) {
+      console.error("Vendor portal context failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_portal_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "PATCH" &&
+    /\/vendor-portal\/offers\/[0-9a-f-]{36}$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const offerId = parts[parts.length - 1];
+      const body = parseBody(event);
+      const offer = await updateVendorPortalOffer(
+        String(body?.accountId || ""),
+        offerId,
+        body
+      );
+      return response(200, {
+        source: "postgresql",
+        offer
+      });
+    } catch (error) {
+      console.error("Vendor portal offer update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_offer_update_failed"
       });
     }
   }
