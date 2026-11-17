@@ -412,6 +412,16 @@ resource "aws_apigatewayv2_stage" "default" {
   name        = "$default"
   auto_deploy = true
 
+  dynamic "route_settings" {
+    for_each = aws_apigatewayv2_route.kredal_webhook
+
+    content {
+      route_key              = route_settings.value.route_key
+      throttling_burst_limit = 10
+      throttling_rate_limit  = 5
+    }
+  }
+
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api.arn
     format = jsonencode({

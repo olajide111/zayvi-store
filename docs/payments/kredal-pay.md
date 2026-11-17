@@ -201,3 +201,14 @@ Kredal retries webhook delivery, but Zayvi also supports catch-up from:
 `GET /v1/kpay/events?after=<last sequence>`
 
 The admin Payments page starts from the highest locally stored sequence and processes returned pages in order. Existing event ids remain idempotent, and stale sequences are ignored.
+
+### Receive webhooks while Vercel Preview is protected
+
+The Preview AWS HTTP API can receive `POST /api/payments/kredal/webhook` directly. The gateway sends only this exact route to the signature-verifying Lambda. The default commerce route still requires AWS IAM. The receiver accepts only signed test-mode events and forwards them to the existing commerce Lambda and ledger.
+
+1. In AWS Secrets Manager in the Preview account and region, store the Kredal **test webhook signing secret** as plain text using the default Secrets Manager encryption key. Supply the complete secret ARN as the Terraform input `kredal_preview_webhook_secret_arn` in the existing Preview configuration. Keep that ARN in the Preview deployment inputs for future plans. The secret value stays in Secrets Manager.
+2. From the existing Preview Terraform workspace, save and review a plan with the same existing Preview variables. Check for the webhook route, its Lambda, logging, and scoped permissions. If the plan also proposes unrelated commerce, database, or bootstrap changes, resolve those before applying it.
+3. Apply the reviewed Preview plan and run `terraform output -raw kredal_preview_webhook_url`. Register that output in Kredal's test webhook settings with the matching signature secret.
+4. Send an unsigned POST to that URL. Expect HTTP 401 and no ledger entry. Then run one test checkout, simulate payment, and close checkout without returning. Verify the order reaches **Paid** and its event is **Applied**. Check the webhook Lambda logs if Kredal reports an error.
+
+The receiver is disabled when the secret ARN is omitted. Keep Vercel Deployment Protection enabled and use the AWS URL for machine-to-machine delivery.
