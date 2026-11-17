@@ -15,6 +15,7 @@ const more = [
   { label: "Sourcing", href: "/admin/sourcing" },
   { label: "Replenishment", href: "/admin/replenishment" },
   { label: "Purchase Orders", href: "/admin/purchase-orders" },
+  { label: "Discovery", href: "/admin/discovery" },
   { label: "Returns", href: "/admin/returns" },
   { label: "Customers", href: "/admin/customers" },
   { label: "Markets", href: "/admin/markets" },
