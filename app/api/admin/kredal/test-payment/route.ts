@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasAdminSession } from "@/lib/admin-auth";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { kredalTestReturnPath } from "@/lib/kredal-test-return";
 import { reconcileKredalTestPayment } from "@/lib/kredal-test-reconciliation";
 import {
   cancelKredalPayment,
@@ -21,6 +22,18 @@ function requireTestMode() {
   if (process.env.KREDAL_MODE !== "test") {
     throw new Error("KREDAL_MODE must be set to test.");
   }
+}
+
+function testCheckoutOrigin(request: NextRequest) {
+  const host = request.headers.get("host");
+  const isPreview = process.env.VERCEL_ENV === "preview";
+  if (host && /^[a-z0-9][a-z0-9.-]*(?::[0-9]{1,5})?$/i.test(host)) {
+    const protocol = isPreview ? "https:" : request.nextUrl.protocol;
+    return `${protocol}//${host}`;
+  }
+
+  const deployment = isPreview ? process.env.VERCEL_URL : undefined;
+  return deployment ? `https://${deployment}` : request.nextUrl.origin;
 }
 
 function toMinorUnits(amount: number) {
@@ -184,10 +197,7 @@ export async function POST(request: NextRequest) {
       idempotencyKey,
       description: "ZAYVI test order " + order.orderNumber,
       customerEmail: order.customerEmail,
-      callbackUrl:
-        (process.env.NEXT_PUBLIC_STORE_URL || request.nextUrl.origin) +
-        "/admin/payments?kredal_return=1&order_id=" +
-        encodeURIComponent(order.id),
+      callbackUrl: new URL(kredalTestReturnPath(order.id), testCheckoutOrigin(request)).href,
       metadata: {
         zayvi_order_id: order.id,
         mode: "test",

@@ -3,8 +3,10 @@
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { returnedKredalOrderId } from "@/lib/kredal-test-return";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 type ConnectionResponse = {
   storeId?: string;
@@ -63,17 +65,31 @@ type TestPaymentResult = {
 };
 
 export default function AdminPaymentsPage() {
+  return (
+    <Suspense fallback={<p className="p-6 text-sm text-gray-600">Loading payments…</p>}>
+      <PaymentsReturn />
+    </Suspense>
+  );
+}
+
+function PaymentsReturn() {
+  const params = useSearchParams();
+  const returnedOrder = params.get("kredal_return") === "1" ? returnedKredalOrderId(params.get("order_id")) : "";
+  return <PaymentsWorkspace key={returnedOrder} returnedOrder={returnedOrder} />;
+}
+
+function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
   const [connection, setConnection] = useState<ConnectionResponse | null>(null);
   const [events, setEvents] = useState<KredalEvent[]>([]);
   const [nigeriaOrders, setNigeriaOrders] = useState<OrderSummary[]>([]);
-  const [orderId, setOrderId] = useState("");
+  const [orderId, setOrderId] = useState(returnedOrder);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [testPayment, setTestPayment] = useState<TestPaymentResult | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -98,7 +114,9 @@ export default function AdminPaymentsPage() {
         eventResponse.status === 401 ||
         ordersResponse.status === 401
       ) {
-        window.location.href = "/admin";
+        const params = new URLSearchParams({ next: "payments" });
+        if (returnedOrder) params.set("order_id", returnedOrder);
+        window.location.replace("/admin?" + params);
         return;
       }
 
@@ -132,19 +150,17 @@ export default function AdminPaymentsPage() {
       setEvents(Array.isArray(eventPayload.events) ? eventPayload.events : []);
       setNigeriaOrders(ngnOrders);
 
-      if (!orderId && ngnOrders.length === 1) {
-        setOrderId(ngnOrders[0].id);
-      }
+      if (ngnOrders.length === 1) setOrderId((current) => current || ngnOrders[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load payments.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [returnedOrder]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   async function connectKredal() {
     setWorking("connect");
@@ -461,11 +477,20 @@ export default function AdminPaymentsPage() {
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
           <h2 className="text-sm font-semibold">Kredal end-to-end test</h2>
+          {returnedOrder && orderId === returnedOrder && (
+            <p className="mt-2 rounded-lg bg-[#edf4ee] p-3 text-sm text-[#215241]">
+              If you just finished in Kredal, choose Verify payment for this order. Refund test payment becomes available once Zayvi confirms it is paid.
+            </p>
+          )}
           <p className="mt-1 text-xs leading-5 text-gray-500">
             Use an existing Preview Nigeria order. Zayvi reads the amount from
             PostgreSQL, sends the exact NGN total to Kredal in kobo, and stores
             the payment attempt before any status can affect the order.
           </p>
+
+          {!hasOrder && !loading && (
+            <p className="mt-2 text-xs text-[#52635b]">Select the order you used in Kredal to enable Verify payment.</p>
+          )}
 
           <div className="mt-5 flex flex-wrap gap-3">
             {nigeriaOrders.length > 0 ? (
@@ -475,6 +500,7 @@ export default function AdminPaymentsPage() {
                 className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 bg-white px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               >
                 <option value="">Select a Preview Nigeria order</option>
+                {orderId && !selectedOrder && <option value={orderId}>{orderId}</option>}
                 {nigeriaOrders.map((order) => (
                   <option key={order.id} value={order.id}>
                     {order.orderNumber} · NGN {Number(order.total).toFixed(2)} · {order.paymentStatus}
