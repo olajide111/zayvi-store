@@ -18,6 +18,20 @@ type PurchaseOrderItem = {
   leadTimeDays: number | null;
 };
 
+type SupplierEvent = {
+  id: string;
+  eventType: string;
+  supplierReference?: string | null;
+  note?: string | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
+  shippedAt?: string | null;
+  expectedDeliveryAt?: string | null;
+  supplierUserEmail?: string | null;
+  supplierUserName?: string | null;
+  createdAt: string;
+};
+
 type PurchaseOrder = {
   id: string;
   poNumber: string;
@@ -32,6 +46,15 @@ type PurchaseOrder = {
   approvedAt?: string | null;
   submittedAt?: string | null;
   cancelledAt?: string | null;
+  supplierAckStatus: string;
+  supplierAcknowledgedAt?: string | null;
+  supplierReference?: string | null;
+  supplierUpdateNote?: string | null;
+  latestCarrier?: string | null;
+  latestTrackingNumber?: string | null;
+  latestShippedAt?: string | null;
+  expectedDeliveryAt?: string | null;
+  supplierEvents: SupplierEvent[];
   createdAt: string;
   updatedAt: string;
   items: PurchaseOrderItem[];
@@ -208,6 +231,60 @@ export default function PurchaseOrderDetailPage({
         {notice && <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">{notice}</div>}
         {error && <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold">Supplier response</h2>
+              <p className="mt-1 text-xs text-gray-400">
+                Supplier-reported evidence only. These updates do not approve, cancel or receive this PO.
+              </p>
+            </div>
+            <span
+              className={
+                "rounded-full px-3 py-1 text-xs font-semibold capitalize " +
+                (po.supplierAckStatus === "acknowledged"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : po.supplierAckStatus === "unable_to_fulfil"
+                    ? "bg-red-50 text-red-700"
+                    : "bg-amber-50 text-amber-700")
+              }
+            >
+              {(po.supplierAckStatus || "pending").replaceAll("_", " ")}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-4 text-xs sm:grid-cols-4">
+            <div>
+              <div className="text-gray-400">Supplier reference</div>
+              <div className="mt-1 font-semibold">{po.supplierReference || "—"}</div>
+            </div>
+            <div>
+              <div className="text-gray-400">Carrier</div>
+              <div className="mt-1 font-semibold">{po.latestCarrier || "—"}</div>
+            </div>
+            <div>
+              <div className="text-gray-400">Tracking</div>
+              <div className="mt-1 font-semibold break-all">
+                {po.latestTrackingNumber || "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-400">Expected delivery</div>
+              <div className="mt-1 font-semibold">
+                {po.expectedDeliveryAt
+                  ? new Date(po.expectedDeliveryAt).toLocaleDateString("en-GB")
+                  : "—"}
+              </div>
+            </div>
+          </div>
+
+          {po.supplierUpdateNote && (
+            <div className="mt-4 rounded-xl bg-[#fafbf9] p-3 text-xs leading-5 text-gray-600">
+              {po.supplierUpdateNote}
+            </div>
+          )}
+        </div>
+
         <div className="mt-6 grid gap-4 sm:grid-cols-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <div className="text-xs text-gray-400">Supplier status</div>
@@ -302,6 +379,52 @@ export default function PurchaseOrderDetailPage({
               );
             })}
           </div>
+        </div>
+
+        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-5 py-4">
+            <h2 className="text-sm font-semibold">Supplier event history</h2>
+          </div>
+
+          {po.supplierEvents.length === 0 ? (
+            <div className="p-8 text-center text-sm text-gray-500">
+              No supplier acknowledgements or shipment updates yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {po.supplierEvents.map((event) => (
+                <div key={event.id} className="px-5 py-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-sm font-semibold capitalize">
+                        {event.eventType.replaceAll("_", " ")}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-400">
+                        {event.supplierUserName || event.supplierUserEmail || "Supplier user"}
+                        {" · "}
+                        {new Date(event.createdAt).toLocaleString("en-GB")}
+                      </div>
+                    </div>
+                    {event.supplierReference && (
+                      <div className="text-xs text-gray-500">
+                        Ref: {event.supplierReference}
+                      </div>
+                    )}
+                  </div>
+                  {(event.carrier || event.trackingNumber) && (
+                    <div className="mt-2 text-xs text-gray-600">
+                      {[event.carrier, event.trackingNumber].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                  {event.note && (
+                    <div className="mt-2 text-xs leading-5 text-gray-500">
+                      {event.note}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {po.notes && (
