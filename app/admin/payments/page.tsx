@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { returnedKredalOrderId } from "@/lib/kredal-test-return";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 type ConnectionResponse = {
   storeId?: string;
@@ -61,8 +61,16 @@ type TestPaymentResult = {
   testMode?: boolean;
   applied?: boolean;
   message?: string;
+  state?: { orderPaymentStatus?: string };
+  payment?: { refunded_minor?: number };
   error?: string;
 };
+
+const naira = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" });
+
+function paymentLabel(status: string) {
+  return status.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
 
 export default function AdminPaymentsPage() {
   return (
@@ -83,6 +91,8 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
   const [events, setEvents] = useState<KredalEvent[]>([]);
   const [nigeriaOrders, setNigeriaOrders] = useState<OrderSummary[]>([]);
   const [orderId, setOrderId] = useState(returnedOrder);
+  const [orderSearch, setOrderSearch] = useState("");
+  const verifiedOnReturn = useRef(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -230,10 +240,10 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
     }
   }
 
-  async function paymentAction(
+  const paymentAction = useCallback(async (
     method: "POST" | "PUT" | "DELETE",
     action: string
-  ) {
+  ) => {
     if (!orderId.trim()) {
       setError("Enter a Zayvi NGN order ID first.");
       return;
@@ -278,7 +288,17 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
     } finally {
       setWorking("");
     }
-  }
+  }, [load, orderId]);
+
+  useEffect(() => {
+    if (
+      !returnedOrder || orderId !== returnedOrder || verifiedOnReturn.current ||
+      loading || working || connection?.connection?.status !== "active"
+    ) return;
+
+    verifiedOnReturn.current = true;
+    void paymentAction("PUT", "verify");
+  }, [connection, loading, orderId, paymentAction, returnedOrder, working]);
 
   async function refundTestPayment() {
     if (!orderId.trim()) {
@@ -351,6 +371,16 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
     }
   }
 
+  function selectOrder(id: string) {
+    setOrderId(id);
+    setTestPayment(null);
+    setNotice("");
+    setError("");
+  }
+
+  const visibleOrders = nigeriaOrders.filter(({ orderNumber }) =>
+    orderNumber.toLowerCase().includes(orderSearch.trim().toLowerCase())
+  );
   const selectedOrder = nigeriaOrders.find((order) => order.id === orderId);
   const hasOrder = Boolean(orderId.trim());
   const isUnpaidOrder = hasOrder && (
@@ -476,45 +506,61 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
         </div>
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
-          <h2 className="text-sm font-semibold">Kredal end-to-end test</h2>
-          {returnedOrder && orderId === returnedOrder && (
-            <p className="mt-2 rounded-lg bg-[#edf4ee] p-3 text-sm text-[#215241]">
-              If you just finished in Kredal, choose Verify payment for this order. Refund test payment becomes available once Zayvi confirms it is paid.
-            </p>
-          )}
-          <p className="mt-1 text-xs leading-5 text-gray-500">
-            Use an existing Preview Nigeria order. Zayvi reads the amount from
-            PostgreSQL, sends the exact NGN total to Kredal in kobo, and stores
-            the payment attempt before any status can affect the order.
+          <h2 className="text-sm font-semibold">Nigeria test payments</h2>
+          <p className="mt-1 text-sm text-[#52635b]">
+            Select an NGN Preview order to test checkout, verify its status or refund it.
           </p>
 
-          {!hasOrder && !loading && (
-            <p className="mt-2 text-xs text-[#52635b]">Select the order you used in Kredal to enable Verify payment.</p>
+          {nigeriaOrders.length > 0 ? (
+            <fieldset disabled={Boolean(working)} className="mt-4">
+              <legend className="sr-only">Preview Nigeria orders</legend>
+              <label className="block max-w-sm text-sm font-medium">
+                Find an order
+                <input type="search" value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)}
+                  placeholder="Order number" className="mt-1 min-h-11 w-full rounded-lg border border-[#dfe6e1] px-3 font-normal" />
+              </label>
+              <ul className="mt-3 max-h-72 divide-y divide-[#dfe6e1] overflow-y-auto rounded-xl border border-[#dfe6e1]">
+                {visibleOrders.map((order) => (
+                  <li key={order.id}>
+                    <label className={`flex min-h-12 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 p-3 hover:bg-[#f5f8f5] ${order.id === orderId ? "bg-[#edf4ee]" : ""}`}>
+                      <input type="radio" name="kredal-test-order" checked={order.id === orderId}
+                        onChange={() => selectOrder(order.id)} className="size-4 shrink-0 accent-[#215241]" />
+                      <span className="min-w-0 flex-1 break-words text-sm font-semibold">{order.orderNumber}</span>
+                      <span className="text-sm tabular-nums">{naira.format(order.total)}</span>
+                      <span className="rounded-full bg-[#f5f8f5] px-2 py-1 text-xs font-semibold text-[#215241]">{paymentLabel(order.paymentStatus)}</span>
+                    </label>
+                  </li>
+                ))}
+                {!visibleOrders.length && <li className="p-3 text-sm text-[#52635b]">No orders match your search.</li>}
+              </ul>
+            </fieldset>
+          ) : !loading && (
+            <label className="mt-4 block max-w-sm text-sm font-medium">
+              Order UUID
+              <input value={orderId} disabled={Boolean(working)} onChange={(event) => selectOrder(event.target.value)}
+                className="mt-1 min-h-11 w-full rounded-lg border border-[#dfe6e1] px-3 font-normal" />
+            </label>
           )}
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            {nigeriaOrders.length > 0 ? (
-              <select
-                value={orderId}
-                onChange={(event) => setOrderId(event.target.value)}
-                className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 bg-white px-4 py-3 text-sm outline-none focus:border-[#78927d]"
-              >
-                <option value="">Select a Preview Nigeria order</option>
-                {orderId && !selectedOrder && <option value={orderId}>{orderId}</option>}
-                {nigeriaOrders.map((order) => (
-                  <option key={order.id} value={order.id}>
-                    {order.orderNumber} · NGN {Number(order.total).toFixed(2)} · {order.paymentStatus}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={orderId}
-                onChange={(event) => setOrderId(event.target.value)}
-                placeholder="No NGN orders found — paste order UUID"
-                className="min-w-full flex-1 rounded-xl border border-gray-200 xl:min-w-0 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
-              />
-            )}
+          {hasOrder && (
+            <div className="mt-4 rounded-xl border border-[#dfe6e1] bg-[#f5f8f5] p-4">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <span className="font-semibold">{selectedOrder?.orderNumber || orderId}</span>
+                {selectedOrder && (
+                  <>
+                    <span>{naira.format(selectedOrder.total)}</span>
+                    <span className="font-semibold text-[#215241]">{paymentLabel(testPayment?.state?.orderPaymentStatus || selectedOrder.paymentStatus)}</span>
+                  </>
+                )}
+                <span className="text-xs text-[#52635b]">Test mode</span>
+              </div>
+              {typeof testPayment?.payment?.refunded_minor === "number" && testPayment.payment.refunded_minor > 0 && (
+                <p className="mt-1 text-sm text-[#52635b]">{naira.format(testPayment.payment.refunded_minor / 100)} refunded</p>
+              )}
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
               disabled={Boolean(working) || connectionStatus !== "active" || !isUnpaidOrder}
@@ -550,9 +596,12 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
           </div>
 
           {testPayment && (
-            <pre className="mt-5 overflow-x-auto rounded-xl bg-[#111814] p-4 text-xs leading-5 text-[#dfe8df]">
-              {JSON.stringify(testPayment, null, 2)}
-            </pre>
+            <details className="mt-4 rounded-lg border border-[#dfe6e1] px-3 py-2">
+              <summary className="min-h-8 cursor-pointer py-1 text-sm font-medium">Technical details</summary>
+              <pre className="mt-2 overflow-x-auto rounded-lg bg-[#111814] p-4 text-xs leading-5 text-[#dfe8df]">
+                {JSON.stringify(testPayment, null, 2)}
+              </pre>
+            </details>
           )}
         </div>
 
