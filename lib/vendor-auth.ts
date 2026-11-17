@@ -24,25 +24,28 @@ function sign(payload: string) {
     .digest("base64url");
 }
 
-export function createVendorSession(input: {
-  accountId: string;
-  supplierId: string;
-  role: VendorSession["role"];
-  email: string;
-}) {
+export function createVendorSession(
+  input: {
+    accountId: string;
+    supplierId: string;
+    role: VendorSession["role"];
+    email: string;
+  },
+  nowSeconds = Math.floor(Date.now() / 1000)
+) {
   const payload: VendorSession = {
     ...input,
-    exp: Math.floor(Date.now() / 1000) + VENDOR_SESSION_MAX_AGE,
+    exp: nowSeconds + VENDOR_SESSION_MAX_AGE,
   };
 
   const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   return `${encoded}.${sign(encoded)}`;
 }
 
-export function readVendorSession(request: NextRequest): VendorSession | null {
-  const value = request.cookies.get(VENDOR_COOKIE)?.value;
-  if (!value) return null;
-
+export function verifyVendorSessionValue(
+  value: string,
+  nowSeconds = Math.floor(Date.now() / 1000)
+): VendorSession | null {
   const [encoded, signature] = value.split(".");
   if (!encoded || !signature) return null;
 
@@ -66,7 +69,7 @@ export function readVendorSession(request: NextRequest): VendorSession | null {
       !session.email ||
       !["owner", "editor", "viewer"].includes(session.role) ||
       !Number.isSafeInteger(session.exp) ||
-      session.exp <= Math.floor(Date.now() / 1000)
+      session.exp <= nowSeconds
     ) {
       return null;
     }
@@ -75,4 +78,9 @@ export function readVendorSession(request: NextRequest): VendorSession | null {
   } catch {
     return null;
   }
+}
+
+export function readVendorSession(request: NextRequest): VendorSession | null {
+  const value = request.cookies.get(VENDOR_COOKIE)?.value;
+  return value ? verifyVendorSessionValue(value) : null;
 }
