@@ -9,6 +9,7 @@ const { contentMigration, queryStorefrontContent } = require("./storefront-conte
 const { marketsMigration, queryStorefrontMarkets, storeMarketSettings } = require("./storefront-markets");
 const { socialLinksMigration, querySocialLinks } = require("./storefront-social-links");
 const { reviewSupplierImage, storefrontImage } = require("./supplier-image-rights");
+const { mapKredalPaymentState } = require("./kredal-payment-state");
 
 let pool;
 

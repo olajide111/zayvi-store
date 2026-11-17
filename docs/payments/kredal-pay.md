@@ -180,7 +180,7 @@ Zayvi reconciles primarily from `payment_state`, with `hold_state` for held/pay-
 | --- | --- | --- | --- |
 | created | any | pending | pending |
 | pending | any | pending | pending |
-| succeeded | held/disputed | held | pending |
+| succeeded | held/disputed | authorised | pending |
 | succeeded | null/released | captured | paid |
 | failed | any | failed | failed |
 | cancelled | any | cancelled | failed |
