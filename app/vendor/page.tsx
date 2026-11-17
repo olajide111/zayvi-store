@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { parseSupplierCsv } from "@/lib/supplier-feed-csv";
+
 type VendorOffer = {
   id: string;
   supplierSku?: string | null;
@@ -30,6 +32,22 @@ type VendorPortal = {
     role: "owner" | "editor" | "viewer";
   };
   offers: VendorOffer[];
+};
+
+type FeedBatch = {
+  id: string;
+  sourceType: string;
+  sourceReference?: string | null;
+  itemCount: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  status: string;
+  rejectionDetails: Array<{
+    index: number;
+    externalProductId?: string | null;
+    errors: string[];
+  }>;
+  createdAt: string;
 };
 
 type EditState = {
@@ -67,6 +85,9 @@ export default function VendorPortalPage() {
   const [editingId, setEditingId] = useState("");
   const [edit, setEdit] = useState<EditState | null>(null);
   const [workingId, setWorkingId] = useState("");
+  const [feedText, setFeedText] = useState("[]");
+  const [feedBatches, setFeedBatches] = useState<FeedBatch[]>([]);
+  const [submittingFeed, setSubmittingFeed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -101,8 +122,38 @@ export default function VendorPortalPage() {
     }
   }
 
+  async function loadFeedHistory() {
+    try {
+      const response = await fetch("/api/vendor/feed-history", {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        window.location.href = "/vendor/access-required";
+        return;
+      }
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Unable to load supplier-feed history."
+        );
+      }
+
+      setFeedBatches(Array.isArray(payload.batches) ? payload.batches : []);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load supplier-feed history."
+      );
+    }
+  }
+
   useEffect(() => {
     void load();
+    void loadFeedHistory();
   }, []);
 
   async function saveOffer(offer: VendorOffer) {
@@ -145,6 +196,91 @@ export default function VendorPortalPage() {
       );
     } finally {
       setWorkingId("");
+    }
+  }
+
+  async function loadCsvFile(file: File) {
+    if (!portal) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      const text = await file.text();
+      const parsed = parseSupplierCsv(text);
+      const currency = portal.account.marketCode === "NG" ? "NGN" : "GBP";
+      const normalized = parsed.map((item) => ({
+        ...item,
+        currency,
+      }));
+
+      setFeedText(JSON.stringify(normalized, null, 2));
+      setNotice(
+        `${normalized.length} CSV row(s) loaded. Review the data, then submit it to Zayvi for review.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to parse supplier CSV."
+      );
+    }
+  }
+
+  async function submitFeed() {
+    if (!portal || !canEdit) return;
+
+    let items: unknown;
+    try {
+      items = JSON.parse(feedText);
+    } catch {
+      setError("Feed JSON is invalid.");
+      return;
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      setError("Supplier feed must contain at least one product.");
+      return;
+    }
+
+    const currency = portal.account.marketCode === "NG" ? "NGN" : "GBP";
+    const normalized = items.map((item) => ({
+      ...(item && typeof item === "object" ? item : {}),
+      currency,
+    }));
+
+    setSubmittingFeed(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/vendor/feed", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sourceType: "file",
+          sourceReference: "Vendor portal submission",
+          items: normalized,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to submit supplier feed.");
+      }
+
+      setNotice(
+        payload.duplicatePayload
+          ? "This exact supplier feed was already processed; no duplicate batch was created."
+          : `Feed submitted: ${payload.acceptedCount} accepted into review, ${payload.rejectedCount} rejected by validation.`
+      );
+      setFeedText("[]");
+      await loadFeedHistory();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to submit supplier feed."
+      );
+    } finally {
+      setSubmittingFeed(false);
     }
   }
 
