@@ -475,6 +475,7 @@ export default function ProductDiscoveryPage() {
             confirmDuplicateReview,
             imageDecision: imageEvidence.trim() ? "licensed" : "omit",
             imageEvidence: imageEvidence.trim(),
+            ...(imageEvidence.trim() ? { expectedImageUrl: candidate.imageUrl } : {}),
           }),
         }
       );

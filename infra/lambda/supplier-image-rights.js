@@ -3,6 +3,10 @@ function reviewSupplierImage(candidate, input) {
     return { image: "", imageRights: null };
   }
 
+  if (input.expectedImageUrl !== candidate.image_url) {
+    throw Object.assign(new Error("The supplier image changed. Reload the candidate before approving it."), { statusCode: 409 });
+  }
+
   let source;
   try {
     source = new URL(candidate.image_url);
