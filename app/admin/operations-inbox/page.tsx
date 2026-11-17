@@ -63,6 +63,7 @@ export default function OperationsInboxPage() {
   const [data, setData] = useState<InboxResponse | null>(null);
   const [severity, setSeverity] = useState("all");
   const [type, setType] = useState("all");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,9 +111,10 @@ export default function OperationsInboxPage() {
         item.title.toLowerCase().includes(term) ||
         item.detail.toLowerCase().includes(term);
 
-      return matchesSeverity && matchesType && matchesQuery;
+      const matchesOverdue = !overdueOnly || item.overdue;
+      return matchesSeverity && matchesType && matchesQuery && matchesOverdue;
     });
-  }, [data, severity, type, query]);
+  }, [data, severity, type, query, overdueOnly]);
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
@@ -159,11 +161,15 @@ export default function OperationsInboxPage() {
             <button
               key={String(value)}
               type="button"
-              onClick={() =>
-                String(label) === "Overdue"
-                  ? setSeverity("all")
-                  : setSeverity(String(value))
-              }
+              onClick={() => {
+                if (String(label) === "Overdue") {
+                  setSeverity("all");
+                  setOverdueOnly(true);
+                } else {
+                  setSeverity(String(value));
+                  setOverdueOnly(false);
+                }
+              }}
               className="rounded-2xl border border-gray-200 bg-white p-5 text-left"
             >
               <div className="text-xs text-gray-400">{String(label)}</div>
@@ -201,6 +207,14 @@ export default function OperationsInboxPage() {
             <option value="purchase_order">Purchase orders</option>
             <option value="return">Returns</option>
           </select>
+          <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={overdueOnly}
+              onChange={(event) => setOverdueOnly(event.target.checked)}
+            />
+            Overdue only
+          </label>
         </div>
 
         {loading && (
