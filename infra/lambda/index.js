@@ -3033,7 +3033,7 @@ async function getOperationsInbox() {
           title = `Send approved PO ${row.po_number}`;
         } else if (row.supplier_ack_status === "pending") {
           title = `Supplier has not acknowledged ${row.po_number}`;
-          severity = "attention";
+          severity = "action";
         } else if (row.supplier_ack_status === "unable_to_fulfil") {
           title = `Supplier cannot fulfil ${row.po_number}`;
           detail = row.supplier_update_note || detail;
@@ -3070,7 +3070,7 @@ async function getOperationsInbox() {
         } else if (row.refund_status === "pending_provider") {
           title = `Refund pending for ${row.return_number}`;
           detail = `${detail} · provider state: ${row.payment_status}`;
-          severity = "attention";
+          severity = "action";
         } else if (row.status === "received") {
           title = `Complete return ${row.return_number}`;
         }
@@ -3094,6 +3094,125 @@ async function getOperationsInbox() {
             currency: row.currency_code
           }
         });
+      }
+
+      const escalationPolicy = {
+        supplier_review: {
+          targetHours: 72,
+          urgentAfterHours: 168,
+          label: "Supplier verification review"
+        },
+        product_discovery: {
+          targetHours: 48,
+          urgentAfterHours: 168,
+          label: "Product discovery review"
+        },
+        purchase_order_draft: {
+          targetHours: 48,
+          urgentAfterHours: 120,
+          label: "Draft purchase-order review"
+        },
+        purchase_order_approved: {
+          targetHours: 24,
+          urgentAfterHours: 72,
+          label: "Approved purchase-order submission"
+        },
+        purchase_order_ack: {
+          targetHours: 24,
+          urgentAfterHours: 48,
+          label: "Supplier purchase-order acknowledgement"
+        },
+        purchase_order_unable: {
+          targetHours: 0,
+          urgentAfterHours: 0,
+          label: "Supplier unable to fulfil"
+        },
+        return_requested: {
+          targetHours: 24,
+          urgentAfterHours: 72,
+          label: "Return request review"
+        },
+        return_approved: {
+          targetHours: 48,
+          urgentAfterHours: 120,
+          label: "Approved return receipt"
+        },
+        return_refund: {
+          targetHours: 24,
+          urgentAfterHours: 72,
+          label: "Provider refund follow-up"
+        },
+        return_received: {
+          targetHours: 24,
+          urgentAfterHours: 72,
+          label: "Received return completion"
+        }
+      };
+
+      const nowMs = Date.now();
+
+      for (const item of items) {
+        let policyKey = item.type;
+
+        if (item.type === "purchase_order") {
+          if (item.metadata.supplierAckStatus === "unable_to_fulfil") {
+            policyKey = "purchase_order_unable";
+          } else if (
+            ["submitted", "partially_received"].includes(item.metadata.status) &&
+            item.metadata.supplierAckStatus === "pending"
+          ) {
+            policyKey = "purchase_order_ack";
+          } else if (item.metadata.status === "approved") {
+            policyKey = "purchase_order_approved";
+          } else {
+            policyKey = "purchase_order_draft";
+          }
+        }
+
+        if (item.type === "return") {
+          if (item.metadata.refundStatus === "pending_provider") {
+            policyKey = "return_refund";
+          } else if (item.metadata.status === "requested") {
+            policyKey = "return_requested";
+          } else if (item.metadata.status === "approved") {
+            policyKey = "return_approved";
+          } else {
+            policyKey = "return_received";
+          }
+        }
+
+        const policy = escalationPolicy[policyKey];
+        const createdAtMs = new Date(item.createdAt || 0).getTime();
+        const ageHours =
+          Number.isFinite(createdAtMs) && createdAtMs > 0
+            ? Math.max(0, (nowMs - createdAtMs) / 3600000)
+            : 0;
+
+        item.baseSeverity = item.severity;
+        item.ageHours = ageHours;
+        item.targetHours = policy?.targetHours ?? null;
+        item.urgentAfterHours = policy?.urgentAfterHours ?? null;
+        item.escalationLabel = policy?.label || null;
+        item.overdue =
+          policy?.targetHours !== undefined &&
+          ageHours >= policy.targetHours;
+        item.overdueHours =
+          item.overdue && policy?.targetHours !== undefined
+            ? Math.max(0, ageHours - policy.targetHours)
+            : 0;
+
+        if (
+          policy?.urgentAfterHours !== undefined &&
+          ageHours >= policy.urgentAfterHours
+        ) {
+          item.severity = "urgent";
+        } else if (
+          policy?.targetHours !== undefined &&
+          ageHours >= policy.targetHours &&
+          item.severity !== "urgent"
+        ) {
+          item.severity = "attention";
+        }
       }
 
       const severityRank = {
@@ -3121,8 +3240,10 @@ async function getOperationsInbox() {
           urgent: items.filter((item) => item.severity === "urgent").length,
           attention: items.filter((item) => item.severity === "attention").length,
           action: items.filter((item) => item.severity === "action").length,
-          review: items.filter((item) => item.severity === "review").length
+          review: items.filter((item) => item.severity === "review").length,
+          overdue: items.filter((item) => item.overdue).length
         },
+        escalationPolicy,
         items
       };
     });

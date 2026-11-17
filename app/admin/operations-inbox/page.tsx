@@ -6,6 +6,13 @@ type InboxItem = {
   id: string;
   type: "supplier_review" | "product_discovery" | "purchase_order" | "return";
   severity: "urgent" | "attention" | "action" | "review";
+  baseSeverity: "urgent" | "attention" | "action" | "review";
+  ageHours: number;
+  targetHours: number | null;
+  urgentAfterHours: number | null;
+  escalationLabel?: string | null;
+  overdue: boolean;
+  overdueHours: number;
   title: string;
   detail: string;
   marketCode?: string | null;
@@ -18,7 +25,17 @@ type InboxItem = {
 type InboxResponse = {
   generatedAt: string;
   total: number;
-  counts: { urgent: number; attention: number; action: number; review: number };
+  counts: {
+    urgent: number;
+    attention: number;
+    action: number;
+    review: number;
+    overdue: number;
+  };
+  escalationPolicy: Record<
+    string,
+    { targetHours: number; urgentAfterHours: number; label: string }
+  >;
   items: InboxItem[];
 };
 
@@ -36,10 +53,17 @@ function typeLabel(value: InboxItem["type"]) {
   return "Return";
 }
 
+function ageLabel(hours: number) {
+  if (hours < 1) return "<1h";
+  if (hours < 48) return Math.floor(hours) + "h";
+  return (hours / 24).toFixed(1) + "d";
+}
+
 export default function OperationsInboxPage() {
   const [data, setData] = useState<InboxResponse | null>(null);
   const [severity, setSeverity] = useState("all");
   const [type, setType] = useState("all");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -87,9 +111,10 @@ export default function OperationsInboxPage() {
         item.title.toLowerCase().includes(term) ||
         item.detail.toLowerCase().includes(term);
 
-      return matchesSeverity && matchesType && matchesQuery;
+      const matchesOverdue = !overdueOnly || item.overdue;
+      return matchesSeverity && matchesType && matchesQuery && matchesOverdue;
     });
-  }, [data, severity, type, query]);
+  }, [data, severity, type, query, overdueOnly]);
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
@@ -118,19 +143,33 @@ export default function OperationsInboxPage() {
             publish products, send purchase orders, receive inventory or process returns automatically.
             Open an item to complete the action in its controlled workspace.
           </p>
+          <p className="mt-2 max-w-4xl text-[11px] leading-5 text-blue-700">
+            Escalation is time-based and transparent: supplier verification targets 72h,
+            product discovery 48h, supplier PO acknowledgement 24h, and return/refund
+            follow-up 24h. Each item shows its own target and urgent threshold.
+          </p>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {[
             ["urgent", "Urgent", data?.counts.urgent],
             ["attention", "Attention", data?.counts.attention],
             ["action", "Action", data?.counts.action],
             ["review", "Review", data?.counts.review],
+            ["all", "Overdue", data?.counts.overdue],
           ].map(([value, label, count]) => (
             <button
               key={String(value)}
               type="button"
-              onClick={() => setSeverity(String(value))}
+              onClick={() => {
+                if (String(label) === "Overdue") {
+                  setSeverity("all");
+                  setOverdueOnly(true);
+                } else {
+                  setSeverity(String(value));
+                  setOverdueOnly(false);
+                }
+              }}
               className="rounded-2xl border border-gray-200 bg-white p-5 text-left"
             >
               <div className="text-xs text-gray-400">{String(label)}</div>
@@ -168,6 +207,14 @@ export default function OperationsInboxPage() {
             <option value="purchase_order">Purchase orders</option>
             <option value="return">Returns</option>
           </select>
+          <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={overdueOnly}
+              onChange={(event) => setOverdueOnly(event.target.checked)}
+            />
+            Overdue only
+          </label>
         </div>
 
         {loading && (
@@ -212,6 +259,38 @@ export default function OperationsInboxPage() {
                   <div>
                     <div className="text-sm font-semibold text-[#23432d]">{item.title}</div>
                     <div className="mt-1 text-xs leading-5 text-gray-500">{item.detail}</div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">
+                        age {ageLabel(item.ageHours)}
+                      </span>
+                      {item.targetHours !== null && (
+                        <span
+                          className={
+                            "rounded-full px-2 py-1 " +
+                            (item.overdue
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-gray-100 text-gray-600")
+                          }
+                        >
+                          target {ageLabel(item.targetHours)}
+                        </span>
+                      )}
+                      {item.urgentAfterHours !== null && (
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">
+                          urgent at {ageLabel(item.urgentAfterHours)}
+                        </span>
+                      )}
+                      {item.overdue && (
+                        <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+                          overdue {ageLabel(item.overdueHours)}
+                        </span>
+                      )}
+                      {item.baseSeverity !== item.severity && (
+                        <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700">
+                          escalated from {item.baseSeverity}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-xs text-gray-400 md:text-right">
                     {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB") : "—"}
