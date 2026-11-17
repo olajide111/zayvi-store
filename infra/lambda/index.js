@@ -10581,28 +10581,6 @@ exports.handler = async (event, context) => {
     }
   }
 
-  if (method === "GET" && routePath.endsWith("/returns")) {
-    try {
-      const returns = await listReturnsOverview();
-      return response(200, {
-        source: "postgresql",
-        total: returns.length,
-        returns,
-        actionsEnabled: false,
-        message:
-          "Returns and refunds are read-only in this phase. Provider refund actions remain separately controlled."
-      });
-    } catch (error) {
-      console.error("Returns overview failed:", {
-        name: error?.name,
-        message: error?.message
-      });
-      return response(500, {
-        error: "returns_unavailable"
-      });
-    }
-  }
-
   if (method === "GET" && routePath.endsWith("/payment-connections/kredal")) {
     try {
       const connection = await getKredalConnection();
