@@ -22,6 +22,7 @@ The next unapplied migrations are expected to be:
 - `0022_returns_reverse_inventory.sql`
 - `0023_vendor_purchase_order_updates.sql`
 - `0024_operations_audit.sql`
+- `0025_order_delivery_address.sql`
 
 The bootstrap runner is checksum-protected and only applies migrations not already recorded in `zayvi_schema_migrations`.
 
@@ -72,6 +73,7 @@ migrations/0021_supplier_inventory_sync.sql
 migrations/0022_returns_reverse_inventory.sql
 migrations/0023_vendor_purchase_order_updates.sql
 migrations/0024_operations_audit.sql
+migrations/0025_order_delivery_address.sql
 ```
 
 ## Initialise the existing Preview backend
@@ -104,7 +106,7 @@ Review the plan:
 terraform show -no-color zayvi-preview-migrations.tfplan
 ```
 
-Expected migration-related change: the bootstrap Lambda package/invocation may change because the packaged migration set changed.
+The bootstrap Lambda and invocation may change when the migration package changes. For checkout delivery, package the matching API Lambda from the same commit before planning and review its code update alongside the bootstrap changes.
 
 Stop if the plan proposes destructive RDS, VPC, S3, CloudFront or unrelated IAM changes.
 
@@ -116,7 +118,7 @@ terraform apply zayvi-preview-migrations.tfplan
 
 The bootstrap output should report `bootstrap_complete`.
 
-For this activation, `migrationsApplied` should include migrations 0011 through 0024 when they were not already applied.
+For this activation, `migrationsApplied` should include migrations 0011 through 0025 when they were not already applied.
 
 ## Post-apply checks
 
@@ -149,7 +151,7 @@ Then validate the Preview application:
 12. Purchase Orders loads, remains manually approved/submitted, and stock receipt writes to owned inventory.
 13. Product Discovery loads, keeps auto-publish disabled, and supplier feed imports remain review-first.
 14. Feed history records accepted/rejected rows and prevents exact supplier-payload replay.
-15. System Readiness reports migrations 0011–0024 as applied.
+15. System Readiness reports migrations 0011–0025 as applied.
 16. Vendor Portal access can issue a one-time invitation, activate a supplier-scoped session and keep viewer accounts read-only.
 17. A verified supplier can receive a revocable `feed:write` API credential, submit a test feed through `/api/vendor-feed/v1/ingest`, and see the batch enter Product Discovery without auto-publishing.
 18. A supplier can receive a separate `inventory:write` credential, submit stock snapshots through `/api/vendor-inventory/v1/sync`, and see matched/unmatched/stale results without changing owned inventory or publication.

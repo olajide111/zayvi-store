@@ -1,5 +1,6 @@
 "use client";
 
+import type { DraftOrderDetails, DraftOrderReceipt } from "@/lib/delivery";
 import { useState, useEffect, useRef } from "react";
 import type { StorefrontProduct, StorefrontProductsResponse } from "@/lib/storefront-products";
 import Header from "@/components/Header";
@@ -15,7 +16,7 @@ import Footer from "@/components/Footer";
 
 const STORE_COLOR = "#171714";
 const CART_STORAGE_KEY = "zayvi-cart-v2";
-const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v1";
+const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v2";
 
 const PAGES: Record<string, { title: string; body: string }> = {
   privacy: {
@@ -298,15 +299,12 @@ export default function Home() {
   const filtered =
     cat === "All" ? products : products.filter((p) => p.category === cat);
 
-  const createPreviewDraftOrder = async (details: {
-    customerName: string;
-    customerEmail: string;
-    phone?: string;
-  }) => {
-    const requestFingerprint = JSON.stringify({
+  const createPreviewDraftOrder = async (details: DraftOrderDetails): Promise<DraftOrderReceipt> => {
+    const request = JSON.stringify({
       customerName: details.customerName.trim(),
       customerEmail: details.customerEmail.trim().toLowerCase(),
       phone: details.phone?.trim() || null,
+      deliveryAddress: details.deliveryAddress,
       marketCode,
       items: cart.map((item) => ({
         id: item.id,
@@ -315,6 +313,10 @@ export default function Home() {
         selectedSize: item.selectedSize || null,
       })),
     });
+
+    window.localStorage.removeItem("zayvi-order-idempotency-v1");
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(request));
+    const requestFingerprint = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 
     let idempotencyKey = "";
 
@@ -374,10 +376,15 @@ export default function Home() {
     }
 
     const orderNumber = String(payload?.order?.orderNumber || "");
-    const orderId = String(payload?.order?.id || "");
+    const order = payload?.order;
+    const subtotal = order?.subtotal ?? (details.deliveryAddress ? undefined : order?.total);
+    const shippingTotal = order?.shippingTotal ?? (details.deliveryAddress ? undefined : 0);
 
-    if (!orderNumber || !orderId) {
-      throw new Error("Draft order was created without an order identifier.");
+    if (
+      !orderNumber || !order?.id || order.currency !== (marketCode === "NG" ? "NGN" : "GBP") ||
+      !Number.isFinite(subtotal) || !Number.isFinite(shippingTotal) || !Number.isFinite(order.total)
+    ) {
+      throw new Error("Could not confirm the draft order totals. Try again.");
     }
 
     setCart([]);
@@ -385,7 +392,13 @@ export default function Home() {
     window.localStorage.removeItem(ORDER_IDEMPOTENCY_STORAGE_KEY);
     showToast(`Draft order ${orderNumber} created`);
 
-    return { orderNumber, orderId };
+    return {
+      orderNumber,
+      currency: order.currency,
+      subtotal,
+      shippingTotal,
+      total: order.total,
+    };
   };
 
   return (

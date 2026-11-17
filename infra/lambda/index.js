@@ -3,6 +3,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { Pool } = require("pg");
 const { Signer } = require("@aws-sdk/rds-signer");
+const { checkoutError, deliveryMigration, normalizeDeliveryAddress, previewDeliveryQuote } = require("./checkout-delivery");
 
 let pool;
 
@@ -1014,6 +1015,11 @@ async function createOrder(input) {
     return { id, quantity, selectedColor, selectedSize };
   });
 
+  const deliveryAddress = input?.deliveryAddress === undefined
+    ? null
+    : normalizeDeliveryAddress(input.deliveryAddress, marketCode);
+  const shippingQuote = deliveryAddress ? previewDeliveryQuote(marketCode) : null;
+
   const requestFingerprint = crypto
     .createHash("sha256")
     .update(
@@ -1022,7 +1028,8 @@ async function createOrder(input) {
         customerEmail,
         phone,
         marketCode,
-        items: normalizedItems
+        items: normalizedItems,
+        ...(deliveryAddress ? { deliveryAddress } : {})
       })
     )
     .digest("hex");
@@ -1042,6 +1049,10 @@ async function createOrder(input) {
 
       const storeId = storeResult.rows[0].id;
 
+      await tx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        `order:${tenantId}:${idempotencyKey}`
+      ]);
+
       const replay = await tx.query(
         `
           SELECT
@@ -1049,6 +1060,8 @@ async function createOrder(input) {
             order_number,
             customer_name,
             customer_email,
+            subtotal,
+            shipping_total,
             total,
             currency_code,
             order_status,
@@ -1080,6 +1093,8 @@ async function createOrder(input) {
           orderNumber: existing.order_number,
           customerName: existing.customer_name,
           customerEmail: existing.customer_email,
+          subtotal: Number(existing.subtotal),
+          shippingTotal: Number(existing.shipping_total),
           total: Number(existing.total),
           currency: existing.currency_code,
           orderStatus: existing.order_status,
@@ -1089,6 +1104,16 @@ async function createOrder(input) {
           purchasingEnabled: false,
           idempotentReplay: true
         };
+      }
+
+      if (shippingQuote) {
+        const definition = schemaMigrationDefinitions.find(({ name }) => name === deliveryMigration);
+        if (!(await probeSchemaMigration(tx, definition))) {
+          throw checkoutError("Preview delivery setup is unavailable.", 503);
+        }
+        if (input.shippingMinor !== shippingQuote.shippingMinor) {
+          throw checkoutError("The delivery fee changed. Review the current fee and try again.", 409);
+        }
       }
 
       const marketResult = await tx.query(
@@ -1213,6 +1238,11 @@ async function createOrder(input) {
           0
         ) / 100;
 
+      if (shippingQuote && shippingQuote.currency !== marketCurrency) {
+        throw checkoutError("The delivery fee does not match this market.", 409);
+      }
+
+      const shippingTotal = (shippingQuote?.shippingMinor ?? 0) / 100;
       const customer = await tx.query(
         `
           INSERT INTO commerce_customers (
@@ -1258,12 +1288,14 @@ async function createOrder(input) {
             source,
             idempotency_key,
             request_fingerprint
+            ${deliveryAddress ? ", delivery_address" : ""}
           )
           VALUES (
             $1, $2, $3, $4, $5, $6,
             'draft', 'unpaid', 'unfulfilled',
-            $7, $8, $9, 0, 0, $9, 'preview',
-            $10, $11
+            $7, $8, $9::numeric, $10::numeric, 0, $9::numeric + $10::numeric, 'preview',
+            $11, $12
+            ${deliveryAddress ? ', $13::jsonb' : ''}
           )
           RETURNING *
         `,
@@ -1277,8 +1309,10 @@ async function createOrder(input) {
           customerName,
           customerEmail,
           subtotal,
+          shippingTotal,
           idempotencyKey,
-          requestFingerprint
+          requestFingerprint,
+          ...(deliveryAddress ? [JSON.stringify(deliveryAddress)] : [])
         ]
       );
 
@@ -1331,6 +1365,8 @@ async function createOrder(input) {
         orderNumber: order.order_number,
         customerName: order.customer_name,
         customerEmail: order.customer_email,
+        subtotal: Number(order.subtotal),
+        shippingTotal: Number(order.shipping_total),
         total: Number(order.total),
         currency: order.currency_code,
         orderStatus: order.order_status,
@@ -1368,6 +1404,7 @@ async function getOrder(orderId) {
             o.fulfilment_status,
             o.subtotal,
             o.shipping_total,
+            to_jsonb(o) -> 'delivery_address' AS delivery_address,
             o.tax_total,
             o.total,
             o.source,
@@ -1491,6 +1528,7 @@ async function getOrder(orderId) {
         fulfilmentStatus: row.fulfilment_status,
         subtotal: Number(row.subtotal),
         shippingTotal: Number(row.shipping_total),
+        deliveryAddress: row.delivery_address ?? null,
         taxTotal: Number(row.tax_total),
         total: Number(row.total),
         source: row.source,
@@ -7545,6 +7583,12 @@ const schemaMigrationDefinitions = [
     feature: "Operations audit",
     description: "Append-only cross-workflow audit evidence for critical commerce actions.",
     probe: { type: "table", table: "commerce_operations_audit_events" }
+  },
+  {
+    name: deliveryMigration,
+    feature: "Checkout delivery",
+    description: "Delivery address snapshots and market shipping fees for Preview draft orders.",
+    probe: { type: "column", table: "commerce_orders", column: "delivery_address" }
   }
 ];
 
@@ -7598,6 +7642,10 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if (routePath.endsWith("/delivery-settings")) {
+    return [deliveryMigration];
+  }
+
   if (routePath.endsWith("/inventory") || routePath.endsWith("/inventory/adjust")) {
     return ["0011_inventory_ledger.sql"];
   }
@@ -12437,6 +12485,15 @@ exports.handler = async (event, context) => {
             ? error.message
             : "order_update_failed"
       });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/delivery-settings")) {
+    try {
+      const marketCode = event?.queryStringParameters?.market || "GB";
+      return response(200, previewDeliveryQuote(marketCode));
+    } catch (error) {
+      return response(error.statusCode || 500, { error: error.statusCode ? error.message : "Delivery settings unavailable." });
     }
   }
 

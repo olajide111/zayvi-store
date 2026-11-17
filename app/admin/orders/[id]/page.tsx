@@ -1,5 +1,6 @@
 "use client";
 
+import type { DeliveryAddress } from "@/lib/delivery";
 import DispatchForm from "@/components/admin/DispatchForm";
 
 import Link from "next/link";
@@ -102,6 +103,7 @@ type OrderDetail = {
   fulfilmentStatus: string;
   subtotal: number;
   shippingTotal: number;
+  deliveryAddress?: (DeliveryAddress & { countryCode: string }) | null;
   taxTotal: number;
   total: number;
   source: string;
@@ -397,6 +399,17 @@ export default function AdminOrderDetailPage({
             <div className="mt-3 text-sm font-medium">{order.customerName}</div>
             <div className="mt-1 text-sm text-gray-500">{order.customerEmail}</div>
           </div>
+
+          {order.deliveryAddress && (
+            <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5" aria-labelledby="order-delivery-address">
+              <h2 id="order-delivery-address" className="text-sm font-semibold">Delivery address</h2>
+              <address className="mt-2 text-sm leading-relaxed break-words not-italic text-[#52635b]">
+                {[order.deliveryAddress.line1, order.deliveryAddress.line2, order.deliveryAddress.city,
+                  order.deliveryAddress.region, order.deliveryAddress.postcode,
+                  order.deliveryAddress.countryCode === "NG" ? "Nigeria" : "United Kingdom"].filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}
+              </address>
+            </section>
+          )}
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
