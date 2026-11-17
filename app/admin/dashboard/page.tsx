@@ -52,6 +52,7 @@ const navigation = [
       ["Inventory", "▦", "/admin/inventory"],
       ["Customers", "♙", "/admin/customers"],
       ["Suppliers", "⌑", "/admin/suppliers"],
+      ["Purchase Orders", "▣", "/admin/purchase-orders"],
     ],
   },
   {
