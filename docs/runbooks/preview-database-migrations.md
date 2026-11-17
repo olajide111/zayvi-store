@@ -16,6 +16,7 @@ The next unapplied migrations are expected to be:
 - `0016_purchase_orders.sql`
 - `0017_supplier_feed_discovery.sql`
 - `0018_supplier_feed_observability.sql`
+- `0019_vendor_portal_access.sql`
 
 The bootstrap runner is checksum-protected and only applies migrations not already recorded in `zayvi_schema_migrations`.
 
@@ -60,6 +61,7 @@ migrations/0015_supplier_verification_audit.sql
 migrations/0016_purchase_orders.sql
 migrations/0017_supplier_feed_discovery.sql
 migrations/0018_supplier_feed_observability.sql
+migrations/0019_vendor_portal_access.sql
 ```
 
 ## Initialise the existing Preview backend
@@ -104,7 +106,7 @@ terraform apply zayvi-preview-migrations.tfplan
 
 The bootstrap output should report `bootstrap_complete`.
 
-For this activation, `migrationsApplied` should include migrations 0011 through 0018 when they were not already applied.
+For this activation, `migrationsApplied` should include migrations 0011 through 0019 when they were not already applied.
 
 ## Post-apply checks
 
@@ -137,7 +139,8 @@ Then validate the Preview application:
 12. Purchase Orders loads, remains manually approved/submitted, and stock receipt writes to owned inventory.
 13. Product Discovery loads, keeps auto-publish disabled, and supplier feed imports remain review-first.
 14. Feed history records accepted/rejected rows and prevents exact supplier-payload replay.
-15. System Readiness reports migrations 0011–0018 as applied.
+15. System Readiness reports migrations 0011–0019 as applied.
+16. Vendor Portal access can issue a one-time invitation, activate a supplier-scoped session and keep viewer accounts read-only.
 
 ## Rollback policy
 
