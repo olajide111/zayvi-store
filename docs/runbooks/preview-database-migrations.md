@@ -6,7 +6,7 @@ It is intentionally limited to Preview. Do not reuse these commands against Prod
 
 ## Current target
 
-The next unapplied migrations are expected to be:
+The checkout delivery change requires migration `0025_order_delivery_address.sql` and the API Lambda from the same commit. On a Preview database already at 0024, only 0025 should apply. The package includes earlier migrations for Preview environments that are catching up:
 
 - `0011_inventory_ledger.sql`
 - `0012_supplier_registry.sql`
@@ -28,7 +28,7 @@ The bootstrap runner is checksum-protected and only applies migrations not alrea
 
 ## Preconditions
 
-1. Work from the current `main` branch.
+1. Work from the reviewed commit that contains migration 0025 and its API implementation.
 2. AWS CLI must be authenticated to account `001961766018`.
 3. AWS region must be `eu-west-2`.
 4. Terraform must initialise against the existing remote Preview state.
@@ -41,11 +41,12 @@ The bootstrap runner is checksum-protected and only applies migrations not alrea
 From the Zayvi repository root:
 
 ```bash
-cd "infra/db-bootstrap"
-npm ci
-npm run package
+npm --prefix infra/lambda ci
+npm --prefix infra/lambda run package
+npm --prefix infra/db-bootstrap ci
+npm --prefix infra/db-bootstrap run package
 
-cd ../terraform
+cd infra/terraform
 ```
 
 The packaging command copies all `database/migrations/NNNN_*.sql` files into `zayvi-db-bootstrap.zip`.

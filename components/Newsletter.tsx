@@ -31,13 +31,14 @@ export default function Newsletter() {
         </div>
         <form
           onSubmit={(e) => e.preventDefault()}
-          style={{ display: "flex", gap: 8, flex: 1, maxWidth: 380 }}
+          style={{ display: "flex", gap: 8, flex: "1 1 280px", minWidth: 0, maxWidth: 380 }}
         >
           <input
             type="email"
             placeholder="Enter your email"
             style={{
               flex: 1,
+              minWidth: 0,
               border: "1px solid #ddd",
               borderRadius: 10,
               padding: "12px 16px",
