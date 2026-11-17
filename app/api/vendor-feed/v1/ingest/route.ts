@@ -1,7 +1,10 @@
-import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { callZayviAwsApi } from "@/lib/aws-api";
+import {
+  hashSupplierApiKey,
+  isSupplierApiKey,
+} from "@/lib/supplier-api-key";
 
 export const runtime = "nodejs";
 
@@ -10,7 +13,7 @@ export async function POST(request: NextRequest) {
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   const apiKey = match?.[1]?.trim() || "";
 
-  if (!/^zv_vendor_[A-Za-z0-9_-]{4,24}_[A-Za-z0-9_-]{20,80}$/.test(apiKey)) {
+  if (!isSupplierApiKey(apiKey)) {
     return NextResponse.json(
       { error: "Invalid supplier API credential." },
       { status: 401 }
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
       ? (body as Record<string, unknown>)
       : {};
 
-  const secretHash = createHash("sha256").update(apiKey).digest("hex");
+  const secretHash = hashSupplierApiKey(apiKey);
 
   const result = await callZayviAwsApi("/supplier-api/ingest", {
     method: "POST",
