@@ -5013,6 +5013,13 @@ async function listPurchaseOrders() {
             po.approved_at,
             po.submitted_at,
             po.cancelled_at,
+            po.supplier_ack_status,
+            po.supplier_acknowledged_at,
+            po.supplier_reference,
+            po.latest_carrier,
+            po.latest_tracking_number,
+            po.latest_shipped_at,
+            po.expected_delivery_at,
             po.created_at,
             po.updated_at,
             s.id AS supplier_id,
@@ -5053,6 +5060,13 @@ async function listPurchaseOrders() {
         approvedAt: row.approved_at,
         submittedAt: row.submitted_at,
         cancelledAt: row.cancelled_at,
+        supplierAckStatus: row.supplier_ack_status || "pending",
+        supplierAcknowledgedAt: row.supplier_acknowledged_at,
+        supplierReference: row.supplier_reference,
+        latestCarrier: row.latest_carrier,
+        latestTrackingNumber: row.latest_tracking_number,
+        latestShippedAt: row.latest_shipped_at,
+        expectedDeliveryAt: row.expected_delivery_at,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       }));
@@ -5128,6 +5142,32 @@ async function getPurchaseOrder(poId) {
         [tenantId, poId]
       );
 
+      const supplierEventResult = await tx.query(
+        `
+          SELECT
+            e.id,
+            e.event_type,
+            e.supplier_reference,
+            e.note,
+            e.carrier,
+            e.tracking_number,
+            e.shipped_at,
+            e.expected_delivery_at,
+            e.created_at,
+            u.email AS supplier_user_email,
+            u.display_name AS supplier_user_name
+          FROM commerce_purchase_order_supplier_events e
+          LEFT JOIN commerce_supplier_users u
+            ON u.tenant_id = e.tenant_id
+           AND u.id = e.supplier_user_id
+          WHERE e.tenant_id = $1
+            AND e.purchase_order_id = $2
+          ORDER BY e.created_at DESC
+          LIMIT 100
+        `,
+        [tenantId, poId]
+      );
+
       const po = poResult.rows[0];
 
       return {
@@ -5144,6 +5184,27 @@ async function getPurchaseOrder(poId) {
         approvedAt: po.approved_at,
         submittedAt: po.submitted_at,
         cancelledAt: po.cancelled_at,
+        supplierAckStatus: po.supplier_ack_status || "pending",
+        supplierAcknowledgedAt: po.supplier_acknowledged_at,
+        supplierReference: po.supplier_reference,
+        supplierUpdateNote: po.supplier_update_note,
+        latestCarrier: po.latest_carrier,
+        latestTrackingNumber: po.latest_tracking_number,
+        latestShippedAt: po.latest_shipped_at,
+        expectedDeliveryAt: po.expected_delivery_at,
+        supplierEvents: supplierEventResult.rows.map((event) => ({
+          id: event.id,
+          eventType: event.event_type,
+          supplierReference: event.supplier_reference,
+          note: event.note,
+          carrier: event.carrier,
+          trackingNumber: event.tracking_number,
+          shippedAt: event.shipped_at,
+          expectedDeliveryAt: event.expected_delivery_at,
+          supplierUserEmail: event.supplier_user_email,
+          supplierUserName: event.supplier_user_name,
+          createdAt: event.created_at
+        })),
         createdAt: po.created_at,
         updatedAt: po.updated_at,
         items: itemResult.rows.map((row) => ({
@@ -6600,6 +6661,12 @@ const schemaMigrationDefinitions = [
     feature: "Returns",
     description: "Admin-reviewed returns, provider refund reconciliation and reverse inventory.",
     probe: { type: "table", table: "commerce_returns" }
+  },
+  {
+    name: "0023_vendor_purchase_order_updates.sql",
+    feature: "Vendor PO updates",
+    description: "Supplier acknowledgements and shipment evidence for submitted purchase orders.",
+    probe: { type: "table", table: "commerce_purchase_order_supplier_events" }
   }
 ];
 
@@ -6678,6 +6745,15 @@ function requiredSchemaMigrationsForRoute(routePath) {
     return [
       "0011_inventory_ledger.sql",
       "0012_supplier_registry.sql"
+    ];
+  }
+
+  if (routePath.includes("/vendor-portal/purchase-orders")) {
+    return [
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql",
+      "0019_vendor_portal_access.sql",
+      "0023_vendor_purchase_order_updates.sql"
     ];
   }
 
@@ -7536,6 +7612,349 @@ async function listVendorFeedHistory(accountId) {
         rejectionDetails: row.rejection_details || [],
         createdAt: row.created_at
       }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
+async function listVendorPurchaseOrders(accountId) {
+  const account = await resolveActiveVendorAccount(accountId);
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            po.id,
+            po.po_number,
+            po.market_code,
+            po.currency_code,
+            po.status,
+            po.notes,
+            po.submitted_at,
+            po.supplier_ack_status,
+            po.supplier_acknowledged_at,
+            po.supplier_reference,
+            po.supplier_update_note,
+            po.latest_carrier,
+            po.latest_tracking_number,
+            po.latest_shipped_at,
+            po.expected_delivery_at,
+            po.created_at,
+            po.updated_at,
+            COUNT(i.id)::int AS line_count,
+            COALESCE(SUM(i.quantity), 0)::int AS ordered_units,
+            COALESCE(SUM(i.received_quantity), 0)::int AS received_units,
+            COALESCE(SUM(i.quantity * i.unit_cost), 0)::numeric AS total_value
+          FROM commerce_purchase_orders po
+          LEFT JOIN commerce_purchase_order_items i
+            ON i.tenant_id = po.tenant_id
+           AND i.purchase_order_id = po.id
+          WHERE po.tenant_id = $1
+            AND po.supplier_id = $2
+            AND po.status IN ('submitted','partially_received','received')
+          GROUP BY po.id
+          ORDER BY po.submitted_at DESC NULLS LAST, po.created_at DESC
+          LIMIT 100
+        `,
+        [tenantId, account.supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        poNumber: row.po_number,
+        marketCode: row.market_code,
+        currency: row.currency_code,
+        status: row.status,
+        notes: row.notes,
+        lineCount: Number(row.line_count || 0),
+        orderedUnits: Number(row.ordered_units || 0),
+        receivedUnits: Number(row.received_units || 0),
+        totalValue: Number(row.total_value || 0),
+        submittedAt: row.submitted_at,
+        supplierAckStatus: row.supplier_ack_status || "pending",
+        supplierAcknowledgedAt: row.supplier_acknowledged_at,
+        supplierReference: row.supplier_reference,
+        supplierUpdateNote: row.supplier_update_note,
+        latestCarrier: row.latest_carrier,
+        latestTrackingNumber: row.latest_tracking_number,
+        latestShippedAt: row.latest_shipped_at,
+        expectedDeliveryAt: row.expected_delivery_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function updateVendorPurchaseOrder(accountId, poId, input) {
+  const account = await resolveActiveVendorAccount(accountId);
+
+  if (account.role === "viewer") {
+    const error = new Error("Viewer accounts cannot update purchase orders.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (!/^[0-9a-f-]{36}$/i.test(String(poId || ""))) {
+    const error = new Error("A valid purchase-order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const action = String(input?.action || "").trim();
+  if (!["acknowledge","unable_to_fulfil","shipment"].includes(action)) {
+    const error = new Error("Unsupported supplier purchase-order action.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const supplierReference =
+    String(input?.supplierReference || "").trim().slice(0, 200) || null;
+  const note =
+    String(input?.note || "").trim().slice(0, 1000) || null;
+  const carrier =
+    String(input?.carrier || "").trim().slice(0, 160) || null;
+  const trackingNumber =
+    String(input?.trackingNumber || "").trim().slice(0, 200) || null;
+
+  let shippedAt = null;
+  let expectedDeliveryAt = null;
+
+  if (action === "shipment") {
+    if (!carrier && !trackingNumber) {
+      const error = new Error(
+        "Shipment update requires a carrier or tracking number."
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    shippedAt = input?.shippedAt ? new Date(input.shippedAt) : new Date();
+    if (Number.isNaN(shippedAt.getTime())) {
+      const error = new Error("Shipment date is invalid.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (shippedAt.getTime() > Date.now() + 10 * 60 * 1000) {
+      const error = new Error("Shipment date cannot be in the future.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (input?.expectedDeliveryAt) {
+      expectedDeliveryAt = new Date(input.expectedDeliveryAt);
+      if (Number.isNaN(expectedDeliveryAt.getTime())) {
+        const error = new Error("Expected delivery date is invalid.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (expectedDeliveryAt.getTime() < shippedAt.getTime()) {
+        const error = new Error(
+          "Expected delivery cannot be earlier than shipment."
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+  }
+
+  if (action === "unable_to_fulfil" && !note) {
+    const error = new Error(
+      "A note is required when a supplier cannot fulfil a purchase order."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const poResult = await tx.query(
+        `
+          SELECT
+            id,
+            supplier_id,
+            status,
+            supplier_ack_status
+          FROM commerce_purchase_orders
+          WHERE tenant_id = $1
+            AND id = $2
+            AND supplier_id = $3
+          FOR UPDATE
+        `,
+        [tenantId, poId, account.supplierId]
+      );
+
+      if (poResult.rowCount === 0) {
+        const error = new Error(
+          "Purchase order not found for this supplier."
+        );
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const po = poResult.rows[0];
+
+      if (!["submitted","partially_received"].includes(po.status)) {
+        const error = new Error(
+          "Only submitted or partially received purchase orders accept supplier updates."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      let eventType = null;
+
+      if (action === "acknowledge") {
+        eventType = "acknowledged";
+        await tx.query(
+          `
+            UPDATE commerce_purchase_orders
+            SET
+              supplier_ack_status = 'acknowledged',
+              supplier_acknowledged_at = now(),
+              supplier_reference = COALESCE($1, supplier_reference),
+              supplier_update_note = $2,
+              updated_at = now()
+            WHERE tenant_id = $3 AND id = $4
+          `,
+          [supplierReference, note, tenantId, poId]
+        );
+      }
+
+      if (action === "unable_to_fulfil") {
+        eventType = "unable_to_fulfil";
+        await tx.query(
+          `
+            UPDATE commerce_purchase_orders
+            SET
+              supplier_ack_status = 'unable_to_fulfil',
+              supplier_acknowledged_at = now(),
+              supplier_reference = COALESCE($1, supplier_reference),
+              supplier_update_note = $2,
+              updated_at = now()
+            WHERE tenant_id = $3 AND id = $4
+          `,
+          [supplierReference, note, tenantId, poId]
+        );
+      }
+
+      if (action === "shipment") {
+        if (po.supplier_ack_status !== "acknowledged") {
+          const error = new Error(
+            "Purchase order must be acknowledged before shipment can be reported."
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        eventType = "shipment_update";
+        await tx.query(
+          `
+            UPDATE commerce_purchase_orders
+            SET
+              supplier_reference = COALESCE($1, supplier_reference),
+              supplier_update_note = COALESCE($2, supplier_update_note),
+              latest_carrier = $3,
+              latest_tracking_number = $4,
+              latest_shipped_at = $5,
+              expected_delivery_at = $6,
+              updated_at = now()
+            WHERE tenant_id = $7 AND id = $8
+          `,
+          [
+            supplierReference,
+            note,
+            carrier,
+            trackingNumber,
+            shippedAt.toISOString(),
+            expectedDeliveryAt ? expectedDeliveryAt.toISOString() : null,
+            tenantId,
+            poId
+          ]
+        );
+      }
+
+      await tx.query(
+        `
+          INSERT INTO commerce_purchase_order_supplier_events (
+            tenant_id,
+            purchase_order_id,
+            supplier_id,
+            supplier_user_id,
+            event_type,
+            supplier_reference,
+            note,
+            carrier,
+            tracking_number,
+            shipped_at,
+            expected_delivery_at
+          )
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        `,
+        [
+          tenantId,
+          poId,
+          account.supplierId,
+          account.accountId,
+          eventType,
+          supplierReference,
+          note,
+          carrier,
+          trackingNumber,
+          shippedAt ? shippedAt.toISOString() : null,
+          expectedDeliveryAt ? expectedDeliveryAt.toISOString() : null
+        ]
+      );
+
+      const updated = await tx.query(
+        `
+          SELECT
+            id,
+            po_number,
+            status,
+            supplier_ack_status,
+            supplier_acknowledged_at,
+            supplier_reference,
+            supplier_update_note,
+            latest_carrier,
+            latest_tracking_number,
+            latest_shipped_at,
+            expected_delivery_at,
+            updated_at
+          FROM commerce_purchase_orders
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, poId]
+      );
+
+      const row = updated.rows[0];
+
+      return {
+        id: row.id,
+        poNumber: row.po_number,
+        status: row.status,
+        supplierAckStatus: row.supplier_ack_status,
+        supplierAcknowledgedAt: row.supplier_acknowledged_at,
+        supplierReference: row.supplier_reference,
+        supplierUpdateNote: row.supplier_update_note,
+        latestCarrier: row.latest_carrier,
+        latestTrackingNumber: row.latest_tracking_number,
+        latestShippedAt: row.latest_shipped_at,
+        expectedDeliveryAt: row.expected_delivery_at,
+        updatedAt: row.updated_at,
+        inventoryChanged: false,
+        purchaseOrderStatusChanged: false
+      };
     });
   } finally {
     client.release();
@@ -10017,6 +10436,63 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "vendor_feed_history_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    routePath.endsWith("/vendor-portal/purchase-orders")
+  ) {
+    try {
+      const accountId = event?.queryStringParameters?.accountId || "";
+      const purchaseOrders = await listVendorPurchaseOrders(accountId);
+      return response(200, {
+        source: "postgresql",
+        total: purchaseOrders.length,
+        purchaseOrders
+      });
+    } catch (error) {
+      console.error("Vendor purchase-order list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_purchase_orders_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "PATCH" &&
+    /\/vendor-portal\/purchase-orders\/[0-9a-f-]{36}$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const poId = parts[parts.length - 1];
+      const body = parseBody(event);
+      const purchaseOrder = await updateVendorPurchaseOrder(
+        String(body?.accountId || ""),
+        poId,
+        body
+      );
+      return response(200, {
+        source: "postgresql",
+        purchaseOrder
+      });
+    } catch (error) {
+      console.error("Vendor purchase-order update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_purchase_order_update_failed"
       });
     }
   }
