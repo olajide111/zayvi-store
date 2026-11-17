@@ -71,6 +71,8 @@ export default function AdminReplenishmentPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [creatingOfferId, setCreatingOfferId] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -115,6 +117,57 @@ export default function AdminReplenishmentPage() {
         item.canonicalCode.toLowerCase().includes(normalized)
     );
   }, [data, query]);
+
+  async function createDraftPurchaseOrder(item: ReplenishmentItem) {
+    if (!item.fallbackSupplier) return;
+
+    const raw = window.prompt(
+      `Purchase quantity for ${item.productName}`,
+      "1"
+    );
+    if (raw === null) return;
+
+    const quantity = Number(raw);
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      setError("Purchase quantity must be a positive whole number.");
+      return;
+    }
+
+    setCreatingOfferId(item.fallbackSupplier.supplierOfferId);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/admin/purchase-orders", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          supplierOfferId: item.fallbackSupplier.supplierOfferId,
+          quantity,
+          notes: `Created from replenishment watchlist for ${item.productName}.`,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to create purchase order.");
+      }
+
+      const created = payload.purchaseOrder;
+      setNotice(`Draft purchase order ${created.poNumber} created.`);
+
+      if (created?.id) {
+        window.location.href = `/admin/purchase-orders/${created.id}`;
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to create purchase order."
+      );
+    } finally {
+      setCreatingOfferId("");
+    }
+  }
 
   const critical =
     data?.items.filter((item) => item.severity === "critical").length ?? 0;
@@ -202,6 +255,12 @@ export default function AdminReplenishmentPage() {
         {loading && (
           <div className="py-16 text-center text-sm text-gray-400">
             Loading replenishment watchlist...
+          </div>
+        )}
+
+        {notice && (
+          <div className="mt-6 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
+            {notice}
           </div>
         )}
 
@@ -310,12 +369,25 @@ export default function AdminReplenishmentPage() {
                             </div>
                           </div>
                         </div>
-                        <a
-                          href={`/admin/suppliers/${item.fallbackSupplier.supplierId}`}
-                          className="mt-3 inline-block text-[11px] font-semibold text-emerald-800 hover:underline"
-                        >
-                          Review supplier offer →
-                        </a>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <a
+                            href={`/admin/suppliers/${item.fallbackSupplier.supplierId}`}
+                            className="rounded-lg border border-emerald-200 px-3 py-2 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100"
+                          >
+                            Review supplier
+                          </a>
+                          <button
+                            type="button"
+                            disabled={
+                              creatingOfferId ===
+                              item.fallbackSupplier.supplierOfferId
+                            }
+                            onClick={() => void createDraftPurchaseOrder(item)}
+                            className="rounded-lg bg-[#17251e] px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                          >
+                            Create draft PO
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <div className="mt-2 text-sm text-gray-500">

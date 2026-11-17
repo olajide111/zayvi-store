@@ -4183,6 +4183,640 @@ async function getReplenishmentWatchlist(marketCode = "GB") {
 }
 
 
+function createPurchaseOrderNumber() {
+  const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return `PO-${stamp}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+async function listPurchaseOrders() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            po.id,
+            po.po_number,
+            po.market_code,
+            po.currency_code,
+            po.status,
+            po.notes,
+            po.approved_by,
+            po.approved_at,
+            po.submitted_at,
+            po.cancelled_at,
+            po.created_at,
+            po.updated_at,
+            s.id AS supplier_id,
+            s.name AS supplier_name,
+            COUNT(i.id)::int AS line_count,
+            COALESCE(SUM(i.quantity * i.unit_cost), 0)::numeric AS total_value,
+            COALESCE(SUM(i.received_quantity), 0)::int AS received_units,
+            COALESCE(SUM(i.quantity), 0)::int AS ordered_units
+          FROM commerce_purchase_orders po
+          JOIN commerce_suppliers s
+            ON s.tenant_id = po.tenant_id
+           AND s.id = po.supplier_id
+          LEFT JOIN commerce_purchase_order_items i
+            ON i.tenant_id = po.tenant_id
+           AND i.purchase_order_id = po.id
+          WHERE po.tenant_id = $1
+          GROUP BY po.id, s.id, s.name
+          ORDER BY po.created_at DESC
+          LIMIT 250
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        poNumber: row.po_number,
+        supplierId: row.supplier_id,
+        supplierName: row.supplier_name,
+        marketCode: row.market_code,
+        currency: row.currency_code,
+        status: row.status,
+        notes: row.notes,
+        lineCount: Number(row.line_count || 0),
+        totalValue: Number(row.total_value || 0),
+        receivedUnits: Number(row.received_units || 0),
+        orderedUnits: Number(row.ordered_units || 0),
+        approvedBy: row.approved_by,
+        approvedAt: row.approved_at,
+        submittedAt: row.submitted_at,
+        cancelledAt: row.cancelled_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function getPurchaseOrder(poId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(poId || ""))) {
+    const error = new Error("A valid purchase-order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const poResult = await tx.query(
+        `
+          SELECT
+            po.*,
+            s.name AS supplier_name,
+            s.verification_status
+          FROM commerce_purchase_orders po
+          JOIN commerce_suppliers s
+            ON s.tenant_id = po.tenant_id
+           AND s.id = po.supplier_id
+          WHERE po.tenant_id = $1
+            AND po.id = $2
+          LIMIT 1
+        `,
+        [tenantId, poId]
+      );
+
+      if (poResult.rowCount === 0) {
+        const error = new Error("Purchase order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const itemResult = await tx.query(
+        `
+          SELECT
+            i.id,
+            i.supplier_offer_id,
+            i.tenant_catalogue_product_id,
+            i.supplier_sku,
+            i.quantity,
+            i.unit_cost,
+            i.currency_code,
+            i.received_quantity,
+            cp.name AS product_name,
+            cp.canonical_code,
+            so.stock_status,
+            so.external_stock_quantity,
+            so.lead_time_days
+          FROM commerce_purchase_order_items i
+          JOIN tenant_catalogue_products tcp
+            ON tcp.tenant_id = i.tenant_id
+           AND tcp.id = i.tenant_catalogue_product_id
+          JOIN catalogue_products cp
+            ON cp.id = tcp.product_id
+          JOIN commerce_supplier_offers so
+            ON so.tenant_id = i.tenant_id
+           AND so.id = i.supplier_offer_id
+          WHERE i.tenant_id = $1
+            AND i.purchase_order_id = $2
+          ORDER BY i.created_at ASC
+        `,
+        [tenantId, poId]
+      );
+
+      const po = poResult.rows[0];
+
+      return {
+        id: po.id,
+        poNumber: po.po_number,
+        supplierId: po.supplier_id,
+        supplierName: po.supplier_name,
+        verificationStatus: po.verification_status,
+        marketCode: po.market_code,
+        currency: po.currency_code,
+        status: po.status,
+        notes: po.notes,
+        approvedBy: po.approved_by,
+        approvedAt: po.approved_at,
+        submittedAt: po.submitted_at,
+        cancelledAt: po.cancelled_at,
+        createdAt: po.created_at,
+        updatedAt: po.updated_at,
+        items: itemResult.rows.map((row) => ({
+          id: row.id,
+          supplierOfferId: row.supplier_offer_id,
+          tenantProductId: row.tenant_catalogue_product_id,
+          supplierSku: row.supplier_sku,
+          productName: row.product_name,
+          canonicalCode: row.canonical_code,
+          quantity: Number(row.quantity),
+          unitCost: Number(row.unit_cost),
+          currency: row.currency_code,
+          receivedQuantity: Number(row.received_quantity),
+          stockStatus: row.stock_status,
+          externalStockQuantity:
+            row.external_stock_quantity === null ? null : Number(row.external_stock_quantity),
+          leadTimeDays:
+            row.lead_time_days === null ? null : Number(row.lead_time_days)
+        }))
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function createPurchaseOrder(input) {
+  const supplierOfferId = String(input?.supplierOfferId || "").trim();
+  const quantity = Number(input?.quantity);
+  const notes = String(input?.notes || "").trim().slice(0, 1000) || null;
+
+  if (!/^[0-9a-f-]{36}$/i.test(supplierOfferId)) {
+    const error = new Error("A valid supplier offer id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 100000) {
+    const error = new Error("Purchase quantity must be a positive whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const offerResult = await tx.query(
+        `
+          SELECT
+            so.id,
+            so.supplier_id,
+            so.tenant_catalogue_product_id,
+            so.supplier_sku,
+            so.currency_code,
+            so.unit_cost,
+            so.minimum_order_quantity,
+            so.stock_status,
+            so.external_stock_quantity,
+            s.store_id,
+            s.market_code,
+            s.name AS supplier_name,
+            s.status AS supplier_status,
+            s.verification_status
+          FROM commerce_supplier_offers so
+          JOIN commerce_suppliers s
+            ON s.tenant_id = so.tenant_id
+           AND s.id = so.supplier_id
+          WHERE so.tenant_id = $1
+            AND so.id = $2
+            AND so.status = 'active'
+          FOR UPDATE
+        `,
+        [tenantId, supplierOfferId]
+      );
+
+      if (offerResult.rowCount === 0) {
+        const error = new Error("Active supplier offer not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const offer = offerResult.rows[0];
+
+      if (
+        offer.supplier_status !== "active" ||
+        offer.verification_status !== "verified"
+      ) {
+        const error = new Error("Only verified active suppliers can receive purchase orders.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (offer.unit_cost === null) {
+        const error = new Error("Supplier offer must have a unit cost before creating a purchase order.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (quantity < Number(offer.minimum_order_quantity)) {
+        const error = new Error(
+          `Quantity must meet the supplier MOQ of ${offer.minimum_order_quantity}.`
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (
+        offer.external_stock_quantity !== null &&
+        quantity > Number(offer.external_stock_quantity)
+      ) {
+        const error = new Error("Requested quantity exceeds the supplier-reported stock quantity.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (!["in_stock", "limited", "preorder"].includes(offer.stock_status)) {
+        const error = new Error("Supplier offer is not currently available for ordering.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const poNumber = createPurchaseOrderNumber();
+
+      const poResult = await tx.query(
+        `
+          INSERT INTO commerce_purchase_orders (
+            tenant_id,
+            store_id,
+            supplier_id,
+            market_code,
+            currency_code,
+            po_number,
+            status,
+            notes
+          )
+          VALUES ($1,$2,$3,$4,$5,$6,'draft',$7)
+          RETURNING id
+        `,
+        [
+          tenantId,
+          offer.store_id,
+          offer.supplier_id,
+          offer.market_code,
+          offer.currency_code,
+          poNumber,
+          notes
+        ]
+      );
+
+      await tx.query(
+        `
+          INSERT INTO commerce_purchase_order_items (
+            tenant_id,
+            purchase_order_id,
+            supplier_offer_id,
+            tenant_catalogue_product_id,
+            supplier_sku,
+            quantity,
+            unit_cost,
+            currency_code
+          )
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        `,
+        [
+          tenantId,
+          poResult.rows[0].id,
+          offer.id,
+          offer.tenant_catalogue_product_id,
+          offer.supplier_sku,
+          quantity,
+          Number(offer.unit_cost),
+          offer.currency_code
+        ]
+      );
+
+      return {
+        id: poResult.rows[0].id,
+        poNumber,
+        supplierName: offer.supplier_name,
+        quantity,
+        currency: offer.currency_code,
+        unitCost: Number(offer.unit_cost),
+        status: "draft"
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function approvePurchaseOrder(poId) {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            po.id,
+            po.status,
+            s.status AS supplier_status,
+            s.verification_status
+          FROM commerce_purchase_orders po
+          JOIN commerce_suppliers s
+            ON s.tenant_id = po.tenant_id
+           AND s.id = po.supplier_id
+          WHERE po.tenant_id = $1
+            AND po.id = $2
+          FOR UPDATE
+        `,
+        [tenantId, poId]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Purchase order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const po = result.rows[0];
+
+      if (po.status !== "draft") {
+        const error = new Error("Only draft purchase orders can be approved.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (
+        po.supplier_status !== "active" ||
+        po.verification_status !== "verified"
+      ) {
+        const error = new Error("Supplier must remain verified and active before approval.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_purchase_orders
+          SET
+            status = 'approved',
+            approved_by = 'admin',
+            approved_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, poId]
+      );
+
+      return { id: poId, status: "approved" };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function markPurchaseOrderSubmitted(poId) {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          UPDATE commerce_purchase_orders
+          SET status = 'submitted', submitted_at = now(), updated_at = now()
+          WHERE tenant_id = $1
+            AND id = $2
+            AND status = 'approved'
+          RETURNING id
+        `,
+        [tenantId, poId]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Only approved purchase orders can be marked submitted.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      return { id: poId, status: "submitted" };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function receivePurchaseOrderItem(poId, itemId, input) {
+  const receiveQuantity = Number(input?.quantity);
+
+  if (!Number.isSafeInteger(receiveQuantity) || receiveQuantity < 1) {
+    const error = new Error("Received quantity must be a positive whole number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const itemResult = await tx.query(
+        `
+          SELECT
+            i.id,
+            i.purchase_order_id,
+            i.tenant_catalogue_product_id,
+            i.quantity,
+            i.received_quantity,
+            po.store_id,
+            po.market_code,
+            po.status
+          FROM commerce_purchase_order_items i
+          JOIN commerce_purchase_orders po
+            ON po.tenant_id = i.tenant_id
+           AND po.id = i.purchase_order_id
+          WHERE i.tenant_id = $1
+            AND i.id = $2
+            AND i.purchase_order_id = $3
+          FOR UPDATE
+        `,
+        [tenantId, itemId, poId]
+      );
+
+      if (itemResult.rowCount === 0) {
+        const error = new Error("Purchase-order item not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const item = itemResult.rows[0];
+
+      if (!["approved", "submitted", "partially_received"].includes(item.status)) {
+        const error = new Error("Purchase order is not in a receivable state.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const remaining =
+        Number(item.quantity) - Number(item.received_quantity);
+
+      if (receiveQuantity > remaining) {
+        const error = new Error("Received quantity exceeds the outstanding purchase-order quantity.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const locationResult = await tx.query(
+        `
+          SELECT id
+          FROM commerce_inventory_locations
+          WHERE tenant_id = $1
+            AND store_id = $2
+            AND market_code = $3
+            AND location_type = 'own_stock'
+            AND status = 'active'
+          ORDER BY created_at ASC
+          LIMIT 1
+        `,
+        [tenantId, item.store_id, item.market_code]
+      );
+
+      if (locationResult.rowCount === 0) {
+        const error = new Error("Own-stock inventory location is not configured for this market.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const locationId = locationResult.rows[0].id;
+
+      await tx.query(
+        `
+          INSERT INTO commerce_inventory_levels (
+            tenant_id,
+            location_id,
+            tenant_catalogue_product_id,
+            on_hand,
+            reserved,
+            safety_stock
+          )
+          VALUES ($1,$2,$3,0,0,0)
+          ON CONFLICT (tenant_id, location_id, tenant_catalogue_product_id)
+          DO NOTHING
+        `,
+        [tenantId, locationId, item.tenant_catalogue_product_id]
+      );
+
+      const levelResult = await tx.query(
+        `
+          SELECT id
+          FROM commerce_inventory_levels
+          WHERE tenant_id = $1
+            AND location_id = $2
+            AND tenant_catalogue_product_id = $3
+          FOR UPDATE
+        `,
+        [tenantId, locationId, item.tenant_catalogue_product_id]
+      );
+
+      const levelId = levelResult.rows[0].id;
+
+      await tx.query(
+        `
+          UPDATE commerce_inventory_levels
+          SET on_hand = on_hand + $1, updated_at = now()
+          WHERE tenant_id = $2 AND id = $3
+        `,
+        [receiveQuantity, tenantId, levelId]
+      );
+
+      await tx.query(
+        `
+          INSERT INTO commerce_inventory_movements (
+            tenant_id,
+            inventory_level_id,
+            movement_type,
+            quantity_delta,
+            reserved_delta,
+            reference_type,
+            reference_id,
+            note,
+            actor
+          )
+          VALUES ($1,$2,'receipt',$3,0,'purchase_order',$4,$5,'admin')
+        `,
+        [
+          tenantId,
+          levelId,
+          receiveQuantity,
+          poId,
+          "Received against approved supplier purchase order"
+        ]
+      );
+
+      await tx.query(
+        `
+          UPDATE commerce_purchase_order_items
+          SET received_quantity = received_quantity + $1, updated_at = now()
+          WHERE tenant_id = $2 AND id = $3
+        `,
+        [receiveQuantity, tenantId, itemId]
+      );
+
+      const outstandingResult = await tx.query(
+        `
+          SELECT
+            COALESCE(SUM(quantity - received_quantity), 0)::int AS outstanding
+          FROM commerce_purchase_order_items
+          WHERE tenant_id = $1
+            AND purchase_order_id = $2
+        `,
+        [tenantId, poId]
+      );
+
+      const outstanding = Number(outstandingResult.rows[0]?.outstanding || 0);
+
+      await tx.query(
+        `
+          UPDATE commerce_purchase_orders
+          SET
+            status = $1,
+            updated_at = now()
+          WHERE tenant_id = $2 AND id = $3
+        `,
+        [outstanding === 0 ? "received" : "partially_received", tenantId, poId]
+      );
+
+      return {
+        itemId,
+        receivedNow: receiveQuantity,
+        outstanding,
+        purchaseOrderStatus:
+          outstanding === 0 ? "received" : "partially_received"
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -5700,6 +6334,159 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "sourcing_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/purchase-orders")) {
+    try {
+      const purchaseOrders = await listPurchaseOrders();
+      return response(200, {
+        source: "postgresql",
+        total: purchaseOrders.length,
+        purchaseOrders,
+        automaticSubmissionEnabled: false
+      });
+    } catch (error) {
+      console.error("Purchase-order list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "purchase_orders_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/purchase-orders")) {
+    try {
+      const purchaseOrder = await createPurchaseOrder(parseBody(event));
+      return response(201, {
+        source: "postgresql",
+        purchaseOrder,
+        automaticSubmissionEnabled: false
+      });
+    } catch (error) {
+      console.error("Purchase-order create failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "purchase_order_create_failed"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    /\/purchase-orders\/[0-9a-f-]{36}$/i.test(routePath)
+  ) {
+    try {
+      const poId = routePath.split("/").filter(Boolean).pop();
+      const purchaseOrder = await getPurchaseOrder(poId);
+      return response(200, {
+        source: "postgresql",
+        purchaseOrder,
+        automaticSubmissionEnabled: false
+      });
+    } catch (error) {
+      console.error("Purchase-order detail failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "purchase_order_detail_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/purchase-orders\/[0-9a-f-]{36}\/approve$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const poId = parts[parts.length - 2];
+      const approval = await approvePurchaseOrder(poId);
+      return response(200, {
+        source: "postgresql",
+        approval,
+        automaticSubmissionEnabled: false
+      });
+    } catch (error) {
+      console.error("Purchase-order approval failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "purchase_order_approval_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/purchase-orders\/[0-9a-f-]{36}\/submitted$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const poId = parts[parts.length - 2];
+      const submission = await markPurchaseOrderSubmitted(poId);
+      return response(200, {
+        source: "postgresql",
+        submission,
+        automaticSubmissionEnabled: false
+      });
+    } catch (error) {
+      console.error("Purchase-order submission status failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "purchase_order_submission_update_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/purchase-orders\/[0-9a-f-]{36}\/items\/[0-9a-f-]{36}\/receive$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const poId = parts[parts.length - 4];
+      const itemId = parts[parts.length - 2];
+      const receipt = await receivePurchaseOrderItem(
+        poId,
+        itemId,
+        parseBody(event)
+      );
+      return response(200, {
+        source: "postgresql",
+        receipt
+      });
+    } catch (error) {
+      console.error("Purchase-order receipt failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "purchase_order_receipt_failed"
       });
     }
   }
