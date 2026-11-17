@@ -5727,6 +5727,115 @@ async function rejectDiscoveryCandidate(candidateId, input) {
 }
 
 
+async function getSystemReadiness() {
+  const requiredMigrations = [
+    {
+      name: "0011_inventory_ledger.sql",
+      feature: "Inventory",
+      description: "Owned-stock locations, balances and movement ledger."
+    },
+    {
+      name: "0012_supplier_registry.sql",
+      feature: "Suppliers",
+      description: "Supplier registry and supplier product offers."
+    },
+    {
+      name: "0013_fulfilment_planning.sql",
+      feature: "Fulfilment planning",
+      description: "Human-approved fulfilment plans and stock reservations."
+    },
+    {
+      name: "0014_fulfilment_execution.sql",
+      feature: "Fulfilment execution",
+      description: "Dispatch, delivery and owned-stock consumption."
+    },
+    {
+      name: "0015_supplier_verification_audit.sql",
+      feature: "Supplier verification",
+      description: "Auditable supplier review and verification history."
+    },
+    {
+      name: "0016_purchase_orders.sql",
+      feature: "Purchase orders",
+      description: "Supplier purchase orders and inventory receiving."
+    },
+    {
+      name: "0017_supplier_feed_discovery.sql",
+      feature: "Product discovery",
+      description: "Supplier-feed batches and discovery review candidates."
+    },
+    {
+      name: "0018_supplier_feed_observability.sql",
+      feature: "Feed observability",
+      description: "Supplier-feed replay protection and durable batch history."
+    }
+  ];
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx) => {
+      const ledgerExists = await tx.query(
+        `
+          SELECT to_regclass('public.zayvi_schema_migrations') AS ledger
+        `
+      );
+
+      if (!ledgerExists.rows[0]?.ledger) {
+        return {
+          ledgerAvailable: false,
+          allReady: false,
+          appliedCount: 0,
+          pendingCount: requiredMigrations.length,
+          requiredMigrations: requiredMigrations.map((migration) => ({
+            ...migration,
+            applied: false,
+            appliedAt: null
+          }))
+        };
+      }
+
+      const appliedResult = await tx.query(
+        `
+          SELECT migration_name, applied_at
+          FROM zayvi_schema_migrations
+          ORDER BY migration_name ASC
+        `
+      );
+
+      const applied = new Map(
+        appliedResult.rows.map((row) => [
+          row.migration_name,
+          row.applied_at
+        ])
+      );
+
+      const mapped = requiredMigrations.map((migration) => ({
+        ...migration,
+        applied: applied.has(migration.name),
+        appliedAt: applied.get(migration.name) || null
+      }));
+
+      const appliedCount = mapped.filter((migration) => migration.applied).length;
+
+      return {
+        ledgerAvailable: true,
+        allReady: appliedCount === mapped.length,
+        appliedCount,
+        pendingCount: mapped.length - appliedCount,
+        requiredMigrations: mapped,
+        latestAppliedMigration:
+          appliedResult.rows.length > 0
+            ? appliedResult.rows[appliedResult.rows.length - 1].migration_name
+            : null
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getKredalConnection() {
   const client = await getPool().connect();
 
@@ -7547,6 +7656,25 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "replenishment_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/system-readiness")) {
+    try {
+      const readiness = await getSystemReadiness();
+      return response(200, {
+        source: "postgresql",
+        generatedAt: new Date().toISOString(),
+        ...readiness
+      });
+    } catch (error) {
+      console.error("System readiness check failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(500, {
+        error: "system_readiness_unavailable"
       });
     }
   }
