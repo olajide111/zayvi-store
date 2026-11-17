@@ -5789,6 +5789,12 @@ const schemaMigrationDefinitions = [
     feature: "Vendor portal",
     description: "Invite-only supplier users and supplier-scoped portal access.",
     probe: { type: "table", table: "commerce_supplier_users" }
+  },
+  {
+    name: "0020_supplier_api_credentials.sql",
+    feature: "Supplier API",
+    description: "Revocable machine credentials for supplier feed automation.",
+    probe: { type: "table", table: "commerce_supplier_api_credentials" }
   }
 ];
 
@@ -5923,6 +5929,18 @@ function requiredSchemaMigrationsForRoute(routePath) {
       "0017_supplier_feed_discovery.sql",
       "0018_supplier_feed_observability.sql",
       "0019_vendor_portal_access.sql"
+    ];
+  }
+
+  if (
+    routePath.includes("/supplier-api-credentials") ||
+    routePath.endsWith("/supplier-api/ingest")
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0017_supplier_feed_discovery.sql",
+      "0018_supplier_feed_observability.sql",
+      "0020_supplier_api_credentials.sql"
     ];
   }
 
@@ -6699,6 +6717,335 @@ async function listVendorFeedHistory(accountId) {
   } finally {
     client.release();
   }
+}
+
+
+async function listSupplierApiCredentials(supplierId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            supplier_id,
+            label,
+            key_prefix,
+            scopes,
+            status,
+            expires_at,
+            last_used_at,
+            revoked_at,
+            created_at,
+            updated_at
+          FROM commerce_supplier_api_credentials
+          WHERE tenant_id = $1
+            AND supplier_id = $2
+          ORDER BY created_at DESC
+        `,
+        [tenantId, supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        supplierId: row.supplier_id,
+        label: row.label,
+        keyPrefix: row.key_prefix,
+        scopes: row.scopes || [],
+        status: row.status,
+        expiresAt: row.expires_at,
+        lastUsedAt: row.last_used_at,
+        revokedAt: row.revoked_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function createSupplierApiCredential(input) {
+  const supplierId = String(input?.supplierId || "").trim();
+  const label = String(input?.label || "").trim().slice(0, 120);
+  const keyPrefix = String(input?.keyPrefix || "").trim().slice(0, 32);
+  const secretHash = String(input?.secretHash || "").trim();
+  const expiresAt =
+    input?.expiresAt === null || input?.expiresAt === undefined || input?.expiresAt === ""
+      ? null
+      : new Date(input.expiresAt);
+
+  if (!/^[0-9a-f-]{36}$/i.test(supplierId)) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!label) {
+    const error = new Error("API credential label is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^zv_vendor_[A-Za-z0-9_-]{4,24}$/.test(keyPrefix)) {
+    const error = new Error("A valid supplier API key prefix is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[a-f0-9]{64}$/i.test(secretHash)) {
+    const error = new Error("A valid supplier API secret hash is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+    const error = new Error("Supplier API credential expiry is invalid.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const supplierResult = await tx.query(
+        `
+          SELECT id, name, status, verification_status
+          FROM commerce_suppliers
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, supplierId]
+      );
+
+      if (supplierResult.rowCount === 0) {
+        const error = new Error("Supplier not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const supplier = supplierResult.rows[0];
+
+      if (
+        supplier.status !== "active" ||
+        supplier.verification_status !== "verified"
+      ) {
+        const error = new Error(
+          "Supplier API credentials can only be created for verified active suppliers."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const result = await tx.query(
+        `
+          INSERT INTO commerce_supplier_api_credentials (
+            tenant_id,
+            supplier_id,
+            label,
+            key_prefix,
+            secret_hash,
+            scopes,
+            status,
+            expires_at
+          )
+          VALUES (
+            $1,$2,$3,$4,$5,ARRAY['feed:write']::text[],'active',$6
+          )
+          RETURNING
+            id,
+            supplier_id,
+            label,
+            key_prefix,
+            scopes,
+            status,
+            expires_at,
+            created_at
+        `,
+        [
+          tenantId,
+          supplierId,
+          label,
+          keyPrefix,
+          secretHash,
+          expiresAt ? expiresAt.toISOString() : null
+        ]
+      );
+
+      const row = result.rows[0];
+
+      return {
+        id: row.id,
+        supplierId: row.supplier_id,
+        supplierName: supplier.name,
+        label: row.label,
+        keyPrefix: row.key_prefix,
+        scopes: row.scopes || [],
+        status: row.status,
+        expiresAt: row.expires_at,
+        createdAt: row.created_at
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function revokeSupplierApiCredential(credentialId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(credentialId || ""))) {
+    const error = new Error("A valid supplier API credential id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          UPDATE commerce_supplier_api_credentials
+          SET
+            status = 'revoked',
+            revoked_at = now(),
+            updated_at = now()
+          WHERE tenant_id = $1
+            AND id = $2
+            AND status = 'active'
+          RETURNING id, supplier_id, label, key_prefix
+        `,
+        [tenantId, credentialId]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Active supplier API credential not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      return {
+        id: result.rows[0].id,
+        supplierId: result.rows[0].supplier_id,
+        label: result.rows[0].label,
+        keyPrefix: result.rows[0].key_prefix,
+        status: "revoked"
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function resolveSupplierApiCredential(secretHash) {
+  if (!/^[a-f0-9]{64}$/i.test(String(secretHash || ""))) {
+    const error = new Error("Supplier API credential is invalid.");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            c.id,
+            c.supplier_id,
+            c.scopes,
+            c.status,
+            c.expires_at,
+            s.status AS supplier_status,
+            s.verification_status
+          FROM commerce_supplier_api_credentials c
+          JOIN commerce_suppliers s
+            ON s.tenant_id = c.tenant_id
+           AND s.id = c.supplier_id
+          WHERE c.tenant_id = $1
+            AND c.secret_hash = $2
+          FOR UPDATE
+        `,
+        [tenantId, secretHash]
+      );
+
+      if (result.rowCount === 0) {
+        const error = new Error("Supplier API credential is invalid.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const credential = result.rows[0];
+
+      if (credential.status !== "active") {
+        const error = new Error("Supplier API credential has been revoked.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      if (
+        credential.expires_at &&
+        new Date(credential.expires_at).getTime() < Date.now()
+      ) {
+        const error = new Error("Supplier API credential has expired.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      if (
+        credential.supplier_status !== "active" ||
+        credential.verification_status !== "verified"
+      ) {
+        const error = new Error("Supplier is not eligible for automated feed submission.");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (!(credential.scopes || []).includes("feed:write")) {
+        const error = new Error("Supplier API credential lacks feed:write scope.");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      await tx.query(
+        `
+          UPDATE commerce_supplier_api_credentials
+          SET last_used_at = now(), updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+        `,
+        [tenantId, credential.id]
+      );
+
+      return {
+        credentialId: credential.id,
+        supplierId: credential.supplier_id
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function ingestSupplierApiFeed(secretHash, input) {
+  const credential = await resolveSupplierApiCredential(secretHash);
+
+  return ingestSupplierFeed({
+    supplierId: credential.supplierId,
+    sourceType: "api",
+    sourceReference:
+      String(input?.sourceReference || "Supplier API submission")
+        .trim()
+        .slice(0, 500) || "Supplier API submission",
+    items: Array.isArray(input?.items) ? input.items : []
+  });
 }
 
 
@@ -8182,6 +8529,108 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_verification_update_failed"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    routePath.endsWith("/supplier-api-credentials")
+  ) {
+    try {
+      const supplierId = event?.queryStringParameters?.supplierId || "";
+      const credentials = await listSupplierApiCredentials(supplierId);
+      return response(200, {
+        source: "postgresql",
+        total: credentials.length,
+        credentials
+      });
+    } catch (error) {
+      console.error("Supplier API credential list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_api_credentials_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    routePath.endsWith("/supplier-api-credentials")
+  ) {
+    try {
+      const credential = await createSupplierApiCredential(parseBody(event));
+      return response(201, {
+        source: "postgresql",
+        credential
+      });
+    } catch (error) {
+      console.error("Supplier API credential create failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_api_credential_create_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /\/supplier-api-credentials\/[0-9a-f-]{36}\/revoke$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const credentialId = parts[parts.length - 2];
+      const revoked = await revokeSupplierApiCredential(credentialId);
+      return response(200, {
+        source: "postgresql",
+        revoked
+      });
+    } catch (error) {
+      console.error("Supplier API credential revoke failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_api_credential_revoke_failed"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/supplier-api/ingest")) {
+    try {
+      const body = parseBody(event);
+      const result = await ingestSupplierApiFeed(
+        String(body?.secretHash || ""),
+        body
+      );
+      return response(201, {
+        source: "postgresql",
+        ...result,
+        autoPublishEnabled: false
+      });
+    } catch (error) {
+      console.error("Supplier API ingest failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_api_ingest_failed"
       });
     }
   }
