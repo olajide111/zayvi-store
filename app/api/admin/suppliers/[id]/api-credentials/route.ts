@@ -1,8 +1,8 @@
-import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { hasAdminSession } from "@/lib/admin-auth";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { createSupplierApiKey } from "@/lib/supplier-api-key";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,17 +68,18 @@ export async function POST(
     );
   }
 
-  const prefix = "zv_vendor_" + randomBytes(4).toString("hex");
-  const secret = randomBytes(24).toString("base64url");
-  const apiKey = prefix + "_" + secret;
-  const secretHash = createHash("sha256").update(apiKey).digest("hex");
+  const {
+    apiKey,
+    keyPrefix,
+    secretHash,
+  } = createSupplierApiKey();
 
   const result = await callZayviAwsApi("/supplier-api-credentials", {
     method: "POST",
     body: {
       supplierId: id,
       label,
-      keyPrefix: prefix,
+      keyPrefix,
       secretHash,
       expiresAt: body.expiresAt ?? null,
     },
