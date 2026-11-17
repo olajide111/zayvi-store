@@ -2392,6 +2392,8 @@ async function createReturn(input) {
         requestedRefundAmount += Number(row.unit_price) * item.quantity;
       }
 
+      const returnNumber = createReturnNumber();
+
       const returnResult = await tx.query(
         `
           INSERT INTO commerce_returns (
@@ -2410,7 +2412,7 @@ async function createReturn(input) {
         [
           tenantId,
           orderId,
-          createReturnNumber(),
+          returnNumber,
           reason,
           requestedRefundAmount,
           order.currency_code
@@ -2443,6 +2445,27 @@ async function createReturn(input) {
           ]
         );
       }
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "return.created",
+        entityType: "return",
+        entityId: createdReturnId,
+        summary: `Return created: ${returnNumber}.`,
+        metadata: {
+          orderId,
+          returnNumber,
+          requestedRefundAmount,
+          currency: order.currency_code,
+          lineCount: normalizedItems.length,
+          quantityRequested: normalizedItems.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          ),
+          reason
+        }
+      });
 
       return createdReturnId;
     });
