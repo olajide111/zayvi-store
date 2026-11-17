@@ -5727,109 +5727,221 @@ async function rejectDiscoveryCandidate(candidateId, input) {
 }
 
 
-async function getSystemReadiness() {
-  const requiredMigrations = [
-    {
-      name: "0011_inventory_ledger.sql",
-      feature: "Inventory",
-      description: "Owned-stock locations, balances and movement ledger."
-    },
-    {
-      name: "0012_supplier_registry.sql",
-      feature: "Suppliers",
-      description: "Supplier registry and supplier product offers."
-    },
-    {
-      name: "0013_fulfilment_planning.sql",
-      feature: "Fulfilment planning",
-      description: "Human-approved fulfilment plans and stock reservations."
-    },
-    {
-      name: "0014_fulfilment_execution.sql",
-      feature: "Fulfilment execution",
-      description: "Dispatch, delivery and owned-stock consumption."
-    },
-    {
-      name: "0015_supplier_verification_audit.sql",
-      feature: "Supplier verification",
-      description: "Auditable supplier review and verification history."
-    },
-    {
-      name: "0016_purchase_orders.sql",
-      feature: "Purchase orders",
-      description: "Supplier purchase orders and inventory receiving."
-    },
-    {
-      name: "0017_supplier_feed_discovery.sql",
-      feature: "Product discovery",
-      description: "Supplier-feed batches and discovery review candidates."
-    },
-    {
-      name: "0018_supplier_feed_observability.sql",
-      feature: "Feed observability",
-      description: "Supplier-feed replay protection and durable batch history."
+const schemaMigrationDefinitions = [
+  {
+    name: "0011_inventory_ledger.sql",
+    feature: "Inventory",
+    description: "Owned-stock locations, balances and movement ledger.",
+    probe: { type: "table", table: "commerce_inventory_levels" }
+  },
+  {
+    name: "0012_supplier_registry.sql",
+    feature: "Suppliers",
+    description: "Supplier registry and supplier product offers.",
+    probe: { type: "table", table: "commerce_suppliers" }
+  },
+  {
+    name: "0013_fulfilment_planning.sql",
+    feature: "Fulfilment planning",
+    description: "Human-approved fulfilment plans and stock reservations.",
+    probe: { type: "table", table: "commerce_fulfilment_plans" }
+  },
+  {
+    name: "0014_fulfilment_execution.sql",
+    feature: "Fulfilment execution",
+    description: "Dispatch, delivery and owned-stock consumption.",
+    probe: {
+      type: "column",
+      table: "commerce_fulfilment_allocations",
+      column: "execution_status"
     }
-  ];
+  },
+  {
+    name: "0015_supplier_verification_audit.sql",
+    feature: "Supplier verification",
+    description: "Auditable supplier review and verification history.",
+    probe: { type: "table", table: "commerce_supplier_verification_events" }
+  },
+  {
+    name: "0016_purchase_orders.sql",
+    feature: "Purchase orders",
+    description: "Supplier purchase orders and inventory receiving.",
+    probe: { type: "table", table: "commerce_purchase_orders" }
+  },
+  {
+    name: "0017_supplier_feed_discovery.sql",
+    feature: "Product discovery",
+    description: "Supplier-feed batches and discovery review candidates.",
+    probe: { type: "table", table: "commerce_product_discovery_candidates" }
+  },
+  {
+    name: "0018_supplier_feed_observability.sql",
+    feature: "Feed observability",
+    description: "Supplier-feed replay protection and durable batch history.",
+    probe: {
+      type: "column",
+      table: "commerce_supplier_feed_batches",
+      column: "payload_checksum"
+    }
+  }
+];
 
+async function probeSchemaMigration(client, definition) {
+  if (definition.probe.type === "table") {
+    const result = await client.query(
+      "SELECT to_regclass($1) AS relation",
+      [`public.${definition.probe.table}`]
+    );
+    return Boolean(result.rows[0]?.relation);
+  }
+
+  const result = await client.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = $1
+          AND column_name = $2
+      ) AS present
+    `,
+    [definition.probe.table, definition.probe.column]
+  );
+
+  return Boolean(result.rows[0]?.present);
+}
+
+async function checkSchemaMigrations(requiredNames) {
   const client = await getPool().connect();
 
   try {
-    return await withTenant(client, async (tx) => {
-      const ledgerExists = await tx.query(
-        `
-          SELECT to_regclass('public.zayvi_schema_migrations') AS ledger
-        `
-      );
+    const definitions = schemaMigrationDefinitions.filter((definition) =>
+      requiredNames.includes(definition.name)
+    );
 
-      if (!ledgerExists.rows[0]?.ledger) {
-        return {
-          ledgerAvailable: false,
-          allReady: false,
-          appliedCount: 0,
-          pendingCount: requiredMigrations.length,
-          requiredMigrations: requiredMigrations.map((migration) => ({
-            ...migration,
-            applied: false,
-            appliedAt: null
-          }))
-        };
-      }
+    const pending = [];
 
-      const appliedResult = await tx.query(
-        `
-          SELECT migration_name, applied_at
-          FROM zayvi_schema_migrations
-          ORDER BY migration_name ASC
-        `
-      );
+    for (const definition of definitions) {
+      const applied = await probeSchemaMigration(client, definition);
+      if (!applied) pending.push(definition.name);
+    }
 
-      const applied = new Map(
-        appliedResult.rows.map((row) => [
-          row.migration_name,
-          row.applied_at
-        ])
-      );
+    return {
+      ready: pending.length === 0,
+      pending
+    };
+  } finally {
+    client.release();
+  }
+}
 
-      const mapped = requiredMigrations.map((migration) => ({
-        ...migration,
-        applied: applied.has(migration.name),
-        appliedAt: applied.get(migration.name) || null
-      }));
+function requiredSchemaMigrationsForRoute(routePath) {
+  if (routePath.endsWith("/inventory") || routePath.endsWith("/inventory/adjust")) {
+    return ["0011_inventory_ledger.sql"];
+  }
 
-      const appliedCount = mapped.filter((migration) => migration.applied).length;
+  if (
+    /\/suppliers\/[0-9a-f-]{36}\/verification-events$/i.test(routePath) ||
+    /\/suppliers\/[0-9a-f-]{36}\/verification$/i.test(routePath)
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0015_supplier_verification_audit.sql"
+    ];
+  }
 
-      return {
-        ledgerAvailable: true,
-        allReady: appliedCount === mapped.length,
-        appliedCount,
-        pendingCount: mapped.length - appliedCount,
-        requiredMigrations: mapped,
-        latestAppliedMigration:
-          appliedResult.rows.length > 0
-            ? appliedResult.rows[appliedResult.rows.length - 1].migration_name
-            : null
-      };
-    });
+  if (
+    routePath.endsWith("/suppliers") ||
+    routePath.endsWith("/supplier-offers")
+  ) {
+    return ["0012_supplier_registry.sql"];
+  }
+
+  if (routePath.endsWith("/sourcing") || routePath.endsWith("/replenishment")) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0012_supplier_registry.sql"
+    ];
+  }
+
+  if (routePath.includes("/purchase-orders")) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql"
+    ];
+  }
+
+  if (routePath.endsWith("/supplier-feed/batches")) {
+    return [
+      "0012_supplier_registry.sql",
+      "0017_supplier_feed_discovery.sql",
+      "0018_supplier_feed_observability.sql"
+    ];
+  }
+
+  if (
+    routePath.endsWith("/supplier-feed/ingest") ||
+    routePath.endsWith("/discovery-candidates") ||
+    /\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0017_supplier_feed_discovery.sql"
+    ];
+  }
+
+  if (/\/orders\/[0-9a-f-]{36}\/fulfilment-plan\/allocations\/[0-9a-f-]{36}\/execution$/i.test(routePath)) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0012_supplier_registry.sql",
+      "0013_fulfilment_planning.sql",
+      "0014_fulfilment_execution.sql"
+    ];
+  }
+
+  if (/\/orders\/[0-9a-f-]{36}\/fulfilment-plan/i.test(routePath)) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0012_supplier_registry.sql",
+      "0013_fulfilment_planning.sql"
+    ];
+  }
+
+  return [];
+}
+
+async function getSystemReadiness() {
+  const client = await getPool().connect();
+
+  try {
+    const mapped = [];
+
+    for (const definition of schemaMigrationDefinitions) {
+      const applied = await probeSchemaMigration(client, definition);
+      mapped.push({
+        name: definition.name,
+        feature: definition.feature,
+        description: definition.description,
+        applied,
+        appliedAt: null
+      });
+    }
+
+    const appliedCount = mapped.filter((migration) => migration.applied).length;
+    const readyNames = mapped
+      .filter((migration) => migration.applied)
+      .map((migration) => migration.name);
+
+    return {
+      readinessSource: "schema_markers",
+      allReady: appliedCount === mapped.length,
+      appliedCount,
+      pendingCount: mapped.length - appliedCount,
+      requiredMigrations: mapped,
+      latestAppliedMigration:
+        readyNames.length > 0 ? readyNames[readyNames.length - 1] : null
+    };
   } finally {
     client.release();
   }
@@ -7098,6 +7210,40 @@ exports.handler = async (event, context) => {
 
   const method = event?.requestContext?.http?.method || "GET";
   const routePath = event?.rawPath || "/";
+
+  if (
+    !routePath.endsWith("/health") &&
+    !routePath.endsWith("/ready") &&
+    !routePath.endsWith("/system-readiness")
+  ) {
+    const requiredMigrations = requiredSchemaMigrationsForRoute(routePath);
+
+    if (requiredMigrations.length > 0) {
+      try {
+        const schema = await checkSchemaMigrations(requiredMigrations);
+
+        if (!schema.ready) {
+          return response(409, {
+            error:
+              "Database migration required before this Preview feature can be used.",
+            code: "schema_not_ready",
+            requiredMigrations: schema.pending,
+            systemReadinessPath: "/admin/system-readiness"
+          });
+        }
+      } catch (error) {
+        console.error("Schema readiness gate failed:", {
+          name: error?.name,
+          message: error?.message
+        });
+
+        return response(503, {
+          error: "Unable to verify database schema readiness.",
+          code: "schema_readiness_unavailable"
+        });
+      }
+    }
+  }
 
   if (method === "GET" && routePath.endsWith("/health")) {
     return response(200, {
