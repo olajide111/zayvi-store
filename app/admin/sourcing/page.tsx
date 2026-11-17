@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useMemo, useState } from "react";
 
 type SourceOption = {
@@ -229,26 +232,11 @@ export default function AdminSourcingPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">
-              Workspace / Sourcing intelligence
-            </div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Sourcing intelligence
-            </h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Insights" title="Sourcing intelligence" description="Compare supplier offers and stock options by market.">
+        <Link href="/admin/suppliers" prefetch={false} className={adminAction}>Suppliers</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -282,16 +270,16 @@ export default function AdminSourcingPage() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Source recommended</div>
-            <div className="mt-2 text-3xl font-semibold">{withRecommendation}</div>
+            <div className="text-xs text-[#52635b]">Source recommended</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{withRecommendation}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Supplier recommended</div>
-            <div className="mt-2 text-3xl font-semibold">{supplierRecommended}</div>
+            <div className="text-xs text-[#52635b]">Supplier recommended</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{supplierRecommended}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Blocked / insufficient evidence</div>
-            <div className="mt-2 text-3xl font-semibold">{blocked}</div>
+            <div className="text-xs text-[#52635b]">Blocked / insufficient evidence</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{blocked}</div>
           </div>
         </div>
 
@@ -326,13 +314,13 @@ export default function AdminSourcingPage() {
                 <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h2 className="text-base font-semibold">{product.productName}</h2>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {product.canonicalCode} · {product.marketCode} ·{" "}
                       {product.publicationStatus.replaceAll("_", " ")}
                     </div>
                   </div>
                   <div className="text-left md:text-right">
-                    <div className="text-xs text-gray-400">Selling price</div>
+                    <div className="text-xs text-[#52635b]">Selling price</div>
                     <div className="mt-1 text-lg font-semibold">
                       {money(product.sellingPrice, product.currency)}
                     </div>

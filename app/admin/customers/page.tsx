@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 type Customer = {
   id: string;
@@ -9,7 +12,6 @@ type Customer = {
   phone?: string | null;
   status: string;
   orderCount: number;
-  lifetimeValue: number;
   firstOrderAt?: string | null;
   lastOrderAt?: string | null;
   createdAt: string;
@@ -25,6 +27,7 @@ export default function AdminCustomersPage() {
   const [data, setData] = useState<CustomersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/customers", { credentials: "include", cache: "no-store" })
@@ -42,53 +45,56 @@ export default function AdminCustomersPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const customers = data?.customers ?? [];
+  const search = query.trim().toLowerCase();
+  const visible = customers.filter((customer) =>
+    [customer.name, customer.email, customer.phone].some((value) => value?.toLowerCase().includes(search)),
+  );
+
   return (
-    <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div><div className="text-xs text-gray-400">Workspace / Customers</div><h1 className="mt-1 text-xl font-semibold text-[#17251e]">Customers</h1></div>
-          <a href="/admin/dashboard" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">Back to overview</a>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Customers</div><div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Returning</div><div className="mt-2 text-3xl font-semibold">{data?.customers.filter((customer) => customer.orderCount > 1).length ?? "—"}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Customer value</div><div className="mt-2 text-3xl font-semibold">£{(data?.customers.reduce((sum, customer) => sum + Number(customer.lifetimeValue || 0), 0) ?? 0).toFixed(2)}</div></div>
-        </div>
-
-        {loading && <div className="py-16 text-center text-sm text-gray-400">Loading customers...</div>}
-        {error && <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
-        {!loading && !error && (data?.customers.length ?? 0) > 0 && (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_90px_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1fr)_150px_120px_120px]">
-              <span>Customer</span>
-              <span className="hidden md:block">Orders</span>
-              <span>Value</span>
-              <span>Last order</span>
+    <main className="min-h-screen">
+      <AdminPageHeading section="Store" title="Customers" description="Find customer records and review order activity.">
+        <Link href="/admin/orders" prefetch={false} className={adminAction}>Orders</Link>
+      </AdminPageHeading>
+      <section className="mx-auto max-w-[1500px] space-y-5 px-4 py-5 sm:px-7 lg:px-8">
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Loaded customers", value: customers.length },
+            { label: "Returning customers", value: customers.filter((customer) => customer.orderCount > 1).length },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
+              <p className="text-xs font-medium text-[#52635b]">{label}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{data ? value : "—"}</p>
             </div>
-            {data?.customers.map((customer) => (
-              <div key={customer.id} className="grid grid-cols-[1fr_90px_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_150px_120px_120px]">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{customer.name}</div>
-                  <div className="mt-1 truncate text-xs text-gray-400">{customer.email}</div>
+          ))}
+        </div>
+        <div className="rounded-xl border border-[#dfe6e1] bg-white p-3">
+          <input aria-label="Search customers" placeholder="Search name, email or phone" value={query} onChange={(event) => setQuery(event.target.value)} className="min-h-11 w-full rounded-lg border border-[#dfe6e1] px-3 text-sm" />
+        </div>
+        {loading && <p role="status" className="py-8 text-center text-sm text-[#52635b]">Loading customers…</p>}
+        {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {!loading && !error && (visible.length ? (
+          <ul aria-label="Customers" className="divide-y divide-[#e4eae5] rounded-xl border border-[#dfe6e1] bg-white">
+            {visible.map((customer) => (
+              <li key={customer.id} className="flex flex-wrap items-start justify-between gap-x-5 gap-y-2 px-4 py-3.5 sm:px-5">
+                <div className="min-w-0 grow">
+                  <p className="font-semibold break-words">{customer.name || "Customer"}</p>
+                  <p className="mt-0.5 text-sm break-all text-[#52635b]">{customer.email}</p>
                 </div>
-                <div className="hidden text-sm text-gray-600 md:block">{customer.orderCount}</div>
-                <div className="text-sm font-semibold">£{Number(customer.lifetimeValue).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString("en-GB") : "—"}</div>
-              </div>
+                <div className="min-w-0 text-xs text-[#52635b]">
+                  <p className="font-semibold text-[#215241]">{customer.orderCount} {customer.orderCount === 1 ? "order" : "orders"}</p>
+                  <p className="mt-0.5">{customer.lastOrderAt ? "Last order " + new Date(customer.lastOrderAt).toLocaleDateString("en-GB") : "No order date"}</p>
+                </div>
+              </li>
             ))}
+          </ul>
+        ) : (
+          <div className="rounded-xl border border-[#dfe6e1] bg-white p-7 text-center">
+            <Users size={24} className="mx-auto text-[#215241]" aria-hidden="true" />
+            <h2 className="mt-2 font-semibold">{customers.length ? "No matching customers" : "No customer records yet"}</h2>
+            <p className="mt-1 text-sm text-[#52635b]">{customers.length ? "Try another name, email or phone." : data?.message || "Customer records appear when draft or live orders are created."}</p>
           </div>
-        )}
-
-        {!loading && !error && (data?.customers.length ?? 0) === 0 && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf4ed] text-xl text-[#31543b]">♙</div>
-            <h2 className="mt-5 text-base font-semibold">No customer records yet</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500">{data?.message || "Customer records will appear here when draft or live orders are created."}</p>
-          </div>
-        )}
+        ))}
       </section>
     </main>
   );

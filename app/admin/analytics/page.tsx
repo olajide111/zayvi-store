@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useState } from "react";
 
 type MarketMetric = {
@@ -41,7 +44,6 @@ function money(value: number, currency: string) {
   return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", {
     style: "currency",
     currency,
-    maximumFractionDigits: currency === "NGN" ? 0 : 2,
   }).format(Number(value || 0));
 }
 
@@ -49,6 +51,7 @@ export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [marketFilter, setMarketFilter] = useState("all");
 
   useEffect(() => {
     fetch("/api/admin/analytics", { credentials: "include", cache: "no-store" })
@@ -68,32 +71,18 @@ export default function AdminAnalyticsPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Analytics</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Commerce analytics</h1>
-          </div>
-          <a href="/admin/dashboard" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">
-            Back to overview
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Insights" title="Commerce analytics" description="Review orders and payments recorded across your Preview markets.">
+        <Link href="/admin/orders" prefetch={false} className={adminAction}>Orders</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-          <div className="text-sm font-semibold text-blue-800">Operational analytics from PostgreSQL</div>
-          <p className="mt-1 text-xs leading-5 text-blue-700">
-            These metrics come from stored Zayvi orders and payment states. No forecasted or AI-generated sales figures are included.
-          </p>
-        </div>
-
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         {loading && <div className="py-16 text-center text-sm text-gray-400">Loading analytics...</div>}
         {error && <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
         {!loading && !error && data && (
           <>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            <h2 className="text-sm font-semibold text-[#215241]">Order status across all markets</h2>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
               {[
                 ["Orders", data.orders.total],
                 ["Paid", data.orders.paid],
@@ -104,14 +93,22 @@ export default function AdminAnalyticsPage() {
               ].map(([label, value]) => (
                 <div key={String(label)} className="rounded-2xl border border-gray-200 bg-white p-5">
                   <div className="text-xs text-gray-400">{label}</div>
-                  <div className="mt-2 text-3xl font-semibold">{value}</div>
+                  <div className="mt-1.5 text-2xl font-semibold tabular-nums">{value}</div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              {data.markets.map((market) => (
-                <div key={market.marketCode} className="rounded-2xl border border-gray-200 bg-white p-6">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold">Market activity</h2>
+              <select aria-label="Analytics market" value={marketFilter} onChange={(event) => setMarketFilter(event.target.value)} className="min-h-11 rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm">
+                <option value="all">All markets</option>
+                <option value="GB">United Kingdom</option>
+                <option value="NG">Nigeria</option>
+              </select>
+            </div>
+            <div className="mt-3 grid gap-4 xl:grid-cols-2">
+              {data.markets.filter((market) => marketFilter === "all" || market.marketCode === marketFilter).map((market) => (
+                <div key={market.marketCode + ":" + market.currency} className="rounded-2xl border border-gray-200 bg-white p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">Market</div>
@@ -121,45 +118,51 @@ export default function AdminAnalyticsPage() {
                       {market.currency}
                     </div>
                   </div>
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div className="rounded-xl bg-[#fafbf9] p-4">
+                  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-4">
+                    <div className="rounded-xl bg-[#fafbf9] p-2.5 sm:p-4">
                       <div className="text-xs text-gray-400">Orders</div>
                       <div className="mt-1 text-2xl font-semibold">{market.orderCount}</div>
                     </div>
-                    <div className="rounded-xl bg-[#fafbf9] p-4">
+                    <div className="rounded-xl bg-[#fafbf9] p-2.5 sm:p-4">
                       <div className="text-xs text-gray-400">Paid orders</div>
                       <div className="mt-1 text-2xl font-semibold">{market.paidOrders}</div>
                     </div>
-                    <div className="rounded-xl bg-[#fafbf9] p-4">
+                    <div className="rounded-xl bg-[#fafbf9] p-2.5 sm:p-4">
                       <div className="text-xs text-gray-400">Paid value</div>
-                      <div className="mt-1 text-lg font-semibold">{money(market.paidValue, market.currency)}</div>
+                      <div className="mt-1 text-base font-semibold break-words tabular-nums sm:text-lg">{money(market.paidValue, market.currency)}</div>
                     </div>
-                    <div className="rounded-xl bg-[#fafbf9] p-4">
+                    <div className="rounded-xl bg-[#fafbf9] p-2.5 sm:p-4">
                       <div className="text-xs text-gray-400">Refunded-order value</div>
-                      <div className="mt-1 text-lg font-semibold">{money(market.refundedOrderValue, market.currency)}</div>
+                      <div className="mt-1 text-base font-semibold break-words tabular-nums sm:text-lg">{money(market.refundedOrderValue, market.currency)}</div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <div className="border-b border-gray-100 px-5 py-4">
-                <div className="text-sm font-semibold">Recent orders</div>
-                <div className="mt-1 text-xs text-gray-400">Latest stored order activity across enabled markets</div>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {data.recentOrders.map((order) => (
-                  <a key={order.id} href={`/admin/orders/${order.id}`} className="grid grid-cols-[1fr_100px] gap-4 px-5 py-4 hover:bg-gray-50 md:grid-cols-[160px_100px_120px_140px_1fr]">
-                    <div className="text-sm font-semibold text-[#23432d]">{order.orderNumber}</div>
-                    <div className="text-xs text-gray-500">{order.marketCode}</div>
-                    <div className="hidden text-xs capitalize text-gray-500 md:block">{order.paymentStatus.replaceAll("_", " ")}</div>
-                    <div className="hidden text-xs capitalize text-gray-500 md:block">{order.fulfilmentStatus.replaceAll("_", " ")}</div>
-                    <div className="text-right text-sm font-semibold">{money(order.total, order.currency)}</div>
-                  </a>
+            {data.markets.every((market) => marketFilter !== "all" && market.marketCode !== marketFilter) && (
+              <p className="rounded-xl border border-[#dfe6e1] bg-white p-4 text-sm text-[#52635b]">No order totals recorded for this view.</p>
+            )}
+
+            <section className="mt-6 overflow-hidden rounded-xl border border-[#dfe6e1] bg-white" aria-label="Recent orders">
+              <h2 className="border-b border-[#dfe6e1] px-4 py-3.5 font-semibold">Recent orders</h2>
+              {data.recentOrders.every((order) => marketFilter !== "all" && order.marketCode !== marketFilter) && (
+                <p className="p-4 text-sm text-[#52635b]">No recent orders in this view.</p>
+              )}
+              <ul className="divide-y divide-[#e4eae5]">
+                {data.recentOrders.filter((order) => marketFilter === "all" || order.marketCode === marketFilter).map((order) => (
+                  <li key={order.id}>
+                    <Link href={`/admin/orders/${encodeURIComponent(order.id)}`} prefetch={false} className="flex items-start justify-between gap-3 px-4 py-3.5 hover:bg-[#f5f8f5]">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold break-words text-[#215241]">{order.orderNumber}</p>
+                        <p className="mt-0.5 text-xs capitalize text-[#52635b]">{order.marketCode} · {order.paymentStatus.replaceAll("_", " ")} · {order.fulfilmentStatus.replaceAll("_", " ")}</p>
+                      </div>
+                      <p className="min-w-0 text-right text-sm font-semibold break-words tabular-nums">{money(order.total, order.currency)}</p>
+                    </Link>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </ul>
+            </section>
 
             <div className="mt-4 text-right text-[11px] text-gray-400">
               Generated {new Date(data.generatedAt).toLocaleString("en-GB")}

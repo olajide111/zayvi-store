@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useMemo, useState } from "react";
 
 type Market = {
@@ -202,24 +205,11 @@ export default function AdminMarketsPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Markets</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Markets & Currencies
-            </h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Store" title="Markets & currencies" description="Review pricing, availability and publication by market.">
+        <Link href="/admin/products" prefetch={false} className={adminAction}>Catalogue</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
           <div className="text-sm font-semibold text-[#23432d]">
             Explicit market pricing
@@ -245,22 +235,22 @@ export default function AdminMarketsPage() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Markets configured</div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div className="text-xs text-[#52635b]">Markets configured</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {data?.total ?? "—"}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Enabled</div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div className="text-xs text-[#52635b]">Enabled</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {data?.markets.filter((market) => market.enabled).length ?? "—"}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-[#52635b]">
               Nigeria products ready
             </div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {loading ? "—" : `${nigeriaReadyCount}/${ngProducts.length}`}
             </div>
           </div>
@@ -356,7 +346,7 @@ export default function AdminMarketsPage() {
                           <div className="truncate text-sm font-semibold">
                             {product.name}
                           </div>
-                          <div className="mt-1 text-xs text-gray-400">
+                          <div className="mt-1 text-xs text-[#52635b]">
                             {product.category}
                           </div>
                         </div>

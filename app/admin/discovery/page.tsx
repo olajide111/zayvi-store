@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useMemo, useState } from "react";
 
 type Supplier = {
@@ -544,26 +547,11 @@ export default function ProductDiscoveryPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">
-              Workspace / Product discovery
-            </div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Supplier product discovery
-            </h1>
-          </div>
-          <a
-            href="/admin/products"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Products
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Insights" title="Product discovery" description="Import and review supplier products before adding them to the catalogue.">
+        <Link href="/admin/products" prefetch={false} className={adminAction}>Catalogue</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
           <div className="text-sm font-semibold text-blue-800">
             Review-first discovery
@@ -575,7 +563,7 @@ export default function ProductDiscoveryPage() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.2fr)]">
           <div className="space-y-6">
           <aside className="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 className="text-sm font-semibold">Import supplier feed</h2>
@@ -646,7 +634,7 @@ export default function ProductDiscoveryPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold">Feed history</h2>
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-[#52635b]">
                   Recent supplier ingestion batches and validation outcomes.
                 </p>
               </div>
@@ -730,7 +718,7 @@ export default function ProductDiscoveryPage() {
             <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-sm font-semibold">Discovery candidates</div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="mt-1 text-xs text-[#52635b]">
                   {candidates.length} item(s) in this view
                 </div>
               </div>
@@ -787,7 +775,7 @@ export default function ProductDiscoveryPage() {
                               className="h-16 w-16 rounded-xl border border-gray-100 object-cover"
                             />
                           ) : (
-                            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-400">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-xs text-[#52635b]">
                               No image
                             </div>
                           )}
@@ -795,7 +783,7 @@ export default function ProductDiscoveryPage() {
                             <div className="text-sm font-semibold">
                               {candidate.name}
                             </div>
-                            <div className="mt-1 text-xs text-gray-400">
+                            <div className="mt-1 text-xs text-[#52635b]">
                               {candidate.supplierName} ·{" "}
                               {candidate.supplierSku ||
                                 candidate.externalProductId}

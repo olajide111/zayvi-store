@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { use, useEffect, useState } from "react";
 
 type OrderItem = {
@@ -385,20 +388,11 @@ export default function AdminOrderDetailPage({
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <a href="/admin/orders" className="text-xs text-gray-400 hover:text-gray-600">← Orders</a>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">{order.orderNumber}</h1>
-          </div>
-          <div className="text-right text-xs text-gray-500">
-            <div>{new Date(order.createdAt).toLocaleString("en-GB")}</div>
-            <div className="mt-1">{order.marketCode} · {order.currency}</div>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Orders" title={order.orderNumber} description={`${order.marketCode} · ${order.currency} · ${new Date(order.createdAt).toLocaleString("en-GB")}`}>
+        <Link href="/admin/orders" prefetch={false} className={adminAction}>All orders</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto grid max-w-[1200px] gap-6 px-5 py-8 md:grid-cols-[minmax(0,1fr)_340px] md:px-9">
+      <section className="mx-auto grid max-w-[1200px] gap-6 px-4 py-5 sm:px-7 lg:px-8 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div>
           <div className="rounded-2xl border border-gray-200 bg-white">
             <div className="border-b border-gray-100 px-5 py-4 text-sm font-semibold">Items</div>
@@ -406,7 +400,7 @@ export default function AdminOrderDetailPage({
               <div key={item.id} className="flex items-start justify-between gap-5 border-b border-gray-100 px-5 py-4 last:border-b-0">
                 <div className="min-w-0">
                   <div className="font-medium">{item.productName}</div>
-                  <div className="mt-1 text-xs text-gray-400">{item.sku || item.productId}</div>
+                  <div className="mt-1 text-xs text-[#52635b]">{item.sku || item.productId}</div>
                   {Object.keys(item.selectedOptions || {}).length > 0 && (
                     <div className="mt-2 text-xs text-gray-500">
                       {Object.entries(item.selectedOptions).map(([key, value]) => `${key}: ${value}`).join(" · ")}
@@ -415,7 +409,7 @@ export default function AdminOrderDetailPage({
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-semibold">{formatMoney(item.lineTotal, item.currency)}</div>
-                  <div className="mt-1 text-xs text-gray-400">{item.quantity} × {formatMoney(item.unitPrice, item.currency)}</div>
+                  <div className="mt-1 text-xs text-[#52635b]">{item.quantity} × {formatMoney(item.unitPrice, item.currency)}</div>
                 </div>
               </div>
             ))}
@@ -451,7 +445,7 @@ export default function AdminOrderDetailPage({
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold">{allocation.productName}</div>
-                          <div className="mt-1 text-xs text-gray-400">
+                          <div className="mt-1 text-xs text-[#52635b]">
                             {allocation.quantity} unit(s) · {allocation.sourceName}
                           </div>
                         </div>
@@ -629,7 +623,7 @@ export default function AdminOrderDetailPage({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold">Payment evidence</h2>
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-[#52635b]">
                   Provider-controlled payment state and reconciliation history.
                 </p>
               </div>

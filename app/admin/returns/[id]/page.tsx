@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { use, useEffect, useState } from "react";
 
 type ReturnItem = {
@@ -234,65 +237,34 @@ export default function ReturnDetailPage({
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1300px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <a
-              href="/admin/returns"
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              ← Returns
-            </a>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              {data.returnNumber}
-            </h1>
-            <div className="mt-1 text-xs text-gray-400">
-              {data.orderNumber} · {data.customerName}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <span
-              className={
-                "rounded-full px-3 py-1 text-xs font-semibold " +
-                statusClass(data.status)
-              }
-            >
-              {data.status.replaceAll("_", " ")}
-            </span>
-            <span
-              className={
-                "rounded-full px-3 py-1 text-xs font-semibold " +
-                statusClass(data.refundStatus)
-              }
-            >
-              refund {data.refundStatus.replaceAll("_", " ")}
-            </span>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Returns" title={data.returnNumber} description={`${data.orderNumber} · ${data.customerName}`}>
+        <Link href="/admin/returns" prefetch={false} className={adminAction}>All returns</Link>
+        <span className={"rounded-full px-3 py-1 text-xs font-semibold " + statusClass(data.status)}>{data.status.replaceAll("_", " ")}</span>
+        <span className={"rounded-full px-3 py-1 text-xs font-semibold " + statusClass(data.refundStatus)}>Refund: {data.refundStatus.replaceAll("_", " ")}</span>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1300px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1300px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Requested refund</div>
+            <div className="text-xs text-[#52635b]">Requested refund</div>
             <div className="mt-2 text-xl font-semibold">
               {money(data.requestedRefundAmount, data.currency)}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Payment state</div>
+            <div className="text-xs text-[#52635b]">Payment state</div>
             <div className="mt-2 text-lg font-semibold capitalize">
               {data.orderPaymentStatus.replaceAll("_", " ")}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Fulfilment</div>
+            <div className="text-xs text-[#52635b]">Fulfilment</div>
             <div className="mt-2 text-lg font-semibold capitalize">
               {data.orderFulfilmentStatus.replaceAll("_", " ")}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Market</div>
+            <div className="text-xs text-[#52635b]">Market</div>
             <div className="mt-2 text-lg font-semibold">
               {data.marketCode} · {data.currency}
             </div>
@@ -334,7 +306,7 @@ export default function ReturnDetailPage({
                   <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_110px_120px_120px]">
                     <div>
                       <div className="text-sm font-semibold">{item.productName}</div>
-                      <div className="mt-1 text-xs text-gray-400">
+                      <div className="mt-1 text-xs text-[#52635b]">
                         {item.sku || "No SKU"} · ordered {item.orderedQuantity} ·{" "}
                         {money(item.unitPrice, data.currency)} each
                       </div>

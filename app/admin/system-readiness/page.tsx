@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useState } from "react";
 
 type MigrationReadiness = {
@@ -25,6 +28,7 @@ export default function SystemReadinessPage() {
   const [data, setData] = useState<ReadinessResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingOnly, setPendingOnly] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/system-readiness", {
@@ -55,24 +59,11 @@ export default function SystemReadinessPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1300px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / System readiness</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              System readiness
-            </h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Store" title="System readiness" description="Check which Preview operations are backed by the current database schema.">
+        <Link href="/admin/settings" prefetch={false} className={adminAction}>Settings</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1300px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1300px] px-4 py-5 sm:px-7 lg:px-8">
         {loading && (
           <div className="py-16 text-center text-sm text-gray-400">
             Checking schema readiness...
@@ -119,15 +110,15 @@ export default function SystemReadinessPage() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                <div className="text-xs text-gray-400">Applied</div>
-                <div className="mt-2 text-3xl font-semibold">{data.appliedCount}</div>
+                <div className="text-xs text-[#52635b]">Applied</div>
+                <div className="mt-1.5 text-2xl font-semibold tabular-nums">{data.appliedCount}</div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                <div className="text-xs text-gray-400">Pending</div>
-                <div className="mt-2 text-3xl font-semibold">{data.pendingCount}</div>
+                <div className="text-xs text-[#52635b]">Pending</div>
+                <div className="mt-1.5 text-2xl font-semibold tabular-nums">{data.pendingCount}</div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                <div className="text-xs text-gray-400">Latest applied</div>
+                <div className="text-xs text-[#52635b]">Latest applied</div>
                 <div className="mt-2 break-all text-sm font-semibold">
                   {data.latestAppliedMigration || "None recorded"}
                 </div>
@@ -137,16 +128,23 @@ export default function SystemReadinessPage() {
             <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
               <div className="border-b border-gray-100 px-5 py-4">
                 <h2 className="text-sm font-semibold">Feature migration readiness</h2>
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-[#52635b]">
                   Current application features that depend on migrations 0011–0024. Readiness is based on actual schema markers, not privileged migration-ledger access.
                 </p>
               </div>
 
+              <label className="flex items-center gap-2 border-b border-[#dfe6e1] px-5 py-3 text-sm text-[#52635b]">
+                <input type="checkbox" checked={pendingOnly} onChange={(event) => setPendingOnly(event.target.checked)} />
+                Pending only
+              </label>
+              {pendingOnly && data.requiredMigrations.every((migration) => migration.applied) && (
+                <p className="px-5 py-4 text-sm text-[#52635b]">All required migrations are applied.</p>
+              )}
               <div className="divide-y divide-gray-100">
-                {data.requiredMigrations.map((migration) => (
+                {data.requiredMigrations.filter((migration) => !pendingOnly || !migration.applied).map((migration) => (
                   <div
                     key={migration.name}
-                    className="grid gap-3 px-5 py-4 md:grid-cols-[170px_minmax(0,1fr)_220px]"
+                    className="grid gap-3 px-5 py-4 xl:grid-cols-[minmax(165px,0.9fr)_minmax(0,1.5fr)_120px]"
                   >
                     <div>
                       <div className="text-sm font-semibold">{migration.feature}</div>
@@ -159,7 +157,7 @@ export default function SystemReadinessPage() {
                       {migration.description}
                     </div>
 
-                    <div className="md:text-right">
+                    <div className="xl:text-right">
                       <span
                         className={
                           "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold " +
