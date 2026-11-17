@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import { cartStorageKey, type StorefrontMarketSettings } from "@/lib/storefront-market";
+import type { SocialLinks } from "@/lib/social-links";
 import type { ContentMarket } from "@/lib/storefront-content";
 import type { DraftOrderDetails, DraftOrderReceipt } from "@/lib/delivery";
 import { useState, useEffect, useRef } from "react";
@@ -21,9 +22,10 @@ import Footer from "@/components/Footer";
 const STORE_COLOR = "#171714";
 const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v2";
 
-export default function Storefront({ marketCode, marketSettings }: {
+export default function Storefront({ marketCode, marketSettings, socialLinks }: {
   marketCode: ContentMarket;
   marketSettings: StorefrontMarketSettings;
+  socialLinks: SocialLinks;
 }) {
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
@@ -451,7 +453,7 @@ export default function Storefront({ marketCode, marketSettings }: {
       </section>
 
       <Newsletter />
-      <Footer market={marketCode} onShopAll={() => browseCategory("All")} />
+      <Footer market={marketCode} socialLinks={socialLinks} onShopAll={() => browseCategory("All")} />
 
       <CartDrawer
         cart={cart}

@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, CreditCard, FileText, Globe2, Palette, ShieldCheck, Truck } from "lucide-react";
+import { ArrowUpRight, CreditCard, FileText, Globe2, Link2, Palette, ShieldCheck, Truck } from "lucide-react";
 import StorefrontChecklist from "./StorefrontChecklist";
 import AdminPageHeading from "@/components/admin/AdminPageHeading";
 
 const destinations = [
   { href: "/admin/markets", title: "Markets & currencies", description: "Choose where your store sells and manage regional pricing.", icon: Globe2 },
   { href: "/admin/content", title: "Content publishing", description: "Set up storefront pages and write articles by market.", icon: FileText },
+  { href: "/admin/settings/social-links", title: "Social links", description: "Choose which social profiles appear in your storefront footer.", icon: Link2 },
   { href: "/admin/themes", title: "Themes & layouts", description: "Preview storefront templates and colours.", icon: Palette },
   { href: "/admin/payments", title: "Payments", description: "Manage connections and test payments.", icon: CreditCard },
   { href: "/admin/shipping", title: "Shipping", description: "Review delivery and fulfilment setup.", icon: Truck },

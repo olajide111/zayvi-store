@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import type { SocialLinks } from "@/lib/social-links";
+import FooterSocialLinks from "./FooterSocialLinks";
 import { contentUrl, type ContentMarket } from "@/lib/storefront-content";
 
 type Props = {
   market: ContentMarket;
+  socialLinks: SocialLinks;
   onShopAll: () => void;
 };
 
-export default function Footer({ market, onShopAll }: Props) {
+export default function Footer({ market, socialLinks, onShopAll }: Props) {
   const cols = [
     {
       title: "Shop",
@@ -66,17 +69,7 @@ export default function Footer({ market, onShopAll }: Props) {
             })}
           </div>
         ))}
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#111", marginBottom: 14 }}>
-            Follow Us
-          </div>
-          <div style={{ display: "flex", gap: 12, fontSize: 18 }}>
-            <span style={{ cursor: "pointer" }}>📷</span>
-            <span style={{ cursor: "pointer" }}>📘</span>
-            <span style={{ cursor: "pointer" }}>▶️</span>
-            <span style={{ cursor: "pointer" }}>🎵</span>
-          </div>
-        </div>
+        <FooterSocialLinks links={socialLinks} />
       </div>
       <div
         style={{

@@ -7,6 +7,7 @@ const { checkoutError, deliveryMigration, normalizeDeliveryAddress, previewDeliv
 
 const { contentMigration, queryStorefrontContent } = require("./storefront-content");
 const { marketsMigration, queryStorefrontMarkets, storeMarketSettings } = require("./storefront-markets");
+const { socialLinksMigration, querySocialLinks } = require("./storefront-social-links");
 const { reviewSupplierImage, storefrontImage } = require("./supplier-image-rights");
 
 let pool;
@@ -7617,6 +7618,12 @@ const schemaMigrationDefinitions = [
     feature: "Storefront markets",
     description: "Store-specific enabled countries, default market and country switcher.",
     probe: { type: "column", table: "stores", column: "storefront_market_codes" }
+  },
+  {
+    name: socialLinksMigration,
+    feature: "Storefront social links",
+    description: "Seller-managed social profile links in the storefront footer.",
+    probe: { type: "column", table: "stores", column: "storefront_social_links" }
   }
 ];
 
@@ -7670,6 +7677,10 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if (routePath.endsWith("/storefront-social-links")) {
+    return [socialLinksMigration];
+  }
+
   if (routePath.endsWith("/storefront-market-settings")) {
     return [marketsMigration];
   }
@@ -12316,6 +12327,25 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "kredal_events_unavailable"
+      });
+    }
+  }
+
+  if (routePath.endsWith("/storefront-social-links") && ["GET", "PUT"].includes(method)) {
+    try {
+      const save = method === "PUT";
+      let input;
+      if (save) {
+        try {
+          input = parseBody(event);
+        } catch {
+          throw checkoutError("Invalid social profile links.");
+        }
+      }
+      return response(200, await querySocialLinks({ getPool, withTenant }, input, save));
+    } catch (error) {
+      return response(error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Social links are unavailable."
       });
     }
   }
