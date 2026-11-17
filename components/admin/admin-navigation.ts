@@ -48,7 +48,7 @@ export const adminGroups = [
       { title: "Markets", href: "/admin/markets", icon: Globe2 },
       { title: "Shipping", href: "/admin/shipping", icon: Truck },
       { title: "System Readiness", href: "/admin/system-readiness", icon: ShieldCheck },
-      { title: "Settings", href: "/admin/settings", icon: Settings },
+      { title: "Store setup", href: "/admin/settings", icon: Settings },
     ],
   },
 ] as const;
