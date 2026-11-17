@@ -138,7 +138,9 @@ Cancel and refund actions are also server-only and followed by a fresh Kredal lo
 - accepts only the documented Kredal event types;
 - stores the full JSON envelope once using the external event id.
 
-The original integration note does not define the exact nested data shape for every webhook event. Zayvi therefore stores signed events but does not guess payment references or mutate money state from undocumented fields. Payment state is reconciled through Kredal's payment lookup.
+Zayvi reconciles matching test payments when a signed event arrives, even if the buyer closes checkout without returning. The Payments page shows the webhook ledger. **Verify payment** remains available for a direct lookup, and **Catch up events** recovers missed deliveries.
+
+To check automatic reconciliation in Preview, create a fresh test checkout, simulate payment and close the hosted checkout before returning to Zayvi. Wait for Kredal to deliver the event, then open Payments directly and refresh the list and ledger without using **Verify payment** or **Catch up events**. Check for a paid order and an applied event. If the ledger is empty, check Kredal's delivery response for the configured Preview webhook URL. If the request reached the app, search Vercel runtime logs for `Kredal webhook` to see whether signature verification, validation, storage or reconciliation ran. The diagnostic logs exclude the event body, customer details and signing secret.
 
 ### Preview fulfilment safety
 
