@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import { ChevronDown, ShoppingBag } from "lucide-react";
+import { ChevronDown, Search, ShoppingBag } from "lucide-react";
 import { contentUrl, type ContentMarket } from "@/lib/storefront-content";
 
 const categories = ["Travel", "Carry", "Recovery", "Daily"];
@@ -11,13 +11,14 @@ type Props = {
   market: ContentMarket;
   cartCount: number;
   onCartOpen: () => void;
+  onSearch: () => void;
   onShopAll: () => void;
   onBestSellers: () => void;
   onCategory: (category: string) => void;
   scrolled: boolean;
 };
 
-export default function Header({ market, cartCount, onCartOpen, onShopAll, onBestSellers, onCategory, scrolled }: Props) {
+export default function Header({ market, cartCount, onCartOpen, onSearch, onShopAll, onBestSellers, onCategory, scrolled }: Props) {
   const shop = useRef<HTMLDetailsElement>(null);
 
   function select(action: () => void) {
@@ -62,10 +63,15 @@ export default function Header({ market, cartCount, onCartOpen, onShopAll, onBes
           <Link href={contentUrl(market)} className="inline-flex min-h-11 items-center rounded-md px-2 hover:bg-[#edf4ee]">Guides</Link>
         </div>
 
-        <button type="button" onClick={onCartOpen} aria-label={cartCount ? `Cart, ${cartCount} items` : "Cart"} className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f5f7f3] hover:bg-[#edf4ee]">
-          <ShoppingBag size={19} aria-hidden="true" />
-          {cartCount > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 rounded-full bg-[#215241] px-1 text-xs leading-5 font-semibold text-white">{cartCount}</span>}
-        </button>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={onSearch} aria-label="Search products" className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-[#edf4ee]">
+            <Search size={19} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={onCartOpen} aria-label={cartCount ? `Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}` : "Cart"} className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f5f7f3] hover:bg-[#edf4ee]">
+            <ShoppingBag size={19} aria-hidden="true" />
+            {cartCount > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 rounded-full bg-[#215241] px-1 text-xs leading-5 font-semibold text-white">{cartCount}</span>}
+          </button>
+        </div>
       </div>
     </nav>
   );
