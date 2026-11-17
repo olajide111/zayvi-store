@@ -138,7 +138,7 @@ export default function SystemReadinessPage() {
               <div className="border-b border-gray-100 px-5 py-4">
                 <h2 className="text-sm font-semibold">Feature migration readiness</h2>
                 <p className="mt-1 text-xs text-gray-400">
-                  Current application features that depend on migrations 0011–0019. Readiness is based on actual schema markers, not privileged migration-ledger access.
+                  Current application features that depend on migrations 0011–0020. Readiness is based on actual schema markers, not privileged migration-ledger access.
                 </p>
               </div>
 
