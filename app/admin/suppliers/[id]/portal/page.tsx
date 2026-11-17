@@ -2,6 +2,20 @@
 
 import { use, useEffect, useState } from "react";
 
+type SupplierApiCredential = {
+  id: string;
+  supplierId: string;
+  label: string;
+  keyPrefix: string;
+  scopes: string[];
+  status: "active" | "revoked";
+  expiresAt?: string | null;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type SupplierUser = {
   id: string;
   supplierId: string;
@@ -24,11 +38,15 @@ export default function SupplierPortalAccessPage({
 }) {
   const { id } = use(params);
   const [users, setUsers] = useState<SupplierUser[]>([]);
+  const [credentials, setCredentials] = useState<SupplierApiCredential[]>([]);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<"owner" | "editor" | "viewer">("editor");
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviteExpiresAt, setInviteExpiresAt] = useState("");
+  const [credentialLabel, setCredentialLabel] = useState("Supplier feed integration");
+  const [credentialExpiryDays, setCredentialExpiryDays] = useState("90");
+  const [newApiKey, setNewApiKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -39,22 +57,41 @@ export default function SupplierPortalAccessPage({
     setError("");
 
     try {
-      const response = await fetch(
-        `/api/admin/suppliers/${id}/users`,
-        { credentials: "include", cache: "no-store" }
-      );
+      const [userResponse, credentialResponse] = await Promise.all([
+        fetch(`/api/admin/suppliers/${id}/users`, {
+          credentials: "include",
+          cache: "no-store",
+        }),
+        fetch(`/api/admin/suppliers/${id}/api-credentials`, {
+          credentials: "include",
+          cache: "no-store",
+        }),
+      ]);
 
-      if (response.status === 401) {
+      if (userResponse.status === 401 || credentialResponse.status === 401) {
         window.location.href = "/admin";
         return;
       }
 
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || "Unable to load vendor access.");
+      const userPayload = await userResponse.json();
+      const credentialPayload = await credentialResponse.json();
+
+      if (!userResponse.ok) {
+        throw new Error(userPayload?.error || "Unable to load vendor access.");
       }
 
-      setUsers(Array.isArray(payload.users) ? payload.users : []);
+      if (!credentialResponse.ok) {
+        throw new Error(
+          credentialPayload?.error || "Unable to load supplier API credentials."
+        );
+      }
+
+      setUsers(Array.isArray(userPayload.users) ? userPayload.users : []);
+      setCredentials(
+        Array.isArray(credentialPayload.credentials)
+          ? credentialPayload.credentials
+          : []
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load vendor access."
@@ -160,6 +197,113 @@ export default function SupplierPortalAccessPage({
       setNotice("Invitation link copied.");
     } catch {
       setError("Unable to copy the invitation link. Select and copy it manually.");
+    }
+  }
+
+  async function createApiCredential(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const days = credentialExpiryDays === "" ? null : Number(credentialExpiryDays);
+    if (days !== null && (!Number.isSafeInteger(days) || days < 1 || days > 365)) {
+      setError("API credential expiry must be between 1 and 365 days.");
+      return;
+    }
+
+    setWorking(true);
+    setError("");
+    setNotice("");
+    setNewApiKey("");
+
+    try {
+      const expiresAt =
+        days === null
+          ? null
+          : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+      const response = await fetch(
+        `/api/admin/suppliers/${id}/api-credentials`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            label: credentialLabel,
+            expiresAt,
+          }),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Unable to create supplier API credential."
+        );
+      }
+
+      setNewApiKey(payload.apiKey || "");
+      setNotice(
+        "Supplier API credential created. Copy the secret now; Zayvi does not store the raw key and cannot show it again."
+      );
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to create supplier API credential."
+      );
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function revokeApiCredential(credentialId: string) {
+    if (!window.confirm("Revoke this supplier API credential immediately?")) {
+      return;
+    }
+
+    setWorking(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/suppliers/${id}/api-credentials/${credentialId}/revoke`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Unable to revoke supplier API credential."
+        );
+      }
+
+      setNotice("Supplier API credential revoked.");
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to revoke supplier API credential."
+      );
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function copyApiKey() {
+    if (!newApiKey) return;
+
+    try {
+      await navigator.clipboard.writeText(newApiKey);
+      setNotice("Supplier API key copied.");
+    } catch {
+      setError("Unable to copy the API key. Select and copy it manually.");
     }
   }
 
@@ -275,6 +419,124 @@ export default function SupplierPortalAccessPage({
             </button>
           </div>
         </form>
+
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+          <div>
+            <h2 className="text-sm font-semibold">Supplier API credentials</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-400">
+              Machine credentials are limited to supplier product-feed submission.
+              Raw keys are shown once, stored only as hashes, and can be revoked immediately.
+              Feed submissions still enter the Admin review queue and never auto-publish.
+            </p>
+          </div>
+
+          {newApiKey && (
+            <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+              <div className="text-xs font-semibold text-amber-800">
+                Copy this API key now
+              </div>
+              <div className="mt-2 break-all rounded-xl bg-white p-3 font-mono text-xs text-gray-700">
+                {newApiKey}
+              </div>
+              <div className="mt-2 text-[11px] leading-4 text-amber-700">
+                Endpoint: POST /api/vendor-feed/v1/ingest · Header:
+                Authorization: Bearer &lt;API_KEY&gt;
+              </div>
+              <button
+                type="button"
+                onClick={() => void copyApiKey()}
+                className="mt-3 rounded-lg bg-[#17251e] px-4 py-2 text-[11px] font-semibold text-white"
+              >
+                Copy API key
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={createApiCredential} className="mt-4">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+              <input
+                required
+                value={credentialLabel}
+                onChange={(event) => setCredentialLabel(event.target.value)}
+                placeholder="Credential label"
+                className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+              />
+              <select
+                value={credentialExpiryDays}
+                onChange={(event) => setCredentialExpiryDays(event.target.value)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+              >
+                <option value="30">Expires in 30 days</option>
+                <option value="90">Expires in 90 days</option>
+                <option value="180">Expires in 180 days</option>
+                <option value="365">Expires in 365 days</option>
+                <option value="">No expiry</option>
+              </select>
+              <button
+                type="submit"
+                disabled={working}
+                className="rounded-xl bg-[#17251e] px-5 py-3 text-xs font-semibold text-white disabled:opacity-40"
+              >
+                Create API key
+              </button>
+            </div>
+          </form>
+
+          {credentials.length > 0 && (
+            <div className="mt-5 divide-y divide-gray-100 rounded-xl border border-gray-100">
+              {credentials.map((credential) => (
+                <div
+                  key={credential.id}
+                  className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_160px_140px_120px]"
+                >
+                  <div>
+                    <div className="text-sm font-semibold">{credential.label}</div>
+                    <div className="mt-1 font-mono text-[11px] text-gray-400">
+                      {credential.keyPrefix}••••••••
+                    </div>
+                    <div className="mt-1 text-[10px] text-gray-400">
+                      Scope: {credential.scopes.join(", ")}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-400">
+                      Last used
+                    </div>
+                    <div className="mt-1">
+                      {credential.lastUsedAt
+                        ? new Date(credential.lastUsedAt).toLocaleString("en-GB")
+                        : "Never"}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-400">
+                      Expires
+                    </div>
+                    <div className="mt-1">
+                      {credential.expiresAt
+                        ? new Date(credential.expiresAt).toLocaleDateString("en-GB")
+                        : "No expiry"}
+                    </div>
+                  </div>
+                  <div className="md:text-right">
+                    {credential.status === "active" ? (
+                      <button
+                        type="button"
+                        disabled={working}
+                        onClick={() => void revokeApiCredential(credential.id)}
+                        className="rounded-lg border border-red-100 px-3 py-2 text-[11px] font-semibold text-red-600 disabled:opacity-40"
+                      >
+                        Revoke key
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-gray-400">Revoked</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-5 py-4">
