@@ -2871,6 +2871,267 @@ async function getCommerceAnalytics() {
 }
 
 
+async function getOperationsInbox() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const [
+        supplierReviewResult,
+        discoveryResult,
+        purchaseOrderResult,
+        returnResult
+      ] = await Promise.all([
+        tx.query(
+          `
+            SELECT
+              s.id,
+              s.name,
+              s.supplier_code,
+              s.market_code,
+              s.verification_status,
+              s.updated_at
+            FROM commerce_suppliers s
+            WHERE s.tenant_id = $1
+              AND s.status = 'active'
+              AND s.verification_status IN ('unverified','pending_review')
+            ORDER BY s.updated_at ASC
+            LIMIT 100
+          `,
+          [tenantId]
+        ),
+        tx.query(
+          `
+            SELECT
+              c.id,
+              c.name,
+              c.category,
+              c.status,
+              c.updated_at,
+              s.id AS supplier_id,
+              s.name AS supplier_name,
+              s.market_code
+            FROM commerce_product_discovery_candidates c
+            JOIN commerce_suppliers s
+              ON s.tenant_id = c.tenant_id
+             AND s.id = c.supplier_id
+            WHERE c.tenant_id = $1
+              AND c.status = 'pending_review'
+            ORDER BY c.updated_at ASC
+            LIMIT 100
+          `,
+          [tenantId]
+        ),
+        tx.query(
+          `
+            SELECT
+              po.id,
+              po.po_number,
+              po.status,
+              po.supplier_ack_status,
+              po.supplier_update_note,
+              po.submitted_at,
+              po.updated_at,
+              s.name AS supplier_name,
+              s.market_code
+            FROM commerce_purchase_orders po
+            JOIN commerce_suppliers s
+              ON s.tenant_id = po.tenant_id
+             AND s.id = po.supplier_id
+            WHERE po.tenant_id = $1
+              AND (
+                po.status IN ('draft','approved')
+                OR (
+                  po.status IN ('submitted','partially_received')
+                  AND po.supplier_ack_status IN ('pending','unable_to_fulfil')
+                )
+              )
+            ORDER BY po.updated_at ASC
+            LIMIT 100
+          `,
+          [tenantId]
+        ),
+        tx.query(
+          `
+            SELECT
+              r.id,
+              r.return_number,
+              r.status,
+              r.refund_status,
+              r.requested_refund_amount,
+              r.currency_code,
+              r.updated_at,
+              o.id AS order_id,
+              o.order_number,
+              o.customer_name,
+              o.payment_status
+            FROM commerce_returns r
+            JOIN commerce_orders o
+              ON o.tenant_id = r.tenant_id
+             AND o.id = r.order_id
+            WHERE r.tenant_id = $1
+              AND (
+                r.status IN ('requested','approved','received')
+                OR r.refund_status = 'pending_provider'
+              )
+            ORDER BY r.updated_at ASC
+            LIMIT 100
+          `,
+          [tenantId]
+        )
+      ]);
+
+      const items = [];
+
+      for (const row of supplierReviewResult.rows) {
+        items.push({
+          id: `supplier:${row.id}`,
+          type: "supplier_review",
+          severity: "review",
+          title: `Review supplier: ${row.name}`,
+          detail:
+            row.verification_status === "unverified"
+              ? "Supplier has not entered verification review."
+              : "Supplier is waiting for verification review.",
+          marketCode: row.market_code,
+          entityId: row.id,
+          href: `/admin/suppliers/${row.id}`,
+          createdAt: row.updated_at,
+          metadata: {
+            supplierCode: row.supplier_code,
+            verificationStatus: row.verification_status
+          }
+        });
+      }
+
+      for (const row of discoveryResult.rows) {
+        items.push({
+          id: `discovery:${row.id}`,
+          type: "product_discovery",
+          severity: "review",
+          title: `Review product candidate: ${row.name}`,
+          detail: `${row.supplier_name} · ${row.category}`,
+          marketCode: row.market_code,
+          entityId: row.id,
+          href: "/admin/discovery",
+          createdAt: row.updated_at,
+          metadata: {
+            supplierId: row.supplier_id,
+            supplierName: row.supplier_name
+          }
+        });
+      }
+
+      for (const row of purchaseOrderResult.rows) {
+        let severity = "action";
+        let title = `Purchase order ${row.po_number} needs action`;
+        let detail = `${row.supplier_name} · ${row.status.replaceAll("_", " ")}`;
+
+        if (row.status === "draft") {
+          title = `Approve or review draft PO ${row.po_number}`;
+        } else if (row.status === "approved") {
+          title = `Send approved PO ${row.po_number}`;
+        } else if (row.supplier_ack_status === "pending") {
+          title = `Supplier has not acknowledged ${row.po_number}`;
+          severity = "attention";
+        } else if (row.supplier_ack_status === "unable_to_fulfil") {
+          title = `Supplier cannot fulfil ${row.po_number}`;
+          detail = row.supplier_update_note || detail;
+          severity = "urgent";
+        }
+
+        items.push({
+          id: `po:${row.id}`,
+          type: "purchase_order",
+          severity,
+          title,
+          detail,
+          marketCode: row.market_code,
+          entityId: row.id,
+          href: `/admin/purchase-orders/${row.id}`,
+          createdAt: row.submitted_at || row.updated_at,
+          metadata: {
+            status: row.status,
+            supplierAckStatus: row.supplier_ack_status,
+            supplierName: row.supplier_name
+          }
+        });
+      }
+
+      for (const row of returnResult.rows) {
+        let severity = "action";
+        let title = `Return ${row.return_number} needs action`;
+        let detail = `${row.order_number} · ${row.customer_name}`;
+
+        if (row.status === "requested") {
+          title = `Approve or reject return ${row.return_number}`;
+        } else if (row.status === "approved") {
+          title = `Receive and inspect return ${row.return_number}`;
+        } else if (row.refund_status === "pending_provider") {
+          title = `Refund pending for ${row.return_number}`;
+          detail = `${detail} · provider state: ${row.payment_status}`;
+          severity = "attention";
+        } else if (row.status === "received") {
+          title = `Complete return ${row.return_number}`;
+        }
+
+        items.push({
+          id: `return:${row.id}`,
+          type: "return",
+          severity,
+          title,
+          detail,
+          marketCode: null,
+          entityId: row.id,
+          href: `/admin/returns/${row.id}`,
+          createdAt: row.updated_at,
+          metadata: {
+            orderId: row.order_id,
+            orderNumber: row.order_number,
+            status: row.status,
+            refundStatus: row.refund_status,
+            refundAmount: Number(row.requested_refund_amount || 0),
+            currency: row.currency_code
+          }
+        });
+      }
+
+      const severityRank = {
+        urgent: 0,
+        attention: 1,
+        action: 2,
+        review: 3
+      };
+
+      items.sort((left, right) => {
+        const rank =
+          (severityRank[left.severity] ?? 9) -
+          (severityRank[right.severity] ?? 9);
+        if (rank !== 0) return rank;
+
+        return (
+          new Date(left.createdAt || 0).getTime() -
+          new Date(right.createdAt || 0).getTime()
+        );
+      });
+
+      return {
+        total: items.length,
+        counts: {
+          urgent: items.filter((item) => item.severity === "urgent").length,
+          attention: items.filter((item) => item.severity === "attention").length,
+          action: items.filter((item) => item.severity === "action").length,
+          review: items.filter((item) => item.severity === "review").length
+        },
+        items
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getSupplierPerformance() {
   const client = await getPool().connect();
 
@@ -6950,6 +7211,17 @@ function requiredSchemaMigrationsForRoute(routePath) {
     return ["0012_supplier_registry.sql"];
   }
 
+  if (routePath.endsWith("/operations-inbox")) {
+    return [
+      "0012_supplier_registry.sql",
+      "0015_supplier_verification_audit.sql",
+      "0016_purchase_orders.sql",
+      "0017_supplier_feed_discovery.sql",
+      "0022_returns_reverse_inventory.sql",
+      "0023_vendor_purchase_order_updates.sql"
+    ];
+  }
+
   if (routePath.endsWith("/supplier-performance")) {
     return [
       "0012_supplier_registry.sql",
@@ -10262,6 +10534,28 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "customers_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/operations-inbox")) {
+    try {
+      const inbox = await getOperationsInbox();
+      return response(200, {
+        source: "postgresql",
+        generatedAt: new Date().toISOString(),
+        ...inbox
+      });
+    } catch (error) {
+      console.error("Operations inbox failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "operations_inbox_unavailable"
       });
     }
   }
