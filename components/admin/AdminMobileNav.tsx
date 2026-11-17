@@ -74,7 +74,7 @@ export default function AdminMobileNav() {
             className={tabClass + (open || moreActive ? " bg-[#e6f0e9]" : " text-[#52635b] hover:bg-[#f1f5f2]")}
           >
             <Ellipsis size={19} aria-hidden="true" />
-            More
+            <span className="text-[10px] leading-tight font-semibold">More</span>
           </button>
         </div>
         <div

@@ -225,8 +225,8 @@ function OperationsPanel({ source }: { source: Source<Operations> }) {
                     {item.severity === "urgent" || item.overdue ? <CircleAlert size={16} aria-hidden="true" /> : <ClipboardList size={16} aria-hidden="true" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold" title={item.title}>{item.title}</span>
-                    <span className="block truncate text-xs text-[#52635b]" title={item.detail}>
+                    <span className="line-clamp-2 text-sm font-semibold break-words">{item.title}</span>
+                    <span className="line-clamp-2 text-xs break-words text-[#52635b]">
                       {item.severity === "urgent" ? "Urgent · " : item.overdue ? "Overdue · " : ""}{item.detail}
                     </span>
                   </span>
@@ -420,10 +420,10 @@ export default function AdminDashboard() {
                       type="button"
                       aria-pressed={market === code}
                       onClick={() => setMarket(code)}
-                      className={"min-h-11 rounded-lg px-2.5 text-xs font-semibold whitespace-nowrap sm:px-3.5 " +
+                      className={"min-h-11 rounded-lg px-2.5 whitespace-nowrap sm:px-3.5 " +
                         (market === code ? "bg-[#e6f0e9] text-[#16372e]" : "text-[#52635b] hover:bg-[#f1f5f2]")}
                     >
-                      {shortName}
+                      <span className="text-xs font-semibold">{shortName}</span>
                     </button>
                   ))}
                 </div>
