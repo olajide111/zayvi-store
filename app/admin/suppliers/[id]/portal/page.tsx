@@ -408,27 +408,27 @@ export default function SupplierPortalAccessPage({
         >
           <h2 className="text-sm font-semibold">Invite vendor user</h2>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <input
               type="email"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Vendor email"
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+              className="min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-sm"
             />
             <input
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               placeholder="Display name (optional)"
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+              className="min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-sm"
             />
             <select
               value={role}
               onChange={(event) =>
                 setRole(event.target.value as "owner" | "editor" | "viewer")
               }
-              className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm md:col-span-2"
+              className="min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm md:col-span-2"
             >
               <option value="owner">Owner — can update supplier offers</option>
               <option value="editor">Editor — can update supplier offers</option>
@@ -480,18 +480,18 @@ export default function SupplierPortalAccessPage({
           )}
 
           <form onSubmit={createApiCredential} className="mt-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
               <input
                 required
                 value={credentialLabel}
                 onChange={(event) => setCredentialLabel(event.target.value)}
                 placeholder="Credential label"
-                className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+                className="min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-sm"
               />
               <select
                 value={credentialExpiryDays}
                 onChange={(event) => setCredentialExpiryDays(event.target.value)}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+                className="min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
               >
                 <option value="30">Expires in 30 days</option>
                 <option value="90">Expires in 90 days</option>
@@ -506,7 +506,7 @@ export default function SupplierPortalAccessPage({
                     event.target.value as "feed" | "inventory" | "both"
                   )
                 }
-                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+                className="min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
               >
                 <option value="feed">Product feed only</option>
                 <option value="inventory">Inventory sync only</option>
@@ -530,7 +530,7 @@ export default function SupplierPortalAccessPage({
                   className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_160px_140px_120px]"
                 >
                   <div>
-                    <div className="text-sm font-semibold">{credential.label}</div>
+                    <div className="text-sm font-semibold break-words">{credential.label}</div>
                     <div className="mt-1 font-mono text-[11px] text-gray-400">
                       {credential.keyPrefix}••••••••
                     </div>
