@@ -2504,6 +2504,22 @@ async function updateReturn(returnId, input) {
 
       const current = returnResult.rows[0];
 
+      const auditReturn = (actionName, summary, metadata = {}) =>
+        recordOperationsAudit(tx, tenantId, {
+          actorType: "admin",
+          actorReference: "admin",
+          action: `return.${actionName}`,
+          entityType: "return",
+          entityId: returnId,
+          marketCode: current.market_code,
+          summary,
+          metadata: {
+            orderId: current.order_id,
+            returnNumber: current.return_number,
+            ...metadata
+          }
+        });
+
       if (action === "approve") {
         if (current.status !== "requested") {
           const error = new Error("Only requested returns can be approved.");
@@ -2526,6 +2542,17 @@ async function updateReturn(returnId, input) {
             WHERE tenant_id = $2 AND id = $3
           `,
           [reviewNote, tenantId, returnId]
+        );
+
+        await auditReturn(
+          "approved",
+          "Return approved for receipt and refund follow-up.",
+          {
+            previousStatus: current.status,
+            nextStatus: "approved",
+            requestedRefundAmount: Number(current.requested_refund_amount || 0),
+            reviewNote
+          }
         );
         return;
       }
@@ -2554,6 +2581,16 @@ async function updateReturn(returnId, input) {
           `,
           [reviewNote, tenantId, returnId]
         );
+
+        await auditReturn(
+          "rejected",
+          "Return request rejected.",
+          {
+            previousStatus: current.status,
+            nextStatus: "rejected",
+            reviewNote
+          }
+        );
         return;
       }
 
@@ -2571,6 +2608,15 @@ async function updateReturn(returnId, input) {
             WHERE tenant_id = $1 AND id = $2
           `,
           [tenantId, returnId]
+        );
+
+        await auditReturn(
+          "cancelled",
+          "Return request cancelled.",
+          {
+            previousStatus: current.status,
+            nextStatus: "cancelled"
+          }
         );
         return;
       }
@@ -2786,6 +2832,30 @@ async function updateReturn(returnId, input) {
           `,
           [inspectionNote, tenantId, returnId]
         );
+
+        const receivedSummary = receivedItems.reduce(
+          (summary, item) => {
+            const quantity = Number(item?.quantityReceived || 0);
+            summary.received += Number.isFinite(quantity) ? quantity : 0;
+            if (String(item?.restockDecision || "") === "restock") {
+              summary.restocked += Number.isFinite(quantity) ? quantity : 0;
+            }
+            return summary;
+          },
+          { received: 0, restocked: 0 }
+        );
+
+        await auditReturn(
+          "received",
+          "Return received and inspected.",
+          {
+            previousStatus: current.status,
+            nextStatus: "received",
+            quantityReceived: receivedSummary.received,
+            quantityRestocked: receivedSummary.restocked,
+            inspectionNote
+          }
+        );
         return;
       }
 
@@ -2819,6 +2889,16 @@ async function updateReturn(returnId, input) {
           `,
           [nextRefundStatus, tenantId, returnId]
         );
+
+        await auditReturn(
+          "refund_reconciled",
+          "Return refund reconciled from provider-controlled payment state.",
+          {
+            providerPaymentStatus: current.payment_status,
+            previousRefundStatus: current.refund_status,
+            nextRefundStatus
+          }
+        );
         return;
       }
 
@@ -2847,6 +2927,16 @@ async function updateReturn(returnId, input) {
             WHERE tenant_id = $1 AND id = $2
           `,
           [tenantId, returnId]
+        );
+
+        await auditReturn(
+          "completed",
+          "Return workflow completed.",
+          {
+            previousStatus: current.status,
+            nextStatus: "completed",
+            refundStatus: current.refund_status
+          }
         );
       }
     });
@@ -10858,6 +10948,29 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "customers_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/operations-audit")) {
+    try {
+      const events = await listOperationsAudit();
+      return response(200, {
+        source: "postgresql",
+        generatedAt: new Date().toISOString(),
+        total: events.length,
+        events
+      });
+    } catch (error) {
+      console.error("Operations audit list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "operations_audit_unavailable"
       });
     }
   }
