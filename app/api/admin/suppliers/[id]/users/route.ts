@@ -98,9 +98,14 @@ export async function POST(
   const inviteUrl = new URL("/vendor/activate", request.nextUrl.origin);
   inviteUrl.searchParams.set("token", token);
 
+  const payload =
+    result.data && typeof result.data === "object"
+      ? (result.data as Record<string, unknown>)
+      : {};
+
   return NextResponse.json(
     {
-      ...result.data,
+      ...payload,
       inviteUrl: inviteUrl.toString(),
       inviteExpiresAt,
     },
