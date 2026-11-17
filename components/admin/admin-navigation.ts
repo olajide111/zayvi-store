@@ -20,6 +20,7 @@ export const adminGroups = [
       { title: "Returns", href: "/admin/returns", icon: RotateCcw },
       { title: "Purchase Orders", href: "/admin/purchase-orders", icon: ClipboardList },
       { title: "Replenishment", href: "/admin/replenishment", icon: Warehouse },
+      { title: "Customers", href: "/admin/customers", icon: Users },
       { title: "Suppliers", href: "/admin/suppliers", icon: Truck },
       { title: "Operations Audit", href: "/admin/operations-audit", icon: Archive },
     ],
@@ -34,13 +35,17 @@ export const adminGroups = [
     ],
   },
   {
-    label: "Store",
+    label: "Storefront",
     items: [
-      { title: "Customers", href: "/admin/customers", icon: Users },
-      { title: "Markets", href: "/admin/markets", icon: Globe2 },
       { title: "Content publishing", href: "/admin/content", icon: FileText },
       { title: "Themes", href: "/admin/themes", icon: Palette },
       { title: "Product Images", href: "/admin/product-images", icon: ImagePlus },
+    ],
+  },
+  {
+    label: "Setup",
+    items: [
+      { title: "Markets", href: "/admin/markets", icon: Globe2 },
       { title: "Shipping", href: "/admin/shipping", icon: Truck },
       { title: "System Readiness", href: "/admin/system-readiness", icon: ShieldCheck },
       { title: "Settings", href: "/admin/settings", icon: Settings },

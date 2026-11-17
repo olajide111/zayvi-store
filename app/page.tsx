@@ -349,6 +349,8 @@ export default function Home() {
       </div>
 
       <Header
+        market={marketCode}
+        onBestSellers={scrollToBest}
         cartCount={cartCount}
         onCartOpen={() => setCartOpen(true)}
         onShopAll={() => { setCat("All"); scrollToGrid(); }}

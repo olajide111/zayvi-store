@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowUpRight, CreditCard, Globe2, Palette, ShieldCheck, Truck } from "lucide-react";
+import { ArrowUpRight, CreditCard, FileText, Globe2, Palette, ShieldCheck, Truck } from "lucide-react";
 import AdminPageHeading from "@/components/admin/AdminPageHeading";
 
 const destinations = [
   { href: "/admin/markets", title: "Markets & currencies", description: "Review regional pricing and publication.", icon: Globe2 },
+  { href: "/admin/content", title: "Content publishing", description: "Set up storefront pages and write articles by market.", icon: FileText },
   { href: "/admin/themes", title: "Themes & layouts", description: "Preview storefront templates and colours.", icon: Palette },
   { href: "/admin/payments", title: "Payments", description: "Manage connections and test payments.", icon: CreditCard },
   { href: "/admin/shipping", title: "Shipping", description: "Review delivery and fulfilment setup.", icon: Truck },

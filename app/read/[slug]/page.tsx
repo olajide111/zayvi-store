@@ -1,7 +1,7 @@
-import Link from "next/link";
+import ReadingNav from "@/components/ReadingNav";
 import { notFound } from "next/navigation";
 import { callZayviAwsApi } from "@/lib/aws-api";
-import { contentUrl, starterPages, type ContentCopy } from "@/lib/storefront-content";
+import { starterPages, type ContentCopy } from "@/lib/storefront-content";
 
 export default async function PublishedPage({ params, searchParams }: {
   params: Promise<{ slug: string }>;
@@ -16,16 +16,15 @@ export default async function PublishedPage({ params, searchParams }: {
   if (!entry) notFound();
 
   return (
-    <main className="min-h-dvh bg-[#f5f7f3] px-5 py-8 text-[#172a21] sm:px-8">
-      <article className="mx-auto max-w-3xl">
-        <div className="flex flex-wrap gap-4 text-sm font-semibold text-[#215241]">
-          <Link className="underline" href={market === "NG" ? "/?market=NG" : "/"}>Zayvi Store</Link>
-          <Link className="underline" href={contentUrl(market)}>Blog &amp; guides</Link>
-        </div>
+    <div className="min-h-dvh bg-[#f5f7f3] text-[#172a21]">
+      <ReadingNav market={market} />
+      <main className="mx-auto max-w-3xl px-5 py-5 sm:px-8">
+        <article>
         <h1 className="mt-7 text-3xl font-semibold tracking-tight break-words sm:text-5xl">{entry.title}</h1>
         {entry.summary && <p className="mt-3 text-lg break-words text-[#52635b]">{entry.summary}</p>}
         <div className="mt-6 rounded-xl border border-[#dfe6e1] bg-white p-5 text-base leading-relaxed whitespace-pre-wrap break-words sm:p-7">{entry.body}</div>
-      </article>
-    </main>
+        </article>
+      </main>
+    </div>
   );
 }

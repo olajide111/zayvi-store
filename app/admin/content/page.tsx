@@ -69,10 +69,10 @@ function ContentEditor({ market, dirty, setDirty }: {
     change(!draft.revision && !customSlug ? { title, slug: slugFromTitle(title) } : { title });
   }
 
-  function start(slug = "") {
+  function start(kind: ContentKind, slug = "") {
     const starter = starterPages[slug];
     setCustomSlug(Boolean(starter));
-    setDraft(starter ? { ...newDraft, slug, title: starter.title, body: starter.body } : newDraft);
+    setDraft(starter ? { ...newDraft, slug, title: starter.title, body: starter.body } : { ...newDraft, kind });
     setDirty(Boolean(starter));
     setError("");
     setNotice("");
@@ -132,41 +132,58 @@ function ContentEditor({ market, dirty, setDirty }: {
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(240px,1fr)_minmax(0,2fr)]">
           <section aria-labelledby="content-list" className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-4">
             <h2 id="content-list" className="font-semibold">Pages and articles</h2>
-            <button type="button" className={adminAction + " mt-3"} disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) start(); }}>New draft</button>
-            {entries.length > 0 && (
-              <ul className="mt-3 divide-y divide-[#e4eae5]">
-                {entries.map((entry) => (
-                  <li key={entry.slug}>
-                    <button type="button" disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) void open(entry.slug); }} className="block min-h-11 w-full break-words rounded-md py-2 text-left text-sm text-[#215241] hover:underline">
-                      <span className="block font-semibold">{entry.title}</span>
-                      <span className="text-xs text-[#52635b]">{status(entry)}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className={adminPrimaryAction} disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) start("article"); }}>New article</button>
+              <button type="button" className={adminAction} disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) start("page"); }}>New page</button>
+            </div>
+            <Link href={contentUrl(market)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[#215241] underline">
+              View Blog &amp; guides
+            </Link>
+            {(["article", "page"] as const).map((kind) => {
+              const items = entries.filter((entry) => entry.kind === kind);
+              if (!items.length) return null;
+              return (
+                <div key={kind} className="mt-3">
+                  <h3 className="text-sm font-semibold">{kind === "article" ? "Articles" : "Pages"}</h3>
+                  <ul className="mt-1 divide-y divide-[#e4eae5]">
+                    {items.map((entry) => (
+                      <li key={entry.slug}>
+                        <button type="button" disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) void open(entry.slug); }} className="block min-h-11 w-full break-words rounded-md py-2 text-left text-sm text-[#215241] hover:underline">
+                          <span className="block font-semibold">{entry.title}</span>
+                          <span className="text-xs text-[#52635b]">{status(entry)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
             <h3 className="mt-5 text-sm font-semibold">Starter pages</h3>
             <div className="mt-2 flex flex-wrap gap-2">
               {Object.entries(starterPages).filter(([slug]) => !entries.some((entry) => entry.slug === slug)).map(([slug, page]) => (
-                <button type="button" key={slug} className={adminAction} disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) start(slug); }}>{page.title}</button>
+                <button type="button" key={slug} className={adminAction} disabled={busy} onClick={() => { if (!dirty || window.confirm("Discard unsaved changes?")) start("page", slug); }}>{page.title}</button>
               ))}
             </div>
           </section>
 
           <section aria-labelledby="content-edit" className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="content-edit" className="font-semibold">{draft.revision ? "Edit draft" : "New draft"}</h2>
+              <h2 id="content-edit" className="font-semibold">{draft.revision ? "Edit draft" : draft.kind === "article" ? "Article draft" : "Page draft"}</h2>
               <button type="button" onClick={() => setPreview((current) => !current)} aria-expanded={preview} className={adminAction}>{preview ? "Hide preview" : "Preview draft"}</button>
             </div>
             <form onSubmit={save} className="mt-4 space-y-4">
               <fieldset disabled={busy} className="min-w-0 space-y-3 text-sm">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block min-w-0">Type
-                    <select className={field} disabled={draft.revision > 0} value={draft.kind} onChange={(event) => change({ kind: event.target.value as ContentKind })}>
+                  <div className="min-w-0">
+                    <label htmlFor="content-type">Type</label>
+                    <select id="content-type" aria-describedby="content-type-help" className={field} disabled={draft.revision > 0} value={draft.kind} onChange={(event) => change({ kind: event.target.value as ContentKind })}>
                       <option value="page">Page</option>
                       <option value="article">Article</option>
                     </select>
-                  </label>
+                    <p id="content-type-help" className="mt-1 text-xs text-[#52635b]">
+                      {draft.kind === "article" ? "Published articles appear in Blog & guides." : "Published pages have their own storefront link."}
+                    </p>
+                  </div>
                   <div className="min-w-0">
                     <label htmlFor="content-slug">URL slug</label>
                     <input
