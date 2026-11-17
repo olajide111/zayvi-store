@@ -4,7 +4,7 @@ import StorefrontChecklist from "./StorefrontChecklist";
 import AdminPageHeading from "@/components/admin/AdminPageHeading";
 
 const destinations = [
-  { href: "/admin/markets", title: "Markets & currencies", description: "Review regional pricing and publication.", icon: Globe2 },
+  { href: "/admin/markets", title: "Markets & currencies", description: "Choose where your store sells and manage regional pricing.", icon: Globe2 },
   { href: "/admin/content", title: "Content publishing", description: "Set up storefront pages and write articles by market.", icon: FileText },
   { href: "/admin/themes", title: "Themes & layouts", description: "Preview storefront templates and colours.", icon: Palette },
   { href: "/admin/payments", title: "Payments", description: "Manage connections and test payments.", icon: CreditCard },

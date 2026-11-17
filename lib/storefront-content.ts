@@ -1,3 +1,5 @@
+import { marketPath } from "./storefront-market";
+
 export type ContentKind = "page" | "article";
 export type ContentMarket = "GB" | "NG";
 export type ContentCopy = { title: string; summary?: string; body: string };
@@ -43,5 +45,5 @@ export const starterPages: Record<string, ContentCopy> = {
 
 export function contentUrl(market: ContentMarket, slug?: string) {
   const path = slug ? `/read/${encodeURIComponent(slug)}` : "/read";
-  return market === "NG" ? path + "?market=NG" : path;
+  return marketPath(path, market);
 }

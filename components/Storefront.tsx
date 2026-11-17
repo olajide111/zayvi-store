@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Search } from "lucide-react";
-import { cartStorageKey } from "@/lib/storefront-market";
+import { cartStorageKey, type StorefrontMarketSettings } from "@/lib/storefront-market";
 import type { ContentMarket } from "@/lib/storefront-content";
 import type { DraftOrderDetails, DraftOrderReceipt } from "@/lib/delivery";
 import { useState, useEffect, useRef } from "react";
 import type { StorefrontProduct, StorefrontProductsResponse } from "@/lib/storefront-products";
+import MarketSwitcher from "@/components/MarketSwitcher";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -21,7 +21,10 @@ import Footer from "@/components/Footer";
 const STORE_COLOR = "#171714";
 const ORDER_IDEMPOTENCY_STORAGE_KEY = "zayvi-order-idempotency-v2";
 
-export default function Storefront({ marketCode }: { marketCode: ContentMarket }) {
+export default function Storefront({ marketCode, marketSettings }: {
+  marketCode: ContentMarket;
+  marketSettings: StorefrontMarketSettings;
+}) {
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(true);
   const [catalogueError, setCatalogueError] = useState("");
@@ -352,15 +355,7 @@ export default function Storefront({ marketCode }: { marketCode: ContentMarket }
     <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[#142e26] px-3 py-1 text-xs text-white">
         <span className="py-1">Zayvi Store Preview</span>
-        <nav aria-label="Shopping market" className="flex flex-wrap items-center gap-1">
-          {(["GB", "NG"] as const).map((code) => (
-            <Link key={code} aria-current={marketCode === code ? "page" : undefined} prefetch={false}
-              href={code === "GB" ? "/" : "/?market=NG"}
-              className={`inline-flex min-h-11 items-center rounded-md px-2 font-semibold ${marketCode === code ? "bg-white text-[#142e26]" : "text-white hover:bg-white/15"}`}>
-              {code === "GB" ? "UK · GBP" : "Nigeria · NGN"}
-            </Link>
-          ))}
-        </nav>
+        <MarketSwitcher market={marketCode} settings={marketSettings} />
       </div>
 
       <Header

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { storefrontApiMarket } from "@/lib/storefront-market-server";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import type { StorefrontProduct } from "@/lib/storefront-products";
 
@@ -7,11 +8,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const market = (url.searchParams.get("market") || "GB").toUpperCase();
-
-  if (!["GB", "NG"].includes(market)) {
-    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
-  }
+  const selection = await storefrontApiMarket(url.searchParams.get("market"));
+  if (selection.error) return selection.error;
+  const { market } = selection;
 
   const result = await callZayviAwsApi(
     "/products?market=" + encodeURIComponent(market)

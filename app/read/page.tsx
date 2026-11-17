@@ -1,18 +1,21 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import ReadingNav from "@/components/ReadingNav";
+import { resolveStorefrontMarket } from "@/lib/storefront-market-server";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import { contentUrl, type ContentKind } from "@/lib/storefront-content";
 
 export const metadata = { title: "Blog & guides | Zayvi Store" };
 
-export default async function GuidesPage({ searchParams }: { searchParams: Promise<{ market?: string }> }) {
-  const market = (await searchParams).market === "NG" ? "NG" : "GB";
+export default async function GuidesPage({ searchParams }: { searchParams: Promise<{ market?: string | string[] }> }) {
+  const { market, settings, unavailable } = await resolveStorefrontMarket((await searchParams).market);
+  if (unavailable) notFound();
   const result = await callZayviAwsApi(`/published-content?market=${market}`);
   const data = result.data as { content?: { slug: string; kind: ContentKind; title: string; summary: string }[] } | null;
   const articles = result.ok && Array.isArray(data?.content) ? data.content.filter((entry) => entry.kind === "article") : [];
   return (
     <div className="min-h-dvh bg-[#f5f7f3] text-[#172a21]">
-      <ReadingNav market={market} index />
+      <ReadingNav market={market} settings={settings} index />
       <main className="mx-auto max-w-4xl px-5 py-5 sm:px-8">
         <h1 className="mt-7 text-4xl font-semibold tracking-tight">Blog &amp; guides</h1>
         <p className="mt-2 text-sm text-[#52635b]">{market === "NG" ? "Nigeria" : "United Kingdom"}</p>

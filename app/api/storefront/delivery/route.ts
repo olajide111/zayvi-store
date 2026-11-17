@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { storefrontApiMarket } from "@/lib/storefront-market-server";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import { isDeliveryQuote } from "@/lib/delivery";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const marketCode = request.nextUrl.searchParams.get("market") || "GB";
-  if (marketCode !== "GB" && marketCode !== "NG") {
-    return NextResponse.json({ error: "Unsupported delivery market." }, { status: 400 });
-  }
+  const selection = await storefrontApiMarket(request.nextUrl.searchParams.get("market"));
+  if (selection.error) return selection.error;
+  const { market: marketCode } = selection;
 
   if (process.env.VERCEL_ENV !== "production") {
     const result = await callZayviAwsApi(`/delivery-settings?market=${marketCode}`);

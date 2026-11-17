@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { marketPath } from "@/lib/storefront-market";
 import { useRef } from "react";
 import { ChevronDown, Search, ShoppingBag } from "lucide-react";
 import { contentUrl, type ContentMarket } from "@/lib/storefront-content";
@@ -34,7 +35,7 @@ export default function Header({ market, cartCount, onCartOpen, onSearch, onShop
   return (
     <nav aria-label="Storefront" className={`sticky top-0 z-[900] border-b border-[#e4eae5] bg-white text-[#172a21]${scrolled ? " shadow-sm" : ""}`}>
       <div className="mx-auto flex min-h-16 max-w-[1280px] items-center justify-between gap-2 px-3 sm:gap-5 sm:px-6">
-        <Link href={market === "NG" ? "/?market=NG" : "/"} className="shrink-0 text-xl font-black tracking-tight">
+        <Link href={marketPath("/", market)} className="shrink-0 text-xl font-black tracking-tight">
           ZAYVI<span className="text-[#215241]">.</span>
         </Link>
 

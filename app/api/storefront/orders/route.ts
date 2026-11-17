@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { storefrontApiMarket } from "@/lib/storefront-market-server";
 import { isDeliveryQuote } from "@/lib/delivery";
 
 export const runtime = "nodejs";
@@ -46,14 +47,9 @@ export async function POST(request: NextRequest) {
     typeof payload.phone === "string" && payload.phone.trim()
       ? payload.phone.trim()
       : undefined;
-  const marketCode =
-    typeof payload.marketCode === "string"
-      ? payload.marketCode.trim().toUpperCase()
-      : "GB";
-
-  if (!["GB", "NG"].includes(marketCode)) {
-    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
-  }
+  const requestedMarket = typeof payload.marketCode === "string"
+    ? payload.marketCode.trim().toUpperCase()
+    : payload.marketCode;
 
   const idempotencyKey =
     typeof payload.idempotencyKey === "string"
@@ -99,6 +95,10 @@ export async function POST(request: NextRequest) {
           : undefined,
     };
   });
+
+  const selection = await storefrontApiMarket(requestedMarket);
+  if (selection.error) return selection.error;
+  const { market: marketCode } = selection;
 
   if (payload.deliveryAddress !== undefined) {
     if (!Number.isSafeInteger(payload.shippingMinor) || Number(payload.shippingMinor) < 0) {

@@ -6,6 +6,7 @@ const { Signer } = require("@aws-sdk/rds-signer");
 const { checkoutError, deliveryMigration, normalizeDeliveryAddress, previewDeliveryQuote } = require("./checkout-delivery");
 
 const { contentMigration, queryStorefrontContent } = require("./storefront-content");
+const { marketsMigration, queryStorefrontMarkets, storeMarketSettings } = require("./storefront-markets");
 const { reviewSupplierImage, storefrontImage } = require("./supplier-image-rights");
 
 let pool;
@@ -1041,8 +1042,13 @@ async function createOrder(input) {
 
   try {
     return await withTenant(client, async (tx, tenantId) => {
+      const marketDefinition = schemaMigrationDefinitions.find(({ name }) => name === marketsMigration);
+      const marketsReady = await probeSchemaMigration(tx, marketDefinition);
       const storeResult = await tx.query(
-        "SELECT id FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active' LIMIT 1",
+        marketsReady
+          ? `SELECT id, default_market_code, storefront_market_codes, storefront_market_switcher
+             FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active' FOR SHARE`
+          : "SELECT id FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active'",
         [tenantId]
       );
 
@@ -1107,6 +1113,10 @@ async function createOrder(input) {
           purchasingEnabled: false,
           idempotentReplay: true
         };
+      }
+
+      if (marketsReady && !storeMarketSettings(storeResult.rows[0]).enabledMarkets.includes(marketCode)) {
+        throw checkoutError("This store does not sell in the selected market.", 409);
       }
 
       if (shippingQuote) {
@@ -7601,6 +7611,12 @@ const schemaMigrationDefinitions = [
     feature: "Storefront publishing",
     description: "Market-specific page and article drafts with explicit publication.",
     probe: { type: "table", table: "commerce_storefront_content" }
+  },
+  {
+    name: marketsMigration,
+    feature: "Storefront markets",
+    description: "Store-specific enabled countries, default market and country switcher.",
+    probe: { type: "column", table: "stores", column: "storefront_market_codes" }
   }
 ];
 
@@ -7654,6 +7670,10 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if (routePath.endsWith("/storefront-market-settings")) {
+    return [marketsMigration];
+  }
+
   if (/\/(store-content|published-content)$/.test(routePath)) {
     return [contentMigration];
   }
@@ -12296,6 +12316,25 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "kredal_events_unavailable"
+      });
+    }
+  }
+
+  if (routePath.endsWith("/storefront-market-settings") && ["GET", "PATCH"].includes(method)) {
+    try {
+      const save = method === "PATCH";
+      let input;
+      if (save) {
+        try {
+          input = parseBody(event);
+        } catch {
+          throw checkoutError("Invalid market settings.");
+        }
+      }
+      return response(200, await queryStorefrontMarkets({ getPool, withTenant }, input, save));
+    } catch (error) {
+      return response(error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Storefront market settings are unavailable."
       });
     }
   }

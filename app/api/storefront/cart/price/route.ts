@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { storefrontApiMarket } from "@/lib/storefront-market-server";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import type { StorefrontProduct } from "@/lib/storefront-products";
 
@@ -21,16 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid cart request." }, { status: 400 });
   }
 
-  const marketCode =
-    typeof body.marketCode === "string"
-      ? body.marketCode.trim().toUpperCase()
-      : "GB";
-
-  if (!["GB", "NG"].includes(marketCode)) {
-    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
-  }
-
-  if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
+  if (!body || !Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
     return NextResponse.json(
       { error: "Your cart is empty or too large." },
       { status: 400 }
@@ -58,6 +50,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid cart line." }, { status: 400 });
   }
+
+  const selection = await storefrontApiMarket(body.marketCode);
+  if (selection.error) return selection.error;
+  const { market: marketCode } = selection;
 
   const result = await callZayviAwsApi(
     "/products?market=" + encodeURIComponent(marketCode)

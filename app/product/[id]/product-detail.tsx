@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { cartStorageKey } from "@/lib/storefront-market";
+import { cartStorageKey, marketPath } from "@/lib/storefront-market";
 import type { ContentMarket } from "@/lib/storefront-content";
 import type {
   StorefrontProduct,
@@ -12,7 +12,7 @@ import type {
 const STORE_COLOR = "#16a34a";
 
 export default function ProductDetails({ id, market }: { id: string; market: ContentMarket }) {
-  const shopHref = market === "NG" ? "/?market=NG" : "/";
+  const shopHref = marketPath("/", market);
   const currency = market === "NG" ? "NGN" : "GBP";
   const [product, setProduct] = useState<StorefrontProduct | null>(null);
   const [loading, setLoading] = useState(true);

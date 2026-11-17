@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import StorefrontMarketsForm from "@/components/admin/StorefrontMarketsForm";
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 import { useEffect, useMemo, useState } from "react";
@@ -210,16 +211,7 @@ export default function AdminMarketsPage() {
       </AdminPageHeading>
 
       <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
-        <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
-          <div className="text-sm font-semibold text-[#23432d]">
-            Explicit market pricing
-          </div>
-          <p className="mt-1 text-xs leading-5 text-[#55705b]">
-            UK and Nigeria are separate commerce markets. Nigeria prices must
-            be entered directly in NGN; Zayvi does not silently convert GBP
-            prices.
-          </p>
-        </div>
+        <StorefrontMarketsForm />
 
         {error && (
           <div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
@@ -233,17 +225,11 @@ export default function AdminMarketsPage() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-[#52635b]">Markets configured</div>
+            <div className="text-xs text-[#52635b]">Platform markets</div>
             <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {data?.total ?? "—"}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-[#52635b]">Enabled</div>
-            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
-              {data?.markets.filter((market) => market.enabled).length ?? "—"}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -286,7 +272,7 @@ export default function AdminMarketsPage() {
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {market.enabled ? "Enabled" : "Disabled"}
+                      {market.enabled ? "Enabled on platform" : "Preview on platform"}
                     </span>
                   </div>
                   <div className="mt-6 space-y-3 border-t border-gray-100 pt-5 text-sm">

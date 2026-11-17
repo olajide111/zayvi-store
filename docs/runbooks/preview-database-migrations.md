@@ -6,7 +6,7 @@ It is intentionally limited to Preview. Do not reuse these commands against Prod
 
 ## Current target
 
-The checkout delivery change requires migration `0025_order_delivery_address.sql` and the API Lambda from the same commit. Storefront publishing also requires `0026_storefront_content.sql`. On a Preview database already at 0024, only 0025 and 0026 should apply. The package includes earlier migrations for Preview environments that are catching up:
+Storefront market settings require migration `0027_storefront_markets.sql` and the API Lambda from the same commit. On Preview at 0026, only 0027 should apply. The migration keeps the existing Zayvi store's UK and Nigeria storefronts enabled at rollout. The package includes earlier migrations for Preview environments that are catching up:
 
 - `0011_inventory_ledger.sql`
 - `0012_supplier_registry.sql`
@@ -24,6 +24,7 @@ The checkout delivery change requires migration `0025_order_delivery_address.sql
 - `0024_operations_audit.sql`
 - `0025_order_delivery_address.sql`
 - `0026_storefront_content.sql`
+- `0027_storefront_markets.sql`
 
 The bootstrap runner is checksum-protected and only applies migrations not already recorded in `zayvi_schema_migrations`.
 
@@ -77,6 +78,7 @@ migrations/0023_vendor_purchase_order_updates.sql
 migrations/0024_operations_audit.sql
 migrations/0025_order_delivery_address.sql
 migrations/0026_storefront_content.sql
+migrations/0027_storefront_markets.sql
 ```
 
 ## Initialise the existing Preview backend
@@ -109,7 +111,7 @@ Review the plan:
 terraform show -no-color zayvi-preview-migrations.tfplan
 ```
 
-The bootstrap Lambda and invocation may change when the migration package changes. For checkout delivery, package the matching API Lambda from the same commit before planning and review its code update alongside the bootstrap changes.
+The bootstrap Lambda and invocation may change when the migration package changes. For storefront market settings, package the matching API Lambda from the same commit before planning and review its code update alongside the bootstrap changes.
 
 Stop if the plan proposes destructive RDS, VPC, S3, CloudFront or unrelated IAM changes.
 
@@ -121,7 +123,7 @@ terraform apply zayvi-preview-migrations.tfplan
 
 The bootstrap output should report `bootstrap_complete`.
 
-For this activation, `migrationsApplied` should include migrations 0011 through 0026 when they were not already applied.
+For this activation, `migrationsApplied` should include migrations 0011 through 0027 when they were not already applied.
 
 ## Post-apply checks
 
@@ -154,13 +156,14 @@ Then validate the Preview application:
 12. Purchase Orders loads, remains manually approved/submitted, and stock receipt writes to owned inventory.
 13. Product Discovery loads, keeps auto-publish disabled, and supplier feed imports remain review-first.
 14. Feed history records accepted/rejected rows and prevents exact supplier-payload replay.
-15. System Readiness reports migrations 0011–0026 as applied.
+15. System Readiness reports migrations 0011–0027 as applied.
 16. Vendor Portal access can issue a one-time invitation, activate a supplier-scoped session and keep viewer accounts read-only.
 17. A verified supplier can receive a revocable `feed:write` API credential, submit a test feed through `/api/vendor-feed/v1/ingest`, and see the batch enter Product Discovery without auto-publishing.
 18. A supplier can receive a separate `inventory:write` credential, submit stock snapshots through `/api/vendor-inventory/v1/sync`, and see matched/unmatched/stale results without changing owned inventory or publication.
 19. Admin → Returns can create a return from paid order lines, approve/reject it, receive and inspect goods, restock only approved quantities, and reconcile refunds only after provider-controlled payment state changes.
 20. A vendor user can see only their supplier's submitted POs, acknowledge or flag fulfilment issues, and report shipment/tracking without changing PO status or inventory. Admin PO detail shows the supplier event history.
 21. Admin → Operations Audit records prospective supplier verification, discovery decisions, PO approval/submission/receipt, vendor PO evidence and returns lifecycle actions in an append-only ledger.
+22. Admin → Markets saves enabled countries and the default country. On a test store, confirm a single market hides the switcher and rejects catalogue requests for its disabled market. With both enabled, check that a shopper can switch countries and that the selected currency persists when they revisit the home page.
 
 ## Rollback policy
 

@@ -1,14 +1,16 @@
 import ReadingNav from "@/components/ReadingNav";
 import { notFound } from "next/navigation";
+import { resolveStorefrontMarket } from "@/lib/storefront-market-server";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import { starterPages, type ContentCopy } from "@/lib/storefront-content";
 
 export default async function PublishedPage({ params, searchParams }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ market?: string }>;
+  searchParams: Promise<{ market?: string | string[] }>;
 }) {
   const { slug } = await params;
-  const market = (await searchParams).market === "NG" ? "NG" : "GB";
+  const { market, settings, unavailable } = await resolveStorefrontMarket((await searchParams).market);
+  if (unavailable) notFound();
   if (slug.length > 80 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) notFound();
   const result = await callZayviAwsApi(`/published-content?market=${market}&slug=${encodeURIComponent(slug)}`);
   const published = result.ok ? (result.data as { entry?: ContentCopy })?.entry : undefined;
@@ -17,7 +19,7 @@ export default async function PublishedPage({ params, searchParams }: {
 
   return (
     <div className="min-h-dvh bg-[#f5f7f3] text-[#172a21]">
-      <ReadingNav market={market} />
+      <ReadingNav market={market} settings={settings} />
       <main className="mx-auto max-w-3xl px-5 py-5 sm:px-8">
         <article>
         <h1 className="mt-7 text-3xl font-semibold tracking-tight break-words sm:text-5xl">{entry.title}</h1>
