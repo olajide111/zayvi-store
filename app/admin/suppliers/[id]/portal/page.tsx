@@ -2,6 +2,18 @@
 
 import { use, useEffect, useState } from "react";
 
+type SupplierInventorySyncRun = {
+  id: string;
+  sourceType: string;
+  sourceReference?: string | null;
+  itemCount: number;
+  matchedCount: number;
+  unmatchedCount: number;
+  staleCount: number;
+  status: string;
+  createdAt: string;
+};
+
 type SupplierApiCredential = {
   id: string;
   supplierId: string;
@@ -39,6 +51,7 @@ export default function SupplierPortalAccessPage({
   const { id } = use(params);
   const [users, setUsers] = useState<SupplierUser[]>([]);
   const [credentials, setCredentials] = useState<SupplierApiCredential[]>([]);
+  const [syncRuns, setSyncRuns] = useState<SupplierInventorySyncRun[]>([]);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<"owner" | "editor" | "viewer">("editor");
@@ -46,6 +59,7 @@ export default function SupplierPortalAccessPage({
   const [inviteExpiresAt, setInviteExpiresAt] = useState("");
   const [credentialLabel, setCredentialLabel] = useState("Supplier feed integration");
   const [credentialExpiryDays, setCredentialExpiryDays] = useState("90");
+  const [credentialScope, setCredentialScope] = useState<"feed" | "inventory" | "both">("feed");
   const [newApiKey, setNewApiKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -57,7 +71,7 @@ export default function SupplierPortalAccessPage({
     setError("");
 
     try {
-      const [userResponse, credentialResponse] = await Promise.all([
+      const [userResponse, credentialResponse, syncResponse] = await Promise.all([
         fetch(`/api/admin/suppliers/${id}/users`, {
           credentials: "include",
           cache: "no-store",
@@ -66,15 +80,24 @@ export default function SupplierPortalAccessPage({
           credentials: "include",
           cache: "no-store",
         }),
+        fetch(`/api/admin/suppliers/${id}/inventory-sync`, {
+          credentials: "include",
+          cache: "no-store",
+        }),
       ]);
 
-      if (userResponse.status === 401 || credentialResponse.status === 401) {
+      if (
+        userResponse.status === 401 ||
+        credentialResponse.status === 401 ||
+        syncResponse.status === 401
+      ) {
         window.location.href = "/admin";
         return;
       }
 
       const userPayload = await userResponse.json();
       const credentialPayload = await credentialResponse.json();
+      const syncPayload = await syncResponse.json();
 
       if (!userResponse.ok) {
         throw new Error(userPayload?.error || "Unable to load vendor access.");
@@ -86,12 +109,19 @@ export default function SupplierPortalAccessPage({
         );
       }
 
+      if (!syncResponse.ok) {
+        throw new Error(
+          syncPayload?.error || "Unable to load supplier inventory sync history."
+        );
+      }
+
       setUsers(Array.isArray(userPayload.users) ? userPayload.users : []);
       setCredentials(
         Array.isArray(credentialPayload.credentials)
           ? credentialPayload.credentials
           : []
       );
+      setSyncRuns(Array.isArray(syncPayload.runs) ? syncPayload.runs : []);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load vendor access."
@@ -229,6 +259,12 @@ export default function SupplierPortalAccessPage({
           body: JSON.stringify({
             label: credentialLabel,
             expiresAt,
+            scopes:
+              credentialScope === "both"
+                ? ["feed:write", "inventory:write"]
+                : credentialScope === "inventory"
+                  ? ["inventory:write"]
+                  : ["feed:write"],
           }),
         }
       );
@@ -453,7 +489,7 @@ export default function SupplierPortalAccessPage({
           )}
 
           <form onSubmit={createApiCredential} className="mt-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
               <input
                 required
                 value={credentialLabel}
@@ -471,6 +507,19 @@ export default function SupplierPortalAccessPage({
                 <option value="180">Expires in 180 days</option>
                 <option value="365">Expires in 365 days</option>
                 <option value="">No expiry</option>
+              </select>
+              <select
+                value={credentialScope}
+                onChange={(event) =>
+                  setCredentialScope(
+                    event.target.value as "feed" | "inventory" | "both"
+                  )
+                }
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+              >
+                <option value="feed">Product feed only</option>
+                <option value="inventory">Inventory sync only</option>
+                <option value="both">Feed + inventory</option>
               </select>
               <button
                 type="submit"
@@ -531,6 +580,56 @@ export default function SupplierPortalAccessPage({
                     ) : (
                       <span className="text-[11px] text-gray-400">Revoked</span>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-5 py-4">
+            <h2 className="text-sm font-semibold">Supplier inventory sync history</h2>
+            <p className="mt-1 text-xs text-gray-400">
+              Supplier-reported stock evidence only. Owned inventory and publication are never changed by these syncs.
+            </p>
+          </div>
+
+          {syncRuns.length === 0 ? (
+            <div className="p-8 text-center text-sm text-gray-500">
+              No supplier inventory sync runs recorded yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {syncRuns.slice(0, 10).map((run) => (
+                <div
+                  key={run.id}
+                  className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1fr)_90px_90px_90px_120px]"
+                >
+                  <div>
+                    <div className="text-sm font-semibold capitalize">
+                      {run.status.replaceAll("_", " ")}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {run.sourceReference || run.sourceType} ·{" "}
+                      {new Date(run.createdAt).toLocaleString("en-GB")}
+                    </div>
+                  </div>
+                  <div className="text-xs">
+                    <div className="text-gray-400">Matched</div>
+                    <div className="mt-1 font-semibold">{run.matchedCount}</div>
+                  </div>
+                  <div className="text-xs">
+                    <div className="text-gray-400">Unmatched</div>
+                    <div className="mt-1 font-semibold">{run.unmatchedCount}</div>
+                  </div>
+                  <div className="text-xs">
+                    <div className="text-gray-400">Stale</div>
+                    <div className="mt-1 font-semibold">{run.staleCount}</div>
+                  </div>
+                  <div className="text-xs md:text-right">
+                    <div className="text-gray-400">Items</div>
+                    <div className="mt-1 font-semibold">{run.itemCount}</div>
                   </div>
                 </div>
               ))}
