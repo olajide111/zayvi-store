@@ -98,6 +98,7 @@ const navigation = [
       ["Integrations Hub", "⌘", "#"],
       ["Team & Permissions", "♧", "#"],
       ["Settings", "⚙", "/admin/settings"],
+      ["System Readiness", "✓", "/admin/system-readiness"],
     ],
   },
 ];
