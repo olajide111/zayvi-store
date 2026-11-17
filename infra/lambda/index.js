@@ -5426,6 +5426,20 @@ async function updateSupplierVerification(supplierId, input) {
         ]
       );
 
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "supplier.verification_updated",
+        entityType: "supplier",
+        entityId: supplierId,
+        summary: `Supplier verification changed from ${supplier.verification_status} to ${toStatus}.`,
+        metadata: {
+          fromStatus: supplier.verification_status,
+          toStatus,
+          reviewNote
+        }
+      });
+
       return {
         supplierId,
         verificationStatus: toStatus,
@@ -6134,6 +6148,16 @@ async function approvePurchaseOrder(poId) {
         [tenantId, poId]
       );
 
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "purchase_order.approved",
+        entityType: "purchase_order",
+        entityId: poId,
+        summary: "Purchase order approved.",
+        metadata: { previousStatus: po.status, nextStatus: "approved" }
+      });
+
       return { id: poId, status: "approved" };
     });
   } finally {
@@ -6163,6 +6187,16 @@ async function markPurchaseOrderSubmitted(poId) {
         error.statusCode = 409;
         throw error;
       }
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "purchase_order.submitted",
+        entityType: "purchase_order",
+        entityId: poId,
+        summary: "Purchase order marked submitted after external supplier submission.",
+        metadata: { nextStatus: "submitted" }
+      });
 
       return { id: poId, status: "submitted" };
     });
@@ -6339,6 +6373,9 @@ async function receivePurchaseOrderItem(poId, itemId, input) {
 
       const outstanding = Number(outstandingResult.rows[0]?.outstanding || 0);
 
+      const nextPurchaseOrderStatus =
+        outstanding === 0 ? "received" : "partially_received";
+
       await tx.query(
         `
           UPDATE commerce_purchase_orders
@@ -6347,15 +6384,30 @@ async function receivePurchaseOrderItem(poId, itemId, input) {
             updated_at = now()
           WHERE tenant_id = $2 AND id = $3
         `,
-        [outstanding === 0 ? "received" : "partially_received", tenantId, poId]
+        [nextPurchaseOrderStatus, tenantId, poId]
       );
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "purchase_order.stock_received",
+        entityType: "purchase_order",
+        entityId: poId,
+        marketCode: item.market_code,
+        summary: `Received ${receiveQuantity} unit(s) against purchase order.`,
+        metadata: {
+          itemId,
+          receivedQuantity: receiveQuantity,
+          outstanding,
+          nextStatus: nextPurchaseOrderStatus
+        }
+      });
 
       return {
         itemId,
         receivedNow: receiveQuantity,
         outstanding,
-        purchaseOrderStatus:
-          outstanding === 0 ? "received" : "partially_received"
+        purchaseOrderStatus: nextPurchaseOrderStatus
       };
     });
   } finally {
@@ -7202,6 +7254,24 @@ async function approveDiscoveryCandidate(candidateId, input) {
         [reviewNote, canonical.rows[0].id, tenantId, candidateId]
       );
 
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "discovery.approved",
+        entityType: "discovery_candidate",
+        entityId: candidateId,
+        marketCode: candidate.market_code,
+        summary: `Discovery candidate approved: ${candidate.name}.`,
+        metadata: {
+          productId: canonical.rows[0].id,
+          tenantProductId: tenantProduct.rows[0].id,
+          customerPrice,
+          currency: targetCurrency,
+          reviewNote,
+          duplicateReviewConfirmed: confirmDuplicateReview
+        }
+      });
+
       return {
         candidateId,
         productId: canonical.rows[0].id,
@@ -7251,6 +7321,16 @@ async function rejectDiscoveryCandidate(candidateId, input) {
         error.statusCode = 409;
         throw error;
       }
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "discovery.rejected",
+        entityType: "discovery_candidate",
+        entityId: candidateId,
+        summary: "Discovery candidate rejected.",
+        metadata: { reviewNote }
+      });
 
       return { candidateId, status: "rejected", reviewNote };
     });
@@ -8627,6 +8707,31 @@ async function updateVendorPurchaseOrder(accountId, poId, input) {
           expectedDeliveryAt ? expectedDeliveryAt.toISOString() : null
         ]
       );
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "vendor",
+        actorReference: account.email,
+        action: `purchase_order.vendor_${eventType}`,
+        entityType: "purchase_order",
+        entityId: poId,
+        summary:
+          eventType === "shipment_update"
+            ? "Supplier reported a purchase-order shipment update."
+            : eventType === "unable_to_fulfil"
+              ? "Supplier reported inability to fulfil purchase order."
+              : "Supplier acknowledged purchase order.",
+        metadata: {
+          supplierId: account.supplierId,
+          supplierReference,
+          note,
+          carrier,
+          trackingNumber,
+          shippedAt: shippedAt ? shippedAt.toISOString() : null,
+          expectedDeliveryAt: expectedDeliveryAt
+            ? expectedDeliveryAt.toISOString()
+            : null
+        }
+      });
 
       const updated = await tx.query(
         `
