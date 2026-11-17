@@ -341,13 +341,21 @@ export default function SupplierDetailPage({
               {supplier.supplierType}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowForm((value) => !value)}
-            className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
-          >
-            {showForm ? "Close" : "Add product offer"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`/admin/suppliers/${supplier.id}/portal`}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
+            >
+              Vendor portal access
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowForm((value) => !value)}
+              className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
+            >
+              {showForm ? "Close" : "Add product offer"}
+            </button>
+          </div>
         </div>
       </header>
 
