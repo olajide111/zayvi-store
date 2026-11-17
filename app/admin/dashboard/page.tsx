@@ -87,6 +87,7 @@ const navigation = [
     items: [
       ["Sales Analytics", "⌁", "/admin/analytics"],
       ["Product Intelligence", "✧", "/admin/sourcing"],
+      ["Supplier Performance", "↗", "/admin/supplier-performance"],
       ["Product Discovery", "⌕", "/admin/discovery"],
       ["Forecasting", "⌇", "#"],
     ],

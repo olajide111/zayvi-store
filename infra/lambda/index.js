@@ -2871,6 +2871,215 @@ async function getCommerceAnalytics() {
 }
 
 
+async function getSupplierPerformance() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            s.id,
+            s.supplier_code,
+            s.name,
+            s.market_code,
+            s.supplier_type,
+            s.fulfilment_model,
+            s.status,
+            s.verification_status,
+
+            COALESCE(offers.active_offers, 0)::int AS active_offers,
+
+            COALESCE(feed.batch_count, 0)::int AS feed_batch_count,
+            COALESCE(feed.accepted_items, 0)::int AS feed_accepted_items,
+            COALESCE(feed.rejected_items, 0)::int AS feed_rejected_items,
+            feed.last_feed_at,
+
+            COALESCE(sync.sync_runs, 0)::int AS sync_runs,
+            COALESCE(sync.matched_items, 0)::int AS sync_matched_items,
+            COALESCE(sync.unmatched_items, 0)::int AS sync_unmatched_items,
+            COALESCE(sync.stale_items, 0)::int AS sync_stale_items,
+            sync.last_sync_at,
+
+            COALESCE(po.po_count, 0)::int AS po_count,
+            COALESCE(po.submitted_po_count, 0)::int AS submitted_po_count,
+            COALESCE(po.acknowledged_po_count, 0)::int AS acknowledged_po_count,
+            COALESCE(po.unable_po_count, 0)::int AS unable_po_count,
+            COALESCE(po.pending_ack_count, 0)::int AS pending_ack_count,
+            po.avg_ack_hours,
+            po.last_shipped_at,
+
+            COALESCE(po.ordered_units, 0)::int AS ordered_units,
+            COALESCE(po.received_units, 0)::int AS received_units
+
+          FROM commerce_suppliers s
+
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*) FILTER (WHERE so.status = 'active')::int AS active_offers
+            FROM commerce_supplier_offers so
+            WHERE so.tenant_id = s.tenant_id
+              AND so.supplier_id = s.id
+          ) offers ON true
+
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*)::int AS batch_count,
+              COALESCE(SUM(b.accepted_count), 0)::int AS accepted_items,
+              COALESCE(SUM(b.rejected_count), 0)::int AS rejected_items,
+              MAX(b.created_at) AS last_feed_at
+            FROM commerce_supplier_feed_batches b
+            WHERE b.tenant_id = s.tenant_id
+              AND b.supplier_id = s.id
+          ) feed ON true
+
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*)::int AS sync_runs,
+              COALESCE(SUM(r.matched_count), 0)::int AS matched_items,
+              COALESCE(SUM(r.unmatched_count), 0)::int AS unmatched_items,
+              COALESCE(SUM(r.stale_count), 0)::int AS stale_items,
+              MAX(r.created_at) AS last_sync_at
+            FROM commerce_supplier_inventory_sync_runs r
+            WHERE r.tenant_id = s.tenant_id
+              AND r.supplier_id = s.id
+          ) sync ON true
+
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*)::int AS po_count,
+              COUNT(*) FILTER (
+                WHERE p.submitted_at IS NOT NULL
+              )::int AS submitted_po_count,
+              COUNT(*) FILTER (
+                WHERE p.supplier_ack_status = 'acknowledged'
+              )::int AS acknowledged_po_count,
+              COUNT(*) FILTER (
+                WHERE p.supplier_ack_status = 'unable_to_fulfil'
+              )::int AS unable_po_count,
+              COUNT(*) FILTER (
+                WHERE p.status IN ('submitted','partially_received')
+                  AND p.supplier_ack_status = 'pending'
+              )::int AS pending_ack_count,
+              AVG(
+                EXTRACT(EPOCH FROM (
+                  p.supplier_acknowledged_at - p.submitted_at
+                )) / 3600.0
+              ) FILTER (
+                WHERE p.submitted_at IS NOT NULL
+                  AND p.supplier_acknowledged_at IS NOT NULL
+              ) AS avg_ack_hours,
+              MAX(p.latest_shipped_at) AS last_shipped_at,
+              COALESCE(SUM(items.ordered_units), 0)::int AS ordered_units,
+              COALESCE(SUM(items.received_units), 0)::int AS received_units
+            FROM commerce_purchase_orders p
+            LEFT JOIN LATERAL (
+              SELECT
+                COALESCE(SUM(i.quantity), 0)::int AS ordered_units,
+                COALESCE(SUM(i.received_quantity), 0)::int AS received_units
+              FROM commerce_purchase_order_items i
+              WHERE i.tenant_id = p.tenant_id
+                AND i.purchase_order_id = p.id
+            ) items ON true
+            WHERE p.tenant_id = s.tenant_id
+              AND p.supplier_id = s.id
+              AND p.status <> 'cancelled'
+          ) po ON true
+
+          WHERE s.tenant_id = $1
+            AND s.status <> 'archived'
+          ORDER BY s.name ASC
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => {
+        const accepted = Number(row.feed_accepted_items || 0);
+        const rejected = Number(row.feed_rejected_items || 0);
+        const feedTotal = accepted + rejected;
+        const matched = Number(row.sync_matched_items || 0);
+        const unmatched = Number(row.sync_unmatched_items || 0);
+        const stale = Number(row.sync_stale_items || 0);
+        const syncTotal = matched + unmatched + stale;
+        const orderedUnits = Number(row.ordered_units || 0);
+        const receivedUnits = Number(row.received_units || 0);
+
+        const feedAcceptanceRate =
+          feedTotal > 0 ? accepted / feedTotal : null;
+        const syncMatchRate =
+          syncTotal > 0 ? matched / syncTotal : null;
+        const receiptRate =
+          orderedUnits > 0 ? receivedUnits / orderedUnits : null;
+
+        const attentionFlags = [
+          ...(row.verification_status !== "verified"
+            ? ["supplier_not_verified"]
+            : []),
+          ...(Number(row.active_offers || 0) === 0
+            ? ["no_active_offers"]
+            : []),
+          ...(feedAcceptanceRate !== null && feedAcceptanceRate < 0.8
+            ? ["high_feed_rejection"]
+            : []),
+          ...(unmatched > 0 ? ["inventory_unmatched_skus"] : []),
+          ...(Number(row.pending_ack_count || 0) > 0
+            ? ["purchase_orders_waiting_ack"]
+            : []),
+          ...(Number(row.unable_po_count || 0) > 0
+            ? ["supplier_reported_unable_to_fulfil"]
+            : [])
+        ];
+
+        return {
+          supplierId: row.id,
+          supplierCode: row.supplier_code,
+          supplierName: row.name,
+          marketCode: row.market_code,
+          supplierType: row.supplier_type,
+          fulfilmentModel: row.fulfilment_model,
+          status: row.status,
+          verificationStatus: row.verification_status,
+          activeOffers: Number(row.active_offers || 0),
+          feed: {
+            batchCount: Number(row.feed_batch_count || 0),
+            acceptedItems: accepted,
+            rejectedItems: rejected,
+            acceptanceRate: feedAcceptanceRate,
+            lastFeedAt: row.last_feed_at
+          },
+          inventorySync: {
+            runCount: Number(row.sync_runs || 0),
+            matchedItems: matched,
+            unmatchedItems: unmatched,
+            staleItems: stale,
+            matchRate: syncMatchRate,
+            lastSyncAt: row.last_sync_at
+          },
+          purchaseOrders: {
+            count: Number(row.po_count || 0),
+            submittedCount: Number(row.submitted_po_count || 0),
+            acknowledgedCount: Number(row.acknowledged_po_count || 0),
+            unableToFulfilCount: Number(row.unable_po_count || 0),
+            pendingAcknowledgementCount: Number(row.pending_ack_count || 0),
+            averageAcknowledgementHours:
+              row.avg_ack_hours === null
+                ? null
+                : Number(row.avg_ack_hours),
+            orderedUnits,
+            receivedUnits,
+            receiptRate,
+            lastShippedAt: row.last_shipped_at
+          },
+          attentionFlags
+        };
+      });
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function listSuppliers() {
   const client = await getPool().connect();
 
@@ -6741,6 +6950,18 @@ function requiredSchemaMigrationsForRoute(routePath) {
     return ["0012_supplier_registry.sql"];
   }
 
+  if (routePath.endsWith("/supplier-performance")) {
+    return [
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql",
+      "0017_supplier_feed_discovery.sql",
+      "0018_supplier_feed_observability.sql",
+      "0019_vendor_portal_access.sql",
+      "0021_supplier_inventory_sync.sql",
+      "0023_vendor_purchase_order_updates.sql"
+    ];
+  }
+
   if (routePath.endsWith("/sourcing") || routePath.endsWith("/replenishment")) {
     return [
       "0011_inventory_ledger.sql",
@@ -10041,6 +10262,29 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "customers_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/supplier-performance")) {
+    try {
+      const suppliers = await getSupplierPerformance();
+      return response(200, {
+        source: "postgresql",
+        generatedAt: new Date().toISOString(),
+        total: suppliers.length,
+        suppliers
+      });
+    } catch (error) {
+      console.error("Supplier performance failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_performance_unavailable"
       });
     }
   }
