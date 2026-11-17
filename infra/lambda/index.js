@@ -5795,6 +5795,12 @@ const schemaMigrationDefinitions = [
     feature: "Supplier API",
     description: "Revocable machine credentials for supplier feed automation.",
     probe: { type: "table", table: "commerce_supplier_api_credentials" }
+  },
+  {
+    name: "0021_supplier_inventory_sync.sql",
+    feature: "Supplier inventory sync",
+    description: "Auditable supplier stock snapshots with stale-update protection.",
+    probe: { type: "table", table: "commerce_supplier_inventory_sync_runs" }
   }
 ];
 
@@ -5929,6 +5935,17 @@ function requiredSchemaMigrationsForRoute(routePath) {
       "0017_supplier_feed_discovery.sql",
       "0018_supplier_feed_observability.sql",
       "0019_vendor_portal_access.sql"
+    ];
+  }
+
+  if (
+    routePath.endsWith("/supplier-api/inventory-sync") ||
+    routePath.endsWith("/supplier-inventory-sync-runs")
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0020_supplier_api_credentials.sql",
+      "0021_supplier_inventory_sync.sql"
     ];
   }
 
@@ -6781,6 +6798,13 @@ async function createSupplierApiCredential(input) {
     input?.expiresAt === null || input?.expiresAt === undefined || input?.expiresAt === ""
       ? null
       : new Date(input.expiresAt);
+  const requestedScopes = Array.isArray(input?.scopes)
+    ? input.scopes.map((scope) => String(scope))
+    : ["feed:write"];
+  const allowedScopes = new Set(["feed:write", "inventory:write"]);
+  const scopes = [...new Set(requestedScopes)].filter((scope) =>
+    allowedScopes.has(scope)
+  );
 
   if (!/^[0-9a-f-]{36}$/i.test(supplierId)) {
     const error = new Error("A valid supplier id is required.");
@@ -6808,6 +6832,12 @@ async function createSupplierApiCredential(input) {
 
   if (expiresAt && Number.isNaN(expiresAt.getTime())) {
     const error = new Error("Supplier API credential expiry is invalid.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (scopes.length < 1 || scopes.length !== requestedScopes.length) {
+    const error = new Error("Supplier API credential contains an unsupported scope.");
     error.statusCode = 400;
     throw error;
   }
@@ -6859,7 +6889,7 @@ async function createSupplierApiCredential(input) {
             expires_at
           )
           VALUES (
-            $1,$2,$3,$4,$5,ARRAY['feed:write']::text[],'active',$6
+            $1,$2,$3,$4,$5,$6::text[],'active',$7
           )
           RETURNING
             id,
@@ -6877,6 +6907,7 @@ async function createSupplierApiCredential(input) {
           label,
           keyPrefix,
           secretHash,
+          scopes,
           expiresAt ? expiresAt.toISOString() : null
         ]
       );
@@ -6945,7 +6976,7 @@ async function revokeSupplierApiCredential(credentialId) {
   }
 }
 
-async function resolveSupplierApiCredential(secretHash) {
+async function resolveSupplierApiCredential(secretHash, requiredScope) {
   if (!/^[a-f0-9]{64}$/i.test(String(secretHash || ""))) {
     const error = new Error("Supplier API credential is invalid.");
     error.statusCode = 401;
@@ -7009,8 +7040,10 @@ async function resolveSupplierApiCredential(secretHash) {
         throw error;
       }
 
-      if (!(credential.scopes || []).includes("feed:write")) {
-        const error = new Error("Supplier API credential lacks feed:write scope.");
+      if (!(credential.scopes || []).includes(requiredScope)) {
+        const error = new Error(
+          `Supplier API credential lacks ${requiredScope} scope.`
+        );
         error.statusCode = 403;
         throw error;
       }
@@ -7035,7 +7068,7 @@ async function resolveSupplierApiCredential(secretHash) {
 }
 
 async function ingestSupplierApiFeed(secretHash, input) {
-  const credential = await resolveSupplierApiCredential(secretHash);
+  const credential = await resolveSupplierApiCredential(secretHash, "feed:write");
 
   return ingestSupplierFeed({
     supplierId: credential.supplierId,
@@ -7046,6 +7079,356 @@ async function ingestSupplierApiFeed(secretHash, input) {
         .slice(0, 500) || "Supplier API submission",
     items: Array.isArray(input?.items) ? input.items : []
   });
+}
+
+
+async function synchronizeSupplierInventory(secretHash, input) {
+  const credential = await resolveSupplierApiCredential(
+    secretHash,
+    "inventory:write"
+  );
+
+  const items = Array.isArray(input?.items) ? input.items : [];
+  const sourceReference =
+    String(input?.sourceReference || "Supplier inventory API sync")
+      .trim()
+      .slice(0, 500) || "Supplier inventory API sync";
+
+  if (items.length < 1 || items.length > 500) {
+    const error = new Error("Inventory sync must contain between 1 and 500 items.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalized = items.map((raw, index) => {
+    const supplierSku = String(raw?.supplierSku || raw?.sku || "").trim();
+    const stockStatus = String(raw?.stockStatus || "unknown").trim();
+    const externalStockQuantity =
+      raw?.externalStockQuantity === null ||
+      raw?.externalStockQuantity === undefined ||
+      raw?.externalStockQuantity === ""
+        ? null
+        : Number(raw.externalStockQuantity);
+    const observedAt = raw?.observedAt
+      ? new Date(raw.observedAt)
+      : new Date();
+
+    if (!supplierSku) {
+      const error = new Error(`Inventory item ${index + 1} requires supplierSku.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!["unknown","in_stock","limited","out_of_stock","preorder"].includes(stockStatus)) {
+      const error = new Error(`Inventory item ${index + 1} has invalid stockStatus.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (
+      externalStockQuantity !== null &&
+      (!Number.isSafeInteger(externalStockQuantity) || externalStockQuantity < 0)
+    ) {
+      const error = new Error(
+        `Inventory item ${index + 1} has invalid externalStockQuantity.`
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (Number.isNaN(observedAt.getTime())) {
+      const error = new Error(`Inventory item ${index + 1} has invalid observedAt.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return {
+      supplierSku,
+      stockStatus,
+      externalStockQuantity,
+      observedAt,
+      raw
+    };
+  });
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const runResult = await tx.query(
+        `
+          INSERT INTO commerce_supplier_inventory_sync_runs (
+            tenant_id,
+            supplier_id,
+            source_type,
+            source_reference,
+            item_count
+          )
+          VALUES ($1,$2,'api',$3,$4)
+          RETURNING id
+        `,
+        [tenantId, credential.supplierId, sourceReference, normalized.length]
+      );
+
+      const syncRunId = runResult.rows[0].id;
+      let matchedCount = 0;
+      let unmatchedCount = 0;
+      let staleCount = 0;
+      const outcomes = [];
+
+      for (const item of normalized) {
+        const offerResult = await tx.query(
+          `
+            SELECT
+              id,
+              source_updated_at
+            FROM commerce_supplier_offers
+            WHERE tenant_id = $1
+              AND supplier_id = $2
+              AND supplier_sku = $3
+              AND status = 'active'
+            ORDER BY updated_at DESC
+            LIMIT 1
+            FOR UPDATE
+          `,
+          [tenantId, credential.supplierId, item.supplierSku]
+        );
+
+        if (offerResult.rowCount === 0) {
+          unmatchedCount += 1;
+
+          await tx.query(
+            `
+              INSERT INTO commerce_supplier_inventory_snapshots (
+                tenant_id,
+                supplier_id,
+                sync_run_id,
+                supplier_offer_id,
+                supplier_sku,
+                stock_status,
+                external_stock_quantity,
+                observed_at,
+                outcome,
+                raw_payload
+              )
+              VALUES ($1,$2,$3,NULL,$4,$5,$6,$7,'unmatched',$8::jsonb)
+            `,
+            [
+              tenantId,
+              credential.supplierId,
+              syncRunId,
+              item.supplierSku,
+              item.stockStatus,
+              item.externalStockQuantity,
+              item.observedAt.toISOString(),
+              JSON.stringify(item.raw)
+            ]
+          );
+
+          outcomes.push({
+            supplierSku: item.supplierSku,
+            outcome: "unmatched"
+          });
+          continue;
+        }
+
+        const offer = offerResult.rows[0];
+        const sourceUpdatedAt = offer.source_updated_at
+          ? new Date(offer.source_updated_at)
+          : null;
+
+        if (
+          sourceUpdatedAt &&
+          item.observedAt.getTime() <= sourceUpdatedAt.getTime()
+        ) {
+          staleCount += 1;
+
+          await tx.query(
+            `
+              INSERT INTO commerce_supplier_inventory_snapshots (
+                tenant_id,
+                supplier_id,
+                sync_run_id,
+                supplier_offer_id,
+                supplier_sku,
+                stock_status,
+                external_stock_quantity,
+                observed_at,
+                outcome,
+                raw_payload
+              )
+              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'stale_ignored',$9::jsonb)
+            `,
+            [
+              tenantId,
+              credential.supplierId,
+              syncRunId,
+              offer.id,
+              item.supplierSku,
+              item.stockStatus,
+              item.externalStockQuantity,
+              item.observedAt.toISOString(),
+              JSON.stringify(item.raw)
+            ]
+          );
+
+          outcomes.push({
+            supplierSku: item.supplierSku,
+            outcome: "stale_ignored"
+          });
+          continue;
+        }
+
+        matchedCount += 1;
+
+        await tx.query(
+          `
+            UPDATE commerce_supplier_offers
+            SET
+              stock_status = $1,
+              external_stock_quantity = $2,
+              source_updated_at = $3,
+              updated_at = now()
+            WHERE tenant_id = $4
+              AND id = $5
+          `,
+          [
+            item.stockStatus,
+            item.externalStockQuantity,
+            item.observedAt.toISOString(),
+            tenantId,
+            offer.id
+          ]
+        );
+
+        await tx.query(
+          `
+            INSERT INTO commerce_supplier_inventory_snapshots (
+              tenant_id,
+              supplier_id,
+              sync_run_id,
+              supplier_offer_id,
+              supplier_sku,
+              stock_status,
+              external_stock_quantity,
+              observed_at,
+              outcome,
+              raw_payload
+            )
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'applied',$9::jsonb)
+          `,
+          [
+            tenantId,
+            credential.supplierId,
+            syncRunId,
+            offer.id,
+            item.supplierSku,
+            item.stockStatus,
+            item.externalStockQuantity,
+            item.observedAt.toISOString(),
+            JSON.stringify(item.raw)
+          ]
+        );
+
+        outcomes.push({
+          supplierSku: item.supplierSku,
+          outcome: "applied"
+        });
+      }
+
+      const status =
+        unmatchedCount === normalized.length
+          ? "failed"
+          : unmatchedCount > 0 || staleCount > 0
+            ? "partial"
+            : "processed";
+
+      await tx.query(
+        `
+          UPDATE commerce_supplier_inventory_sync_runs
+          SET
+            matched_count = $1,
+            unmatched_count = $2,
+            stale_count = $3,
+            status = $4
+          WHERE tenant_id = $5
+            AND id = $6
+        `,
+        [
+          matchedCount,
+          unmatchedCount,
+          staleCount,
+          status,
+          tenantId,
+          syncRunId
+        ]
+      );
+
+      return {
+        syncRunId,
+        status,
+        itemCount: normalized.length,
+        matchedCount,
+        unmatchedCount,
+        staleCount,
+        outcomes,
+        ownedInventoryChanged: false,
+        publicationChanged: false
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
+async function listSupplierInventorySyncRuns(supplierId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            source_type,
+            source_reference,
+            item_count,
+            matched_count,
+            unmatched_count,
+            stale_count,
+            status,
+            created_at
+          FROM commerce_supplier_inventory_sync_runs
+          WHERE tenant_id = $1
+            AND supplier_id = $2
+          ORDER BY created_at DESC
+          LIMIT 100
+        `,
+        [tenantId, supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        sourceType: row.source_type,
+        sourceReference: row.source_reference,
+        itemCount: Number(row.item_count || 0),
+        matchedCount: Number(row.matched_count || 0),
+        unmatchedCount: Number(row.unmatched_count || 0),
+        staleCount: Number(row.stale_count || 0),
+        status: row.status,
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
 }
 
 
@@ -8535,6 +8918,32 @@ exports.handler = async (event, context) => {
 
   if (
     method === "GET" &&
+    routePath.endsWith("/supplier-inventory-sync-runs")
+  ) {
+    try {
+      const supplierId = event?.queryStringParameters?.supplierId || "";
+      const runs = await listSupplierInventorySyncRuns(supplierId);
+      return response(200, {
+        source: "postgresql",
+        total: runs.length,
+        runs
+      });
+    } catch (error) {
+      console.error("Supplier inventory sync history failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_inventory_sync_history_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
     routePath.endsWith("/supplier-api-credentials")
   ) {
     try {
@@ -8605,6 +9014,34 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_api_credential_revoke_failed"
+      });
+    }
+  }
+
+  if (
+    method === "POST" &&
+    routePath.endsWith("/supplier-api/inventory-sync")
+  ) {
+    try {
+      const body = parseBody(event);
+      const result = await synchronizeSupplierInventory(
+        String(body?.secretHash || ""),
+        body
+      );
+      return response(200, {
+        source: "postgresql",
+        ...result
+      });
+    } catch (error) {
+      console.error("Supplier inventory sync failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_inventory_sync_failed"
       });
     }
   }

@@ -50,7 +50,7 @@ export async function POST(
 
   const { id } = await context.params;
 
-  let body: { label?: unknown; expiresAt?: unknown };
+  let body: { label?: unknown; expiresAt?: unknown; scopes?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -82,6 +82,7 @@ export async function POST(
       keyPrefix,
       secretHash,
       expiresAt: body.expiresAt ?? null,
+      scopes: Array.isArray(body.scopes) ? body.scopes : ["feed:write"],
     },
   });
 
