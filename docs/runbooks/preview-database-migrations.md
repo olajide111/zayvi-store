@@ -13,6 +13,9 @@ The next unapplied migrations are expected to be:
 - `0013_fulfilment_planning.sql`
 - `0014_fulfilment_execution.sql`
 - `0015_supplier_verification_audit.sql`
+- `0016_purchase_orders.sql`
+- `0017_supplier_feed_discovery.sql`
+- `0018_supplier_feed_observability.sql`
 
 The bootstrap runner is checksum-protected and only applies migrations not already recorded in `zayvi_schema_migrations`.
 
@@ -54,6 +57,9 @@ migrations/0012_supplier_registry.sql
 migrations/0013_fulfilment_planning.sql
 migrations/0014_fulfilment_execution.sql
 migrations/0015_supplier_verification_audit.sql
+migrations/0016_purchase_orders.sql
+migrations/0017_supplier_feed_discovery.sql
+migrations/0018_supplier_feed_observability.sql
 ```
 
 ## Initialise the existing Preview backend
@@ -98,7 +104,7 @@ terraform apply zayvi-preview-migrations.tfplan
 
 The bootstrap output should report `bootstrap_complete`.
 
-For this activation, `migrationsApplied` should include migrations 0011 through 0015 when they were not already applied.
+For this activation, `migrationsApplied` should include migrations 0011 through 0018 when they were not already applied.
 
 ## Post-apply checks
 
@@ -128,6 +134,10 @@ Then validate the Preview application:
 9. A draft fulfilment plan can be generated for an order without auto-routing or contacting suppliers.
 10. Preview/test orders remain blocked from approving or executing real fulfilment.
 11. Replenishment watchlist loads and keeps automatic reordering disabled.
+12. Purchase Orders loads, remains manually approved/submitted, and stock receipt writes to owned inventory.
+13. Product Discovery loads, keeps auto-publish disabled, and supplier feed imports remain review-first.
+14. Feed history records accepted/rejected rows and prevents exact supplier-payload replay.
+15. System Readiness reports migrations 0011–0018 as applied.
 
 ## Rollback policy
 
