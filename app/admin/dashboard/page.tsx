@@ -89,6 +89,7 @@ const navigation = [
       ["Product Intelligence", "✧", "/admin/sourcing"],
       ["Supplier Performance", "↗", "/admin/supplier-performance"],
       ["Operations Inbox", "!", "/admin/operations-inbox"],
+      ["Operations Audit", "≡", "/admin/operations-audit"],
       ["Product Discovery", "⌕", "/admin/discovery"],
       ["Forecasting", "⌇", "#"],
     ],

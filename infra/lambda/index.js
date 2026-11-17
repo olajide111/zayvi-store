@@ -151,6 +151,94 @@ async function withTenant(client, work) {
   }
 }
 
+async function recordOperationsAudit(
+  tx,
+  tenantId,
+  {
+    actorType,
+    actorReference = null,
+    action,
+    entityType,
+    entityId = null,
+    marketCode = null,
+    summary,
+    metadata = {}
+  }
+) {
+  await tx.query(
+    `
+      INSERT INTO commerce_operations_audit_events (
+        tenant_id,
+        actor_type,
+        actor_reference,
+        action,
+        entity_type,
+        entity_id,
+        market_code,
+        summary,
+        metadata
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
+    `,
+    [
+      tenantId,
+      actorType,
+      actorReference,
+      action,
+      entityType,
+      entityId,
+      marketCode,
+      summary,
+      JSON.stringify(metadata || {})
+    ]
+  );
+}
+
+async function listOperationsAudit() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            actor_type,
+            actor_reference,
+            action,
+            entity_type,
+            entity_id,
+            market_code,
+            summary,
+            metadata,
+            created_at
+          FROM commerce_operations_audit_events
+          WHERE tenant_id = $1
+          ORDER BY created_at DESC
+          LIMIT 500
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        actorType: row.actor_type,
+        actorReference: row.actor_reference,
+        action: row.action,
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        marketCode: row.market_code,
+        summary: row.summary,
+        metadata: row.metadata || {},
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function listProducts(marketCode = "GB") {
   const normalizedMarket = String(marketCode || "GB").trim().toUpperCase();
 
@@ -2304,6 +2392,8 @@ async function createReturn(input) {
         requestedRefundAmount += Number(row.unit_price) * item.quantity;
       }
 
+      const returnNumber = createReturnNumber();
+
       const returnResult = await tx.query(
         `
           INSERT INTO commerce_returns (
@@ -2322,7 +2412,7 @@ async function createReturn(input) {
         [
           tenantId,
           orderId,
-          createReturnNumber(),
+          returnNumber,
           reason,
           requestedRefundAmount,
           order.currency_code
@@ -2355,6 +2445,27 @@ async function createReturn(input) {
           ]
         );
       }
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "return.created",
+        entityType: "return",
+        entityId: createdReturnId,
+        summary: `Return created: ${returnNumber}.`,
+        metadata: {
+          orderId,
+          returnNumber,
+          requestedRefundAmount,
+          currency: order.currency_code,
+          lineCount: normalizedItems.length,
+          quantityRequested: normalizedItems.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          ),
+          reason
+        }
+      });
 
       return createdReturnId;
     });
@@ -2416,6 +2527,22 @@ async function updateReturn(returnId, input) {
 
       const current = returnResult.rows[0];
 
+      const auditReturn = (actionName, summary, metadata = {}) =>
+        recordOperationsAudit(tx, tenantId, {
+          actorType: "admin",
+          actorReference: "admin",
+          action: `return.${actionName}`,
+          entityType: "return",
+          entityId: returnId,
+          marketCode: current.market_code,
+          summary,
+          metadata: {
+            orderId: current.order_id,
+            returnNumber: current.return_number,
+            ...metadata
+          }
+        });
+
       if (action === "approve") {
         if (current.status !== "requested") {
           const error = new Error("Only requested returns can be approved.");
@@ -2438,6 +2565,17 @@ async function updateReturn(returnId, input) {
             WHERE tenant_id = $2 AND id = $3
           `,
           [reviewNote, tenantId, returnId]
+        );
+
+        await auditReturn(
+          "approved",
+          "Return approved for receipt and refund follow-up.",
+          {
+            previousStatus: current.status,
+            nextStatus: "approved",
+            requestedRefundAmount: Number(current.requested_refund_amount || 0),
+            reviewNote
+          }
         );
         return;
       }
@@ -2466,6 +2604,16 @@ async function updateReturn(returnId, input) {
           `,
           [reviewNote, tenantId, returnId]
         );
+
+        await auditReturn(
+          "rejected",
+          "Return request rejected.",
+          {
+            previousStatus: current.status,
+            nextStatus: "rejected",
+            reviewNote
+          }
+        );
         return;
       }
 
@@ -2483,6 +2631,15 @@ async function updateReturn(returnId, input) {
             WHERE tenant_id = $1 AND id = $2
           `,
           [tenantId, returnId]
+        );
+
+        await auditReturn(
+          "cancelled",
+          "Return request cancelled.",
+          {
+            previousStatus: current.status,
+            nextStatus: "cancelled"
+          }
         );
         return;
       }
@@ -2698,6 +2855,30 @@ async function updateReturn(returnId, input) {
           `,
           [inspectionNote, tenantId, returnId]
         );
+
+        const receivedSummary = receivedItems.reduce(
+          (summary, item) => {
+            const quantity = Number(item?.quantityReceived || 0);
+            summary.received += Number.isFinite(quantity) ? quantity : 0;
+            if (String(item?.restockDecision || "") === "restock") {
+              summary.restocked += Number.isFinite(quantity) ? quantity : 0;
+            }
+            return summary;
+          },
+          { received: 0, restocked: 0 }
+        );
+
+        await auditReturn(
+          "received",
+          "Return received and inspected.",
+          {
+            previousStatus: current.status,
+            nextStatus: "received",
+            quantityReceived: receivedSummary.received,
+            quantityRestocked: receivedSummary.restocked,
+            inspectionNote
+          }
+        );
         return;
       }
 
@@ -2731,6 +2912,16 @@ async function updateReturn(returnId, input) {
           `,
           [nextRefundStatus, tenantId, returnId]
         );
+
+        await auditReturn(
+          "refund_reconciled",
+          "Return refund reconciled from provider-controlled payment state.",
+          {
+            providerPaymentStatus: current.payment_status,
+            previousRefundStatus: current.refund_status,
+            nextRefundStatus
+          }
+        );
         return;
       }
 
@@ -2759,6 +2950,16 @@ async function updateReturn(returnId, input) {
             WHERE tenant_id = $1 AND id = $2
           `,
           [tenantId, returnId]
+        );
+
+        await auditReturn(
+          "completed",
+          "Return workflow completed.",
+          {
+            previousStatus: current.status,
+            nextStatus: "completed",
+            refundStatus: current.refund_status
+          }
         );
       }
     });
@@ -5338,6 +5539,20 @@ async function updateSupplierVerification(supplierId, input) {
         ]
       );
 
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "supplier.verification_updated",
+        entityType: "supplier",
+        entityId: supplierId,
+        summary: `Supplier verification changed from ${supplier.verification_status} to ${toStatus}.`,
+        metadata: {
+          fromStatus: supplier.verification_status,
+          toStatus,
+          reviewNote
+        }
+      });
+
       return {
         supplierId,
         verificationStatus: toStatus,
@@ -6046,6 +6261,16 @@ async function approvePurchaseOrder(poId) {
         [tenantId, poId]
       );
 
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "purchase_order.approved",
+        entityType: "purchase_order",
+        entityId: poId,
+        summary: "Purchase order approved.",
+        metadata: { previousStatus: po.status, nextStatus: "approved" }
+      });
+
       return { id: poId, status: "approved" };
     });
   } finally {
@@ -6075,6 +6300,16 @@ async function markPurchaseOrderSubmitted(poId) {
         error.statusCode = 409;
         throw error;
       }
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "purchase_order.submitted",
+        entityType: "purchase_order",
+        entityId: poId,
+        summary: "Purchase order marked submitted after external supplier submission.",
+        metadata: { nextStatus: "submitted" }
+      });
 
       return { id: poId, status: "submitted" };
     });
@@ -6251,6 +6486,9 @@ async function receivePurchaseOrderItem(poId, itemId, input) {
 
       const outstanding = Number(outstandingResult.rows[0]?.outstanding || 0);
 
+      const nextPurchaseOrderStatus =
+        outstanding === 0 ? "received" : "partially_received";
+
       await tx.query(
         `
           UPDATE commerce_purchase_orders
@@ -6259,15 +6497,30 @@ async function receivePurchaseOrderItem(poId, itemId, input) {
             updated_at = now()
           WHERE tenant_id = $2 AND id = $3
         `,
-        [outstanding === 0 ? "received" : "partially_received", tenantId, poId]
+        [nextPurchaseOrderStatus, tenantId, poId]
       );
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "purchase_order.stock_received",
+        entityType: "purchase_order",
+        entityId: poId,
+        marketCode: item.market_code,
+        summary: `Received ${receiveQuantity} unit(s) against purchase order.`,
+        metadata: {
+          itemId,
+          receivedQuantity: receiveQuantity,
+          outstanding,
+          nextStatus: nextPurchaseOrderStatus
+        }
+      });
 
       return {
         itemId,
         receivedNow: receiveQuantity,
         outstanding,
-        purchaseOrderStatus:
-          outstanding === 0 ? "received" : "partially_received"
+        purchaseOrderStatus: nextPurchaseOrderStatus
       };
     });
   } finally {
@@ -7114,6 +7367,24 @@ async function approveDiscoveryCandidate(candidateId, input) {
         [reviewNote, canonical.rows[0].id, tenantId, candidateId]
       );
 
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "discovery.approved",
+        entityType: "discovery_candidate",
+        entityId: candidateId,
+        marketCode: candidate.market_code,
+        summary: `Discovery candidate approved: ${candidate.name}.`,
+        metadata: {
+          productId: canonical.rows[0].id,
+          tenantProductId: tenantProduct.rows[0].id,
+          customerPrice,
+          currency: targetCurrency,
+          reviewNote,
+          duplicateReviewConfirmed: confirmDuplicateReview
+        }
+      });
+
       return {
         candidateId,
         productId: canonical.rows[0].id,
@@ -7163,6 +7434,16 @@ async function rejectDiscoveryCandidate(candidateId, input) {
         error.statusCode = 409;
         throw error;
       }
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "admin",
+        actorReference: "admin",
+        action: "discovery.rejected",
+        entityType: "discovery_candidate",
+        entityId: candidateId,
+        summary: "Discovery candidate rejected.",
+        metadata: { reviewNote }
+      });
 
       return { candidateId, status: "rejected", reviewNote };
     });
@@ -7258,6 +7539,12 @@ const schemaMigrationDefinitions = [
     feature: "Vendor PO updates",
     description: "Supplier acknowledgements and shipment evidence for submitted purchase orders.",
     probe: { type: "table", table: "commerce_purchase_order_supplier_events" }
+  },
+  {
+    name: "0024_operations_audit.sql",
+    feature: "Operations audit",
+    description: "Append-only cross-workflow audit evidence for critical commerce actions.",
+    probe: { type: "table", table: "commerce_operations_audit_events" }
   }
 ];
 
@@ -7315,13 +7602,18 @@ function requiredSchemaMigrationsForRoute(routePath) {
     return ["0011_inventory_ledger.sql"];
   }
 
-  if (
-    /\/suppliers\/[0-9a-f-]{36}\/verification-events$/i.test(routePath) ||
-    /\/suppliers\/[0-9a-f-]{36}\/verification$/i.test(routePath)
-  ) {
+  if (/\/suppliers\/[0-9a-f-]{36}\/verification-events$/i.test(routePath)) {
     return [
       "0012_supplier_registry.sql",
       "0015_supplier_verification_audit.sql"
+    ];
+  }
+
+  if (/\/suppliers\/[0-9a-f-]{36}\/verification$/i.test(routePath)) {
+    return [
+      "0012_supplier_registry.sql",
+      "0015_supplier_verification_audit.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -7330,6 +7622,10 @@ function requiredSchemaMigrationsForRoute(routePath) {
     routePath.endsWith("/supplier-offers")
   ) {
     return ["0012_supplier_registry.sql"];
+  }
+
+  if (routePath.endsWith("/operations-audit")) {
+    return ["0024_operations_audit.sql"];
   }
 
   if (routePath.endsWith("/operations-inbox")) {
@@ -7362,12 +7658,34 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (routePath.includes("/vendor-portal/purchase-orders")) {
+  if (/\/vendor-portal\/purchase-orders\/[0-9a-f-]{36}$/i.test(routePath)) {
+    return [
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql",
+      "0019_vendor_portal_access.sql",
+      "0023_vendor_purchase_order_updates.sql",
+      "0024_operations_audit.sql"
+    ];
+  }
+
+  if (routePath.endsWith("/vendor-portal/purchase-orders")) {
     return [
       "0012_supplier_registry.sql",
       "0016_purchase_orders.sql",
       "0019_vendor_portal_access.sql",
       "0023_vendor_purchase_order_updates.sql"
+    ];
+  }
+
+  if (
+    /\/purchase-orders\/[0-9a-f-]{36}\/(approve|submitted)$/i.test(routePath) ||
+    /\/purchase-orders\/[0-9a-f-]{36}\/items\/[0-9a-f-]{36}\/receive$/i.test(routePath)
+  ) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -7387,10 +7705,17 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
+  if (/\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)) {
+    return [
+      "0012_supplier_registry.sql",
+      "0017_supplier_feed_discovery.sql",
+      "0024_operations_audit.sql"
+    ];
+  }
+
   if (
     routePath.endsWith("/supplier-feed/ingest") ||
-    routePath.endsWith("/discovery-candidates") ||
-    /\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)
+    routePath.endsWith("/discovery-candidates")
   ) {
     return [
       "0012_supplier_registry.sql",
@@ -7418,7 +7743,8 @@ function requiredSchemaMigrationsForRoute(routePath) {
   if (routePath.includes("/returns")) {
     return [
       "0011_inventory_ledger.sql",
-      "0022_returns_reverse_inventory.sql"
+      "0022_returns_reverse_inventory.sql",
+      "0024_operations_audit.sql"
     ];
   }
 
@@ -8529,6 +8855,31 @@ async function updateVendorPurchaseOrder(accountId, poId, input) {
           expectedDeliveryAt ? expectedDeliveryAt.toISOString() : null
         ]
       );
+
+      await recordOperationsAudit(tx, tenantId, {
+        actorType: "vendor",
+        actorReference: account.email,
+        action: `purchase_order.vendor_${eventType}`,
+        entityType: "purchase_order",
+        entityId: poId,
+        summary:
+          eventType === "shipment_update"
+            ? "Supplier reported a purchase-order shipment update."
+            : eventType === "unable_to_fulfil"
+              ? "Supplier reported inability to fulfil purchase order."
+              : "Supplier acknowledged purchase order.",
+        metadata: {
+          supplierId: account.supplierId,
+          supplierReference,
+          note,
+          carrier,
+          trackingNumber,
+          shippedAt: shippedAt ? shippedAt.toISOString() : null,
+          expectedDeliveryAt: expectedDeliveryAt
+            ? expectedDeliveryAt.toISOString()
+            : null
+        }
+      });
 
       const updated = await tx.query(
         `
@@ -10655,6 +11006,29 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "customers_unavailable"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/operations-audit")) {
+    try {
+      const events = await listOperationsAudit();
+      return response(200, {
+        source: "postgresql",
+        generatedAt: new Date().toISOString(),
+        total: events.length,
+        events
+      });
+    } catch (error) {
+      console.error("Operations audit list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "operations_audit_unavailable"
       });
     }
   }
