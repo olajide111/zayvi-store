@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUpRight, FileText, PenLine } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import ContentLibrary, { publicationStatus } from "./ContentLibrary";
 import { requestContent, type EntrySummary } from "@/lib/admin-content";
 import AdminPageHeading, { adminAction, adminPrimaryAction } from "@/components/admin/AdminPageHeading";
 import { contentUrl, starterPages, type ContentKind, type ContentMarket } from "@/lib/storefront-content";
@@ -56,11 +57,6 @@ function starterDraft(slug: string): Draft {
   return { ...newDraft, slug, title: page.title, body: page.body };
 }
 
-function status(entry: EntrySummary) {
-  if (!entry.published_at) return "Draft";
-  return entry.draft_changed ? "Published · draft changes" : "Published";
-}
-
 function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, guard, confirm }: {
   market: ContentMarket;
   initialPage?: string;
@@ -77,6 +73,8 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [preview, setPreview] = useState(false);
+  const libraryHeading = useRef<HTMLHeadingElement>(null);
+  const editorHeading = useRef<HTMLHeadingElement>(null);
   const url = `/api/admin/content?market=${market}`;
   const selected = entries?.find((entry) => entry.slug === draft.slug);
   const canSave = (dirty || draft.revision === 0) && Boolean(draft.title.trim() && draft.body.trim() && draft.slug);
@@ -113,6 +111,10 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
     change(!draft.revision && !customSlug ? { title, slug: slugFromTitle(title) } : { title });
   }
 
+  function focusEditor() {
+    requestAnimationFrame(() => editorHeading.current?.focus());
+  }
+
   function start(kind: ContentKind, slug = "") {
     const starter = starterPages[slug];
     setCustomSlug(Boolean(starter));
@@ -121,6 +123,7 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
     setPreview(false);
     setError("");
     setNotice("");
+    focusEditor();
   }
 
   async function open(slug: string) {
@@ -134,6 +137,8 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
       setCustomSlug(true);
       setDraft({ slug: entry.slug, kind: entry.kind, revision: entry.revision, ...entry.draft });
       setDirty(false);
+      setPreview(false);
+      focusEditor();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to open the draft.");
     } finally {
@@ -175,50 +180,18 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
       {!entries && !error && <p role="status" className="text-sm text-[#52635b]">Loading content…</p>}
       {entries && (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(230px,0.8fr)_minmax(0,2fr)]">
-          <section aria-labelledby="content-list" className="min-w-0 rounded-2xl border border-[#dfe6e1] bg-white p-4">
-            <h2 id="content-list" className="font-semibold">Pages and articles</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className={adminPrimaryAction} disabled={busy} onClick={() => guard(() => start("article"))}><PenLine size={15} className="mr-2" aria-hidden="true" />New article</button>
-              <button type="button" className={adminAction} disabled={busy} onClick={() => guard(() => start("page"))}>New page</button>
-            </div>
-            <Link href={contentUrl(market)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[#215241] underline">
-              View Blog &amp; guides
-            </Link>
-            {(["article", "page"] as const).map((kind) => {
-              const items = entries.filter((entry) => entry.kind === kind);
-              if (!items.length) return null;
-              return (
-                <div key={kind} className="mt-3">
-                  <h3 className="text-sm font-semibold">{kind === "article" ? "Articles" : "Pages"}</h3>
-                  <ul className="mt-1 divide-y divide-[#e4eae5]">
-                    {items.map((entry) => (
-                      <li key={entry.slug}>
-                        <button type="button" disabled={busy} onClick={() => guard(() => void open(entry.slug))} aria-pressed={draft.revision > 0 && draft.slug === entry.slug} className="block min-h-11 w-full break-words rounded-md px-2 py-2 text-left text-sm text-[#215241] hover:bg-[#f4f7f4] aria-pressed:bg-[#edf4ee]">
-                          <span className="block font-semibold">{entry.title}</span>
-                          <span className="text-xs text-[#52635b]">{status(entry)}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-            <h3 className="mt-5 text-sm font-semibold">Starter pages</h3>
-            <div className="mt-2 grid gap-1">
-              {Object.entries(starterPages).filter(([slug]) => !entries.some((entry) => entry.slug === slug)).map(([slug, page]) => (
-                <button type="button" key={slug} className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-left text-sm text-[#215241] hover:bg-[#edf4ee] disabled:opacity-50" disabled={busy} onClick={() => guard(() => start("page", slug))}>
-                  <FileText size={14} aria-hidden="true" className="shrink-0" />{page.title}
-                </button>
-              ))}
-            </div>
-          </section>
+          <ContentLibrary entries={entries} market={market} busy={busy} selectedSlug={draft.revision > 0 ? draft.slug : undefined}
+            headingRef={libraryHeading}
+            onStart={(kind, slug) => guard(() => start(kind, slug))}
+            onOpen={(slug) => guard(() => void open(slug))} />
 
           <section aria-labelledby="content-edit" className={`min-w-0 overflow-hidden rounded-2xl border border-[#dfe6e1] bg-white ${initialPage ? "order-first lg:order-none" : ""}`}>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4eae5] bg-[#f9fbf8] p-4 sm:px-6">
               <div className="min-w-0">
-                <h2 id="content-edit" className="text-lg font-semibold tracking-tight break-words">{draft.title || (draft.kind === "article" ? "New article" : "New page")}</h2>
-                <p className="mt-1 text-xs font-medium text-[#52635b]">{dirty ? "Unsaved changes" : draft.revision && selected ? status(selected) : "New draft"}</p>
+                <h2 id="content-edit" ref={editorHeading} tabIndex={-1} className="scroll-mt-4 text-lg font-semibold tracking-tight break-words">{draft.title || (draft.kind === "article" ? "New article" : "New page")}</h2>
+                <p className="mt-1 text-xs font-medium text-[#52635b]">{dirty ? "Unsaved changes" : draft.revision && selected ? publicationStatus(selected) : "New draft"}</p>
               </div>
+              <button type="button" onClick={() => libraryHeading.current?.focus()} className={adminAction + " lg:hidden"}>Back to library</button>
               <button type="button" onClick={() => setPreview((current) => !current)} aria-expanded={preview} className={adminAction}>{preview ? "Hide preview" : "Preview draft"}</button>
             </div>
             <form onSubmit={save} className="space-y-4">
