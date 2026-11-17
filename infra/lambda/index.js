@@ -5915,6 +5915,18 @@ function requiredSchemaMigrationsForRoute(routePath) {
   }
 
   if (
+    routePath.endsWith("/vendor-portal/feed") ||
+    routePath.endsWith("/vendor-portal/feed-history")
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0017_supplier_feed_discovery.sql",
+      "0018_supplier_feed_observability.sql",
+      "0019_vendor_portal_access.sql"
+    ];
+  }
+
+  if (
     routePath.includes("/supplier-users") ||
     routePath.includes("/vendor-portal")
   ) {
@@ -6553,6 +6565,136 @@ async function updateVendorPortalOffer(accountId, offerId, input) {
             : Number(row.external_stock_quantity),
         sourceUpdatedAt: row.source_updated_at
       };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
+async function resolveActiveVendorAccount(accountId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(accountId || ""))) {
+    const error = new Error("A valid vendor account id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            u.id,
+            u.supplier_id,
+            u.email,
+            u.role,
+            u.status,
+            s.name AS supplier_name,
+            s.market_code,
+            s.status AS supplier_status,
+            s.verification_status
+          FROM commerce_supplier_users u
+          JOIN commerce_suppliers s
+            ON s.tenant_id = u.tenant_id
+           AND s.id = u.supplier_id
+          WHERE u.tenant_id = $1
+            AND u.id = $2
+          LIMIT 1
+        `,
+        [tenantId, accountId]
+      );
+
+      if (result.rowCount === 0 || result.rows[0].status !== "active") {
+        const error = new Error("Vendor session is no longer active.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const account = result.rows[0];
+
+      if (account.supplier_status !== "active") {
+        const error = new Error("Supplier account is paused or archived.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      return {
+        accountId: account.id,
+        supplierId: account.supplier_id,
+        supplierName: account.supplier_name,
+        marketCode: account.market_code,
+        verificationStatus: account.verification_status,
+        email: account.email,
+        role: account.role
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function submitVendorFeed(accountId, input) {
+  const account = await resolveActiveVendorAccount(accountId);
+
+  if (account.role === "viewer") {
+    const error = new Error("Viewer accounts cannot submit supplier feeds.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return ingestSupplierFeed({
+    supplierId: account.supplierId,
+    sourceType: input?.sourceType === "file" ? "file" : "manual",
+    sourceReference:
+      String(input?.sourceReference || "Vendor portal submission")
+        .trim()
+        .slice(0, 500) || "Vendor portal submission",
+    items: Array.isArray(input?.items) ? input.items : []
+  });
+}
+
+async function listVendorFeedHistory(accountId) {
+  const account = await resolveActiveVendorAccount(accountId);
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            source_type,
+            source_reference,
+            item_count,
+            accepted_count,
+            rejected_count,
+            status,
+            accepted_details,
+            rejection_details,
+            created_at
+          FROM commerce_supplier_feed_batches
+          WHERE tenant_id = $1
+            AND supplier_id = $2
+          ORDER BY created_at DESC
+          LIMIT 25
+        `,
+        [tenantId, account.supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        sourceType: row.source_type,
+        sourceReference: row.source_reference,
+        itemCount: Number(row.item_count || 0),
+        acceptedCount: Number(row.accepted_count || 0),
+        rejectedCount: Number(row.rejected_count || 0),
+        status: row.status,
+        acceptedDetails: row.accepted_details || [],
+        rejectionDetails: row.rejection_details || [],
+        createdAt: row.created_at
+      }));
     });
   } finally {
     client.release();
@@ -8134,6 +8276,55 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "vendor_invite_activation_failed"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/vendor-portal/feed")) {
+    try {
+      const body = parseBody(event);
+      const result = await submitVendorFeed(
+        String(body?.accountId || ""),
+        body
+      );
+      return response(201, {
+        source: "postgresql",
+        ...result,
+        autoPublishEnabled: false
+      });
+    } catch (error) {
+      console.error("Vendor feed submission failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_feed_submission_failed"
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/vendor-portal/feed-history")) {
+    try {
+      const accountId = event?.queryStringParameters?.accountId || "";
+      const batches = await listVendorFeedHistory(accountId);
+      return response(200, {
+        source: "postgresql",
+        total: batches.length,
+        batches
+      });
+    } catch (error) {
+      console.error("Vendor feed history failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "vendor_feed_history_unavailable"
       });
     }
   }
