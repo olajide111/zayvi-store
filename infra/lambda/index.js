@@ -7597,7 +7597,7 @@ async function checkSchemaMigrations(requiredNames) {
   }
 }
 
-function requiredSchemaMigrationsForRoute(routePath) {
+function requiredSchemaMigrationsForRoute(routePath, method) {
   if (routePath.endsWith("/inventory") || routePath.endsWith("/inventory/adjust")) {
     return ["0011_inventory_ledger.sql"];
   }
@@ -7741,11 +7741,14 @@ function requiredSchemaMigrationsForRoute(routePath) {
   }
 
   if (routePath.includes("/returns")) {
-    return [
+    const required = [
       "0011_inventory_ledger.sql",
-      "0022_returns_reverse_inventory.sql",
-      "0024_operations_audit.sql"
+      "0022_returns_reverse_inventory.sql"
     ];
+    if (method === "POST" || method === "PATCH") {
+      required.push("0024_operations_audit.sql");
+    }
+    return required;
   }
 
   if (
@@ -10890,7 +10893,7 @@ exports.handler = async (event, context) => {
     !routePath.endsWith("/ready") &&
     !routePath.endsWith("/system-readiness")
   ) {
-    const requiredMigrations = requiredSchemaMigrationsForRoute(routePath);
+    const requiredMigrations = requiredSchemaMigrationsForRoute(routePath, method);
 
     if (requiredMigrations.length > 0) {
       try {
