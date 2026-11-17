@@ -151,6 +151,94 @@ async function withTenant(client, work) {
   }
 }
 
+async function recordOperationsAudit(
+  tx,
+  tenantId,
+  {
+    actorType,
+    actorReference = null,
+    action,
+    entityType,
+    entityId = null,
+    marketCode = null,
+    summary,
+    metadata = {}
+  }
+) {
+  await tx.query(
+    `
+      INSERT INTO commerce_operations_audit_events (
+        tenant_id,
+        actor_type,
+        actor_reference,
+        action,
+        entity_type,
+        entity_id,
+        market_code,
+        summary,
+        metadata
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
+    `,
+    [
+      tenantId,
+      actorType,
+      actorReference,
+      action,
+      entityType,
+      entityId,
+      marketCode,
+      summary,
+      JSON.stringify(metadata || {})
+    ]
+  );
+}
+
+async function listOperationsAudit() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            actor_type,
+            actor_reference,
+            action,
+            entity_type,
+            entity_id,
+            market_code,
+            summary,
+            metadata,
+            created_at
+          FROM commerce_operations_audit_events
+          WHERE tenant_id = $1
+          ORDER BY created_at DESC
+          LIMIT 500
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        actorType: row.actor_type,
+        actorReference: row.actor_reference,
+        action: row.action,
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        marketCode: row.market_code,
+        summary: row.summary,
+        metadata: row.metadata || {},
+        createdAt: row.created_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
 async function listProducts(marketCode = "GB") {
   const normalizedMarket = String(marketCode || "GB").trim().toUpperCase();
 
@@ -7258,6 +7346,12 @@ const schemaMigrationDefinitions = [
     feature: "Vendor PO updates",
     description: "Supplier acknowledgements and shipment evidence for submitted purchase orders.",
     probe: { type: "table", table: "commerce_purchase_order_supplier_events" }
+  },
+  {
+    name: "0024_operations_audit.sql",
+    feature: "Operations audit",
+    description: "Append-only cross-workflow audit evidence for critical commerce actions.",
+    probe: { type: "table", table: "commerce_operations_audit_events" }
   }
 ];
 
@@ -7330,6 +7424,10 @@ function requiredSchemaMigrationsForRoute(routePath) {
     routePath.endsWith("/supplier-offers")
   ) {
     return ["0012_supplier_registry.sql"];
+  }
+
+  if (routePath.endsWith("/operations-audit")) {
+    return ["0024_operations_audit.sql"];
   }
 
   if (routePath.endsWith("/operations-inbox")) {
