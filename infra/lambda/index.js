@@ -7579,10 +7579,14 @@ function requiredSchemaMigrationsForRoute(routePath) {
     return ["0011_inventory_ledger.sql"];
   }
 
-  if (
-    /\/suppliers\/[0-9a-f-]{36}\/verification-events$/i.test(routePath) ||
-    /\/suppliers\/[0-9a-f-]{36}\/verification$/i.test(routePath)
-  ) {
+  if (/\/suppliers\/[0-9a-f-]{36}\/verification-events$/i.test(routePath)) {
+    return [
+      "0012_supplier_registry.sql",
+      "0015_supplier_verification_audit.sql"
+    ];
+  }
+
+  if (/\/suppliers\/[0-9a-f-]{36}\/verification$/i.test(routePath)) {
     return [
       "0012_supplier_registry.sql",
       "0015_supplier_verification_audit.sql",
@@ -7631,7 +7635,7 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (routePath.includes("/vendor-portal/purchase-orders")) {
+  if (/\/vendor-portal\/purchase-orders\/[0-9a-f-]{36}$/i.test(routePath)) {
     return [
       "0012_supplier_registry.sql",
       "0016_purchase_orders.sql",
@@ -7641,12 +7645,32 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (routePath.includes("/purchase-orders")) {
+  if (routePath.endsWith("/vendor-portal/purchase-orders")) {
+    return [
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql",
+      "0019_vendor_portal_access.sql",
+      "0023_vendor_purchase_order_updates.sql"
+    ];
+  }
+
+  if (
+    /\/purchase-orders\/[0-9a-f-]{36}\/(approve|submitted)$/i.test(routePath) ||
+    /\/purchase-orders\/[0-9a-f-]{36}\/items\/[0-9a-f-]{36}\/receive$/i.test(routePath)
+  ) {
     return [
       "0011_inventory_ledger.sql",
       "0012_supplier_registry.sql",
       "0016_purchase_orders.sql",
       "0024_operations_audit.sql"
+    ];
+  }
+
+  if (routePath.includes("/purchase-orders")) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0012_supplier_registry.sql",
+      "0016_purchase_orders.sql"
     ];
   }
 
@@ -7658,15 +7682,21 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (
-    routePath.endsWith("/supplier-feed/ingest") ||
-    routePath.endsWith("/discovery-candidates") ||
-    /\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)
-  ) {
+  if (/\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)) {
     return [
       "0012_supplier_registry.sql",
       "0017_supplier_feed_discovery.sql",
       "0024_operations_audit.sql"
+    ];
+  }
+
+  if (
+    routePath.endsWith("/supplier-feed/ingest") ||
+    routePath.endsWith("/discovery-candidates")
+  ) {
+    return [
+      "0012_supplier_registry.sql",
+      "0017_supplier_feed_discovery.sql"
     ];
   }
 
