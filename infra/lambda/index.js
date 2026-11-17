@@ -1977,6 +1977,799 @@ async function listReturnsOverview() {
 }
 
 
+function createReturnNumber() {
+  const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return `RT-${stamp}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+async function listReturns() {
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            r.id,
+            r.return_number,
+            r.order_id,
+            o.order_number,
+            o.customer_name,
+            o.customer_email,
+            o.market_code,
+            r.status,
+            r.reason,
+            r.review_note,
+            r.inspection_note,
+            r.refund_status,
+            r.requested_refund_amount,
+            r.currency_code,
+            r.requested_at,
+            r.approved_at,
+            r.rejected_at,
+            r.received_at,
+            r.completed_at,
+            r.updated_at,
+            COALESCE(SUM(ri.quantity_requested), 0)::int AS quantity_requested,
+            COALESCE(SUM(ri.quantity_received), 0)::int AS quantity_received,
+            COALESCE(SUM(ri.quantity_restocked), 0)::int AS quantity_restocked
+          FROM commerce_returns r
+          JOIN commerce_orders o
+            ON o.tenant_id = r.tenant_id
+           AND o.id = r.order_id
+          LEFT JOIN commerce_return_items ri
+            ON ri.tenant_id = r.tenant_id
+           AND ri.return_id = r.id
+          WHERE r.tenant_id = $1
+          GROUP BY r.id, o.id
+          ORDER BY r.created_at DESC
+          LIMIT 250
+        `,
+        [tenantId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        returnNumber: row.return_number,
+        orderId: row.order_id,
+        orderNumber: row.order_number,
+        customerName: row.customer_name,
+        customerEmail: row.customer_email,
+        marketCode: row.market_code,
+        status: row.status,
+        reason: row.reason,
+        reviewNote: row.review_note,
+        inspectionNote: row.inspection_note,
+        refundStatus: row.refund_status,
+        requestedRefundAmount: Number(row.requested_refund_amount || 0),
+        currency: row.currency_code,
+        quantityRequested: Number(row.quantity_requested || 0),
+        quantityReceived: Number(row.quantity_received || 0),
+        quantityRestocked: Number(row.quantity_restocked || 0),
+        requestedAt: row.requested_at,
+        approvedAt: row.approved_at,
+        rejectedAt: row.rejected_at,
+        receivedAt: row.received_at,
+        completedAt: row.completed_at,
+        updatedAt: row.updated_at
+      }));
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function getReturn(returnId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(returnId || ""))) {
+    const error = new Error("A valid return id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const returnResult = await tx.query(
+        `
+          SELECT
+            r.*,
+            o.order_number,
+            o.customer_name,
+            o.customer_email,
+            o.market_code,
+            o.payment_status,
+            o.fulfilment_status,
+            o.source
+          FROM commerce_returns r
+          JOIN commerce_orders o
+            ON o.tenant_id = r.tenant_id
+           AND o.id = r.order_id
+          WHERE r.tenant_id = $1
+            AND r.id = $2
+          LIMIT 1
+        `,
+        [tenantId, returnId]
+      );
+
+      if (returnResult.rowCount === 0) {
+        const error = new Error("Return not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const itemResult = await tx.query(
+        `
+          SELECT
+            ri.id,
+            ri.order_item_id,
+            ri.tenant_catalogue_product_id,
+            oi.product_name,
+            oi.merchant_sku,
+            oi.quantity AS ordered_quantity,
+            oi.unit_price,
+            ri.quantity_requested,
+            ri.quantity_received,
+            ri.quantity_restocked,
+            ri.condition,
+            ri.restock_decision,
+            ri.refund_amount
+          FROM commerce_return_items ri
+          JOIN commerce_order_items oi
+            ON oi.tenant_id = ri.tenant_id
+           AND oi.id = ri.order_item_id
+          WHERE ri.tenant_id = $1
+            AND ri.return_id = $2
+          ORDER BY ri.created_at ASC
+        `,
+        [tenantId, returnId]
+      );
+
+      const row = returnResult.rows[0];
+
+      return {
+        id: row.id,
+        returnNumber: row.return_number,
+        orderId: row.order_id,
+        orderNumber: row.order_number,
+        customerName: row.customer_name,
+        customerEmail: row.customer_email,
+        marketCode: row.market_code,
+        orderPaymentStatus: row.payment_status,
+        orderFulfilmentStatus: row.fulfilment_status,
+        orderSource: row.source,
+        status: row.status,
+        reason: row.reason,
+        reviewNote: row.review_note,
+        inspectionNote: row.inspection_note,
+        refundStatus: row.refund_status,
+        requestedRefundAmount: Number(row.requested_refund_amount || 0),
+        currency: row.currency_code,
+        requestedAt: row.requested_at,
+        approvedAt: row.approved_at,
+        rejectedAt: row.rejected_at,
+        receivedAt: row.received_at,
+        completedAt: row.completed_at,
+        updatedAt: row.updated_at,
+        items: itemResult.rows.map((item) => ({
+          id: item.id,
+          orderItemId: item.order_item_id,
+          tenantProductId: item.tenant_catalogue_product_id,
+          productName: item.product_name,
+          sku: item.merchant_sku,
+          orderedQuantity: Number(item.ordered_quantity),
+          unitPrice: Number(item.unit_price),
+          quantityRequested: Number(item.quantity_requested),
+          quantityReceived: Number(item.quantity_received),
+          quantityRestocked: Number(item.quantity_restocked),
+          condition: item.condition,
+          restockDecision: item.restock_decision,
+          refundAmount: Number(item.refund_amount)
+        }))
+      };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+async function createReturn(input) {
+  const orderId = String(input?.orderId || "").trim();
+  const reason = String(input?.reason || "").trim().slice(0, 1000);
+  const items = Array.isArray(input?.items) ? input.items : [];
+
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
+    const error = new Error("A valid order id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!reason) {
+    const error = new Error("A return reason is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (items.length < 1 || items.length > 50) {
+    const error = new Error("A return must contain between 1 and 50 items.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedItems = items.map((item) => {
+    const orderItemId = String(item?.orderItemId || "").trim();
+    const quantity = Number(item?.quantity);
+
+    if (!/^[0-9a-f-]{36}$/i.test(orderItemId)) {
+      const error = new Error("Return item has an invalid order item id.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 20) {
+      const error = new Error("Return quantities must be positive whole numbers.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return { orderItemId, quantity };
+  });
+
+  const ids = normalizedItems.map((item) => item.orderItemId);
+  if (new Set(ids).size !== ids.length) {
+    const error = new Error("Each order item can only appear once in a return.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    const returnId = await withTenant(client, async (tx, tenantId) => {
+      const orderResult = await tx.query(
+        `
+          SELECT id, currency_code, payment_status
+          FROM commerce_orders
+          WHERE tenant_id = $1
+            AND id = $2
+          FOR UPDATE
+        `,
+        [tenantId, orderId]
+      );
+
+      if (orderResult.rowCount === 0) {
+        const error = new Error("Order not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const order = orderResult.rows[0];
+
+      if (!["paid", "partially_refunded"].includes(order.payment_status)) {
+        const error = new Error(
+          "Returns requiring a refund can only be opened for paid or partially refunded orders."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const orderItems = await tx.query(
+        `
+          SELECT
+            oi.id,
+            oi.tenant_catalogue_product_id,
+            oi.quantity,
+            oi.unit_price,
+            COALESCE((
+              SELECT SUM(ri.quantity_requested)
+              FROM commerce_return_items ri
+              JOIN commerce_returns r
+                ON r.tenant_id = ri.tenant_id
+               AND r.id = ri.return_id
+              WHERE ri.tenant_id = oi.tenant_id
+                AND ri.order_item_id = oi.id
+                AND r.status NOT IN ('rejected','cancelled')
+            ), 0)::int AS already_requested
+          FROM commerce_order_items oi
+          WHERE oi.tenant_id = $1
+            AND oi.order_id = $2
+            AND oi.id = ANY($3::uuid[])
+          FOR UPDATE
+        `,
+        [tenantId, orderId, ids]
+      );
+
+      if (orderItems.rowCount !== normalizedItems.length) {
+        const error = new Error("One or more return items do not belong to this order.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const byId = new Map(orderItems.rows.map((row) => [row.id, row]));
+      let requestedRefundAmount = 0;
+
+      for (const item of normalizedItems) {
+        const row = byId.get(item.orderItemId);
+        const remaining =
+          Number(row.quantity) - Number(row.already_requested || 0);
+
+        if (item.quantity > remaining) {
+          const error = new Error(
+            "Return quantity exceeds the remaining returnable quantity for an item."
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        requestedRefundAmount += Number(row.unit_price) * item.quantity;
+      }
+
+      const returnResult = await tx.query(
+        `
+          INSERT INTO commerce_returns (
+            tenant_id,
+            order_id,
+            return_number,
+            status,
+            reason,
+            refund_status,
+            requested_refund_amount,
+            currency_code
+          )
+          VALUES ($1,$2,$3,'requested',$4,'not_requested',$5,$6)
+          RETURNING id
+        `,
+        [
+          tenantId,
+          orderId,
+          createReturnNumber(),
+          reason,
+          requestedRefundAmount,
+          order.currency_code
+        ]
+      );
+
+      const createdReturnId = returnResult.rows[0].id;
+
+      for (const item of normalizedItems) {
+        const row = byId.get(item.orderItemId);
+        await tx.query(
+          `
+            INSERT INTO commerce_return_items (
+              tenant_id,
+              return_id,
+              order_item_id,
+              tenant_catalogue_product_id,
+              quantity_requested,
+              refund_amount
+            )
+            VALUES ($1,$2,$3,$4,$5,$6)
+          `,
+          [
+            tenantId,
+            createdReturnId,
+            item.orderItemId,
+            row.tenant_catalogue_product_id,
+            item.quantity,
+            Number(row.unit_price) * item.quantity
+          ]
+        );
+      }
+
+      return createdReturnId;
+    });
+
+    return await getReturn(returnId);
+  } finally {
+    client.release();
+  }
+}
+
+async function updateReturn(returnId, input) {
+  const action = String(input?.action || "").trim();
+  const reviewNote = String(input?.reviewNote || "").trim().slice(0, 1000) || null;
+  const inspectionNote =
+    String(input?.inspectionNote || "").trim().slice(0, 1000) || null;
+
+  const allowedActions = new Set([
+    "approve",
+    "reject",
+    "receive",
+    "reconcile_refund",
+    "complete",
+    "cancel"
+  ]);
+
+  if (!allowedActions.has(action)) {
+    const error = new Error("Unsupported return action.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    await withTenant(client, async (tx, tenantId) => {
+      const returnResult = await tx.query(
+        `
+          SELECT
+            r.*,
+            o.market_code,
+            o.payment_status,
+            o.store_id
+          FROM commerce_returns r
+          JOIN commerce_orders o
+            ON o.tenant_id = r.tenant_id
+           AND o.id = r.order_id
+          WHERE r.tenant_id = $1
+            AND r.id = $2
+          FOR UPDATE
+        `,
+        [tenantId, returnId]
+      );
+
+      if (returnResult.rowCount === 0) {
+        const error = new Error("Return not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const current = returnResult.rows[0];
+
+      if (action === "approve") {
+        if (current.status !== "requested") {
+          const error = new Error("Only requested returns can be approved.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_returns
+            SET
+              status = 'approved',
+              refund_status = CASE
+                WHEN requested_refund_amount > 0 THEN 'pending_provider'
+                ELSE 'not_requested'
+              END,
+              review_note = $1,
+              approved_at = now(),
+              updated_at = now()
+            WHERE tenant_id = $2 AND id = $3
+          `,
+          [reviewNote, tenantId, returnId]
+        );
+        return;
+      }
+
+      if (action === "reject") {
+        if (current.status !== "requested") {
+          const error = new Error("Only requested returns can be rejected.");
+          error.statusCode = 409;
+          throw error;
+        }
+        if (!reviewNote) {
+          const error = new Error("A rejection note is required.");
+          error.statusCode = 400;
+          throw error;
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_returns
+            SET
+              status = 'rejected',
+              review_note = $1,
+              rejected_at = now(),
+              updated_at = now()
+            WHERE tenant_id = $2 AND id = $3
+          `,
+          [reviewNote, tenantId, returnId]
+        );
+        return;
+      }
+
+      if (action === "cancel") {
+        if (!["requested", "approved"].includes(current.status)) {
+          const error = new Error("Only requested or approved returns can be cancelled.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_returns
+            SET status = 'cancelled', updated_at = now()
+            WHERE tenant_id = $1 AND id = $2
+          `,
+          [tenantId, returnId]
+        );
+        return;
+      }
+
+      if (action === "receive") {
+        if (current.status !== "approved") {
+          const error = new Error("Only approved returns can be received.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        const receivedItems = Array.isArray(input?.items) ? input.items : [];
+        const itemResult = await tx.query(
+          `
+            SELECT
+              ri.id,
+              ri.order_item_id,
+              ri.tenant_catalogue_product_id,
+              ri.quantity_requested
+            FROM commerce_return_items ri
+            WHERE ri.tenant_id = $1
+              AND ri.return_id = $2
+            ORDER BY ri.created_at ASC
+            FOR UPDATE
+          `,
+          [tenantId, returnId]
+        );
+
+        const submitted = new Map(
+          receivedItems.map((item) => [
+            String(item?.orderItemId || ""),
+            item
+          ])
+        );
+
+        if (submitted.size !== itemResult.rows.length) {
+          const error = new Error("Receipt must inspect every return item.");
+          error.statusCode = 400;
+          throw error;
+        }
+
+        const locationResult = await tx.query(
+          `
+            SELECT id
+            FROM commerce_inventory_locations
+            WHERE tenant_id = $1
+              AND store_id = $2
+              AND market_code = $3
+              AND location_type = 'own_stock'
+              AND status = 'active'
+            ORDER BY created_at ASC
+            LIMIT 1
+          `,
+          [tenantId, current.store_id, current.market_code]
+        );
+
+        if (locationResult.rowCount === 0) {
+          const error = new Error("Active own-stock return location not found.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        const locationId = locationResult.rows[0].id;
+
+        for (const row of itemResult.rows) {
+          const item = submitted.get(row.order_item_id);
+          if (!item) {
+            const error = new Error("Receipt contains an unknown return item.");
+            error.statusCode = 400;
+            throw error;
+          }
+
+          const quantityReceived = Number(item.quantityReceived);
+          const condition = String(item.condition || "").trim();
+          const restockDecision = String(item.restockDecision || "").trim();
+
+          if (
+            !Number.isSafeInteger(quantityReceived) ||
+            quantityReceived < 0 ||
+            quantityReceived > Number(row.quantity_requested)
+          ) {
+            const error = new Error("Received quantity is invalid.");
+            error.statusCode = 400;
+            throw error;
+          }
+
+          if (!["new","opened","damaged","faulty"].includes(condition)) {
+            const error = new Error("A valid inspected condition is required.");
+            error.statusCode = 400;
+            throw error;
+          }
+
+          if (!["restock","do_not_restock"].includes(restockDecision)) {
+            const error = new Error("A restock decision is required.");
+            error.statusCode = 400;
+            throw error;
+          }
+
+          if (restockDecision === "restock" && ["damaged","faulty"].includes(condition)) {
+            const error = new Error("Damaged or faulty goods cannot be restocked.");
+            error.statusCode = 409;
+            throw error;
+          }
+
+          const quantityRestocked =
+            restockDecision === "restock" ? quantityReceived : 0;
+
+          await tx.query(
+            `
+              UPDATE commerce_return_items
+              SET
+                quantity_received = $1,
+                quantity_restocked = $2,
+                condition = $3,
+                restock_decision = $4,
+                updated_at = now()
+              WHERE tenant_id = $5 AND id = $6
+            `,
+            [
+              quantityReceived,
+              quantityRestocked,
+              condition,
+              restockDecision,
+              tenantId,
+              row.id
+            ]
+          );
+
+          if (quantityRestocked > 0) {
+            await tx.query(
+              `
+                INSERT INTO commerce_inventory_levels (
+                  tenant_id,
+                  location_id,
+                  tenant_catalogue_product_id,
+                  on_hand,
+                  reserved,
+                  safety_stock
+                )
+                VALUES ($1,$2,$3,0,0,0)
+                ON CONFLICT (tenant_id, location_id, tenant_catalogue_product_id)
+                DO NOTHING
+              `,
+              [
+                tenantId,
+                locationId,
+                row.tenant_catalogue_product_id
+              ]
+            );
+
+            const levelResult = await tx.query(
+              `
+                SELECT id, on_hand
+                FROM commerce_inventory_levels
+                WHERE tenant_id = $1
+                  AND location_id = $2
+                  AND tenant_catalogue_product_id = $3
+                FOR UPDATE
+              `,
+              [
+                tenantId,
+                locationId,
+                row.tenant_catalogue_product_id
+              ]
+            );
+
+            const level = levelResult.rows[0];
+
+            await tx.query(
+              `
+                UPDATE commerce_inventory_levels
+                SET on_hand = on_hand + $1, updated_at = now()
+                WHERE tenant_id = $2 AND id = $3
+              `,
+              [quantityRestocked, tenantId, level.id]
+            );
+
+            await tx.query(
+              `
+                INSERT INTO commerce_inventory_movements (
+                  tenant_id,
+                  inventory_level_id,
+                  movement_type,
+                  quantity_delta,
+                  reserved_delta,
+                  reference_type,
+                  reference_id,
+                  note,
+                  actor
+                )
+                VALUES ($1,$2,'return',$3,0,'return',$4,$5,'admin')
+              `,
+              [
+                tenantId,
+                level.id,
+                quantityRestocked,
+                returnId,
+                inspectionNote || "Return received and approved for restock."
+              ]
+            );
+          }
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_returns
+            SET
+              status = 'received',
+              inspection_note = $1,
+              received_at = now(),
+              updated_at = now()
+            WHERE tenant_id = $2 AND id = $3
+          `,
+          [inspectionNote, tenantId, returnId]
+        );
+        return;
+      }
+
+      if (action === "reconcile_refund") {
+        if (!["approved", "received"].includes(current.status)) {
+          const error = new Error(
+            "Refund reconciliation requires an approved or received return."
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        let nextRefundStatus = null;
+        if (current.payment_status === "refunded") {
+          nextRefundStatus = "refunded";
+        } else if (current.payment_status === "partially_refunded") {
+          nextRefundStatus = "partially_refunded";
+        } else {
+          const error = new Error(
+            "Provider payment status does not yet show a refund."
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_returns
+            SET refund_status = $1, updated_at = now()
+            WHERE tenant_id = $2 AND id = $3
+          `,
+          [nextRefundStatus, tenantId, returnId]
+        );
+        return;
+      }
+
+      if (action === "complete") {
+        if (current.status !== "received") {
+          const error = new Error("Only received returns can be completed.");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (
+          Number(current.requested_refund_amount) > 0 &&
+          !["partially_refunded","refunded"].includes(current.refund_status)
+        ) {
+          const error = new Error(
+            "Refund must be reconciled from provider-controlled payment state before completion."
+          );
+          error.statusCode = 409;
+          throw error;
+        }
+
+        await tx.query(
+          `
+            UPDATE commerce_returns
+            SET status = 'completed', completed_at = now(), updated_at = now()
+            WHERE tenant_id = $1 AND id = $2
+          `,
+          [tenantId, returnId]
+        );
+      }
+    });
+
+    return await getReturn(returnId);
+  } finally {
+    client.release();
+  }
+}
+
+
 async function getCommerceAnalytics() {
   const client = await getPool().connect();
 
@@ -5801,6 +6594,12 @@ const schemaMigrationDefinitions = [
     feature: "Supplier inventory sync",
     description: "Auditable supplier stock snapshots with stale-update protection.",
     probe: { type: "table", table: "commerce_supplier_inventory_sync_runs" }
+  },
+  {
+    name: "0022_returns_reverse_inventory.sql",
+    feature: "Returns",
+    description: "Admin-reviewed returns, provider refund reconciliation and reverse inventory.",
+    probe: { type: "table", table: "commerce_returns" }
   }
 ];
 
@@ -5923,6 +6722,13 @@ function requiredSchemaMigrationsForRoute(routePath) {
       "0011_inventory_ledger.sql",
       "0012_supplier_registry.sql",
       "0013_fulfilment_planning.sql"
+    ];
+  }
+
+  if (routePath.includes("/returns")) {
+    return [
+      "0011_inventory_ledger.sql",
+      "0022_returns_reverse_inventory.sql"
     ];
   }
 
@@ -9661,6 +10467,101 @@ exports.handler = async (event, context) => {
     }
   }
 
+  if (method === "GET" && routePath.endsWith("/returns")) {
+    try {
+      const returns = await listReturns();
+      return response(200, {
+        source: "postgresql",
+        total: returns.length,
+        returns
+      });
+    } catch (error) {
+      console.error("Return list failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "returns_unavailable"
+      });
+    }
+  }
+
+  if (method === "POST" && routePath.endsWith("/returns")) {
+    try {
+      const result = await createReturn(parseBody(event));
+      return response(201, {
+        source: "postgresql",
+        return: result
+      });
+    } catch (error) {
+      console.error("Return create failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "return_create_failed"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    /\/returns\/[0-9a-f-]{36}$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const returnId = parts[parts.length - 1];
+      const result = await getReturn(returnId);
+      return response(200, {
+        source: "postgresql",
+        return: result
+      });
+    } catch (error) {
+      console.error("Return detail failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "return_unavailable"
+      });
+    }
+  }
+
+  if (
+    method === "PATCH" &&
+    /\/returns\/[0-9a-f-]{36}$/i.test(routePath)
+  ) {
+    try {
+      const parts = routePath.split("/").filter(Boolean);
+      const returnId = parts[parts.length - 1];
+      const result = await updateReturn(returnId, parseBody(event));
+      return response(200, {
+        source: "postgresql",
+        return: result
+      });
+    } catch (error) {
+      console.error("Return update failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "return_update_failed"
+      });
+    }
+  }
+
   if (method === "GET" && routePath.endsWith("/analytics")) {
     try {
       const analytics = await getCommerceAnalytics();
@@ -9676,28 +10577,6 @@ exports.handler = async (event, context) => {
       });
       return response(500, {
         error: "analytics_unavailable"
-      });
-    }
-  }
-
-  if (method === "GET" && routePath.endsWith("/returns")) {
-    try {
-      const returns = await listReturnsOverview();
-      return response(200, {
-        source: "postgresql",
-        total: returns.length,
-        returns,
-        actionsEnabled: false,
-        message:
-          "Returns and refunds are read-only in this phase. Provider refund actions remain separately controlled."
-      });
-    } catch (error) {
-      console.error("Returns overview failed:", {
-        name: error?.name,
-        message: error?.message
-      });
-      return response(500, {
-        error: "returns_unavailable"
       });
     }
   }
