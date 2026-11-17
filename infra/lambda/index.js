@@ -5938,7 +5938,10 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (routePath.endsWith("/supplier-api/inventory-sync")) {
+  if (
+    routePath.endsWith("/supplier-api/inventory-sync") ||
+    routePath.endsWith("/supplier-inventory-sync-runs")
+  ) {
     return [
       "0012_supplier_registry.sql",
       "0020_supplier_api_credentials.sql",
@@ -7372,6 +7375,56 @@ async function synchronizeSupplierInventory(secretHash, input) {
         ownedInventoryChanged: false,
         publicationChanged: false
       };
+    });
+  } finally {
+    client.release();
+  }
+}
+
+
+async function listSupplierInventorySyncRuns(supplierId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(supplierId || ""))) {
+    const error = new Error("A valid supplier id is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    return await withTenant(client, async (tx, tenantId) => {
+      const result = await tx.query(
+        `
+          SELECT
+            id,
+            source_type,
+            source_reference,
+            item_count,
+            matched_count,
+            unmatched_count,
+            stale_count,
+            status,
+            created_at
+          FROM commerce_supplier_inventory_sync_runs
+          WHERE tenant_id = $1
+            AND supplier_id = $2
+          ORDER BY created_at DESC
+          LIMIT 100
+        `,
+        [tenantId, supplierId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        sourceType: row.source_type,
+        sourceReference: row.source_reference,
+        itemCount: Number(row.item_count || 0),
+        matchedCount: Number(row.matched_count || 0),
+        unmatchedCount: Number(row.unmatched_count || 0),
+        staleCount: Number(row.stale_count || 0),
+        status: row.status,
+        createdAt: row.created_at
+      }));
     });
   } finally {
     client.release();
@@ -8859,6 +8912,32 @@ exports.handler = async (event, context) => {
           error?.statusCode && error.statusCode < 500
             ? error.message
             : "supplier_verification_update_failed"
+      });
+    }
+  }
+
+  if (
+    method === "GET" &&
+    routePath.endsWith("/supplier-inventory-sync-runs")
+  ) {
+    try {
+      const supplierId = event?.queryStringParameters?.supplierId || "";
+      const runs = await listSupplierInventorySyncRuns(supplierId);
+      return response(200, {
+        source: "postgresql",
+        total: runs.length,
+        runs
+      });
+    } catch (error) {
+      console.error("Supplier inventory sync history failed:", {
+        name: error?.name,
+        message: error?.message
+      });
+      return response(error?.statusCode || 500, {
+        error:
+          error?.statusCode && error.statusCode < 500
+            ? error.message
+            : "supplier_inventory_sync_history_unavailable"
       });
     }
   }
