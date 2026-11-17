@@ -467,11 +467,6 @@ export default function ProductDiscoveryPage() {
             ) : (
               <div className="mt-4 space-y-4">
                 {candidates.map((candidate) => {
-                  const grossMargin =
-                    candidate.unitCost === null
-                      ? null
-                      : null;
-
                   return (
                     <section
                       key={candidate.id}
