@@ -62,7 +62,10 @@ type TestPaymentResult = {
   applied?: boolean;
   message?: string;
   state?: { orderPaymentStatus?: string };
-  payment?: { refunded_minor?: number };
+  payment?: {
+    refunded_minor?: number;
+    refunds?: Array<{ id?: string; status?: string }>;
+  };
   error?: string;
 };
 
@@ -508,7 +511,8 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
           <h2 className="text-sm font-semibold">Nigeria test payments</h2>
           <p className="mt-1 text-sm text-[#52635b]">
-            Select an NGN Preview order to test checkout, verify its status or refund it.
+            Payment and refund updates arrive automatically through signed webhooks.
+            Use Refresh to load the latest orders. Verify payment is available if an update is missing.
           </p>
 
           {nigeriaOrders.length > 0 ? (
@@ -556,6 +560,20 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
               </div>
               {typeof testPayment?.payment?.refunded_minor === "number" && testPayment.payment.refunded_minor > 0 && (
                 <p className="mt-1 text-sm text-[#52635b]">{naira.format(testPayment.payment.refunded_minor / 100)} refunded</p>
+              )}
+              {Array.isArray(testPayment?.payment?.refunds) && (
+                <div className="mt-2 text-sm text-[#52635b]">
+                  <p>{testPayment.payment.refunds.length} refund {testPayment.payment.refunds.length === 1 ? "record" : "records"} reported by Kredal</p>
+                  {testPayment.payment.refunds.length > 0 && (
+                    <ul className="mt-1 space-y-1">
+                      {testPayment.payment.refunds.map((refund, index) => (
+                        <li key={refund.id || index} className="break-all">
+                          {refund.id || "Reference unavailable"} · {refund.status ? paymentLabel(refund.status) : "Status unavailable"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </div>
           )}

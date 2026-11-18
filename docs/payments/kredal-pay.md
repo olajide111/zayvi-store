@@ -274,3 +274,21 @@ For a first activation, expect the dedicated webhook Lambda, log group, IAM role
    ```
 
 5. Run one simulated payment and close checkout before it returns to Zayvi. Confirm the order reaches **Paid** and the corresponding event is **Applied** before using **Verify payment** or **Catch up events**.
+
+
+## Preview acceptance evidence — 18 November 2026
+
+These results were reported by the owner from the deployed Preview UI and Kredal delivery history. They cover simulated payments only.
+
+| Scenario | Evidence | Result |
+| --- | --- | --- |
+| Automatic payment reconciliation | Order `ZV-20261118-542385A7`, NGN 3,500; payment `rq_lPsvGzg9Vn0`; event `evt_4NYzrWh6bzXmtg`, sequence 49, applied at 19:09:50 UTC. Owner confirmed no manual verification or catch-up action. | Passed |
+| Full refund | Order `ZV-20261118-20F70D6F`; Kredal lookup reports one successful refund `rf_uDkACzpIMqwr`, `refunded_minor=350000`, payment and Zayvi payment status refunded. | Passed |
+| Duplicate delivery | Refund event `evt_vXIG_7bdKEo1Pg`, sequence 45, redelivered twice with the same ID and body, fresh signatures and HTTP 200 responses. Ledger retained one applied entry with original receipt time 14:01:18 UTC. Provider lookup retained one refund. | Passed |
+| Unpaid cancellation | Order `ZV-20261118-4690D4D0`, NGN 4,500; Kredal payment cancelled; Zayvi attempt and order cancelled, payment status failed. Event `evt_lRiKMVyIvP1n7Q`, sequence 47, applied at 19:05:09 UTC. | Passed |
+
+The refund route sends a stable `Idempotency-Key` derived from the order and requested amount. The duplicate-webhook result above does not independently test retrying a refund API request.
+
+Remaining deployed acceptance checks include failed/expired payments, recovery of a deliberately missed event and retrying the same refund request with its original idempotency key. Late paid events after refund and invalid signature rejection also need deployed evidence distinct from local regression checks. Preview test orders must remain blocked from real fulfilment.
+
+Production activation is a separate release: confirm live credentials and connection, a separate endpoint/signing secret, explicit server-side NGN prices and live-mode handling before approving real payment execution. Preserve the Preview secret ARN in future Terraform inputs; review the full infrastructure plan after the scoped webhook activation without applying unrelated changes.
