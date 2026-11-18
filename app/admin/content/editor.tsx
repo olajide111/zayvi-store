@@ -75,9 +75,21 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
   const [preview, setPreview] = useState(false);
   const libraryHeading = useRef<HTMLHeadingElement>(null);
   const editorHeading = useRef<HTMLHeadingElement>(null);
+  const previewHeading = useRef<HTMLHeadingElement>(null);
   const url = `/api/admin/content?market=${market}`;
   const selected = entries?.find((entry) => entry.slug === draft.slug);
   const canSave = (dirty || draft.revision === 0) && Boolean(draft.title.trim() && draft.body.trim() && draft.slug);
+  const publicationHelp = dirty
+    ? "Save your changes before publishing. Shoppers still see the previously published version, if any."
+    : !draft.revision
+      ? "Save a draft first. Saving does not publish it to shoppers."
+      : selected?.published_at && !selected.draft_changed
+        ? "The saved version is already published."
+        : `Publishing makes this saved version visible in ${market === "NG" ? "Nigeria" : "the United Kingdom"}.`;
+
+  useEffect(() => {
+    if (preview) previewHeading.current?.focus();
+  }, [preview]);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -194,7 +206,12 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
               <button type="button" onClick={() => libraryHeading.current?.focus()} className={adminAction + " lg:hidden"}>Back to library</button>
               <button type="button" onClick={() => setPreview((current) => !current)} aria-expanded={preview} className={adminAction}>{preview ? "Hide preview" : "Preview draft"}</button>
             </div>
-            <form onSubmit={save} className="space-y-4">
+            <form onSubmit={save} className="space-y-4" onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+                event.preventDefault();
+                event.currentTarget.requestSubmit();
+              }
+            }}>
               <fieldset disabled={busy} className="min-w-0 space-y-4 px-4 pt-4 text-sm sm:px-6">
                 <label className="block">Title
                   <input required maxLength={120} className={field} value={draft.title} onChange={(event) => changeTitle(event.target.value)} />
@@ -233,22 +250,26 @@ function ContentEditor({ market, initialPage, dirty, setDirty, busy, setBusy, gu
                   </div>
                 </div>
                 <label className="block">Summary (optional)
-                  <textarea rows={2} maxLength={300} className={field} value={draft.summary} onChange={(event) => change({ summary: event.target.value })} />
+                  <textarea rows={2} maxLength={300} aria-describedby="summary-length" className={field} value={draft.summary} onChange={(event) => change({ summary: event.target.value })} />
                 </label>
+                <p id="summary-length" className="text-xs text-[#52635b]">{draft.summary.length} / 300 characters</p>
                 <label className="block">Body
-                  <textarea required rows={9} maxLength={16000} className={field + " leading-relaxed"} value={draft.body} onChange={(event) => change({ body: event.target.value })} />
+                  <textarea required rows={9} maxLength={16000} aria-describedby="body-length" className={field + " leading-relaxed"} value={draft.body} onChange={(event) => change({ body: event.target.value })} />
                 </label>
+                <p id="body-length" className="text-xs text-[#52635b]">{draft.body.length} / 16,000 characters · Plain text; line breaks are preserved. Use Ctrl+S or ⌘S while editing to save a draft.</p>
               </fieldset>
               {preview && (
                 <section aria-label="Draft preview" className="mx-4 space-y-2 rounded-xl bg-[#f5f8f5] p-4 break-words sm:mx-6">
-                  <h3 className="text-xl font-semibold">{draft.title || "Untitled draft"}</h3>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#52635b]">Draft preview · {market === "NG" ? "Nigeria" : "United Kingdom"} · Not a published view</p>
+                  <h3 ref={previewHeading} tabIndex={-1} className="font-serif text-3xl tracking-tight">{draft.title || "Untitled draft"}</h3>
                   {draft.summary && <p className="text-sm text-[#52635b]">{draft.summary}</p>}
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{draft.body}</p>
                 </section>
               )}
-              <div className="flex flex-wrap gap-2 border-t border-[#e4eae5] bg-[#f9fbf8] p-4 sm:px-6">
+              <div className="flex flex-wrap gap-2 border-t border-[#e4eae5] bg-[#f9fbf8] p-4 sm:px-6" aria-busy={busy}>
+                <p id="publication-help" className="w-full text-sm text-[#52635b]">{busy ? "Updating content…" : publicationHelp}</p>
                 <button type="submit" disabled={busy || !canSave} className={adminPrimaryAction}>Save draft</button>
-                <button type="button" disabled={busy || dirty || !draft.revision || Boolean(selected?.published_at && !selected.draft_changed)} className={adminAction} onClick={() => void update("publish")}>Publish saved draft</button>
+                <button type="button" aria-describedby="publication-help" disabled={busy || dirty || !draft.revision || Boolean(selected?.published_at && !selected.draft_changed)} className={adminAction} onClick={() => void update("publish")}>Publish saved draft</button>
                 {selected?.published_at && (
                   <>
                     <Link href={contentUrl(market, selected.slug)} className={adminAction} target="_blank" rel="noopener noreferrer">View published page</Link>
@@ -270,6 +291,37 @@ export default function ContentPublishingEditor({ initialMarket, initialPage }: 
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (!dirty && !busy) return;
+    function beforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    function guardWorkspaceNavigation(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(link instanceof HTMLAnchorElement) || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+      const target = new URL(link.href, window.location.href);
+      if (target.origin !== window.location.origin || (target.pathname === window.location.pathname && target.search === window.location.search)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (busy) return;
+      const href = target.pathname + target.search + target.hash;
+      setConfirmation({
+        title: "Discard unsaved changes?",
+        detail: "Save this draft before leaving if you want to keep your edits.",
+        label: "Discard changes",
+        run: () => { setDirty(false); router.push(href); },
+      });
+    }
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", guardWorkspaceNavigation, true);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", guardWorkspaceNavigation, true);
+    };
+  }, [dirty, busy, router]);
 
   function guard(action: () => void) {
     if (!dirty) { action(); return; }
