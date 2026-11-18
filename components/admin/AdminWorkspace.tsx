@@ -6,6 +6,7 @@ import { ChevronDown, ExternalLink, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import AdminMobileNav from "./AdminMobileNav";
 import AdminSignOut from "./AdminSignOut";
+import AdminPageSearch from "./AdminPageSearch";
 import { adminGroups, adminPrimary, isAdminRouteActive } from "./admin-navigation";
 
 type Destination = { title: string; href: string; icon: LucideIcon };
@@ -49,6 +50,7 @@ export default function AdminWorkspace({ children }: { children: ReactNode }) {
             <span className="block text-xs text-[#b0c6b8]">Admin workspace</span>
           </span>
         </Link>
+        <AdminPageSearch key={pathname} dark />
         <nav aria-label="Admin sidebar" className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 space-y-0.5 px-3 pb-3">
             {adminPrimary.map((item) => <WorkspaceLink key={item.href} item={item} pathname={pathname} />)}

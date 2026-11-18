@@ -1,6 +1,6 @@
 import {
   Activity, Archive, BarChart3, Boxes, ClipboardList, CreditCard, FileText, Globe2,
-  House, ImagePlus, Inbox, Layers3, Package, Palette, RotateCcw, ScanSearch, Settings,
+  House, ImagePlus, Inbox, Layers3, Link2, Package, Palette, RotateCcw, ScanSearch, Settings,
   ShieldCheck, Truck, Users, Warehouse,
 } from "lucide-react";
 
@@ -38,6 +38,7 @@ export const adminGroups = [
     label: "Storefront",
     items: [
       { title: "Content publishing", href: "/admin/content", icon: FileText },
+      { title: "Social links", href: "/admin/settings/social-links", icon: Link2 },
       { title: "Themes", href: "/admin/themes", icon: Palette },
       { title: "Product Images", href: "/admin/product-images", icon: ImagePlus },
     ],
@@ -54,6 +55,11 @@ export const adminGroups = [
 ] as const;
 
 export function isAdminRouteActive(pathname: string, href: string) {
-  return pathname === href ||
-    (href !== "/admin" && href !== "/admin/dashboard" && pathname.startsWith(href + "/"));
+  if (pathname === href) return true;
+  if (href === "/admin" || href === "/admin/dashboard" || !pathname.startsWith(href + "/")) return false;
+  // Prefer a named child page over its parent settings section.
+  return ![...adminPrimary, ...adminGroups.flatMap(({ items }) => [...items])].some((item) =>
+    item.href.startsWith(href + "/") &&
+    (pathname === item.href || pathname.startsWith(item.href + "/")),
+  );
 }

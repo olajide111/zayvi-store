@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Ellipsis } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminSignOut from "./AdminSignOut";
+import AdminPageSearch from "./AdminPageSearch";
 import { adminGroups, adminPrimary, isAdminRouteActive } from "./admin-navigation";
 
 const tabClass = "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-semibold leading-tight";
@@ -83,6 +84,7 @@ export default function AdminMobileNav() {
           hidden={!open}
           className="absolute inset-x-2 bottom-[calc(100%+0.5rem)] mx-auto max-h-[min(68dvh,29rem)] max-w-xl overflow-y-auto overscroll-contain rounded-2xl border border-[#dfe6e1] bg-white p-3 shadow-xl"
         >
+          <AdminPageSearch key={`${pathname}:${open}`} onNavigate={() => setMenuPath(null)} />
           {adminGroups.map(({ label, items }) => (
             <div key={label} className="mb-3 last:mb-0">
               <p className="px-2 py-1 text-xs font-semibold text-[#52635b]">{label}</p>
