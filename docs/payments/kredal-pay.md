@@ -206,9 +206,71 @@ The admin Payments page starts from the highest locally stored sequence and proc
 
 The Preview AWS HTTP API can receive `POST /api/payments/kredal/webhook` directly. The gateway sends only this exact route to the signature-verifying Lambda. The default commerce route still requires AWS IAM. The receiver accepts only signed test-mode events and forwards them to the existing commerce Lambda and ledger.
 
-1. In AWS Secrets Manager in the Preview account and region, store the Kredal **test webhook signing secret** as plain text using the default Secrets Manager encryption key. Supply the complete secret ARN as the Terraform input `kredal_preview_webhook_secret_arn` in the existing Preview configuration. Keep that ARN in the Preview deployment inputs for future plans. The secret value stays in Secrets Manager.
-2. From the existing Preview Terraform workspace, save and review a plan with the same existing Preview variables. Check for the webhook route, its Lambda, logging, and scoped permissions. If the plan also proposes unrelated commerce, database, or bootstrap changes, resolve those before applying it.
-3. Apply the reviewed Preview plan and run `terraform output -raw kredal_preview_webhook_url`. Register that output in Kredal's test webhook settings with the matching signature secret.
-4. Send an unsigned POST to that URL. Expect HTTP 401 and no ledger entry. Then run one test checkout, simulate payment, and close checkout without returning. Verify the order reaches **Paid** and its event is **Applied**. Check the webhook Lambda logs if Kredal reports an error.
+#### Prepare the Preview plan
 
-The receiver is disabled when the secret ARN is omitted. Keep Vercel Deployment Protection enabled and use the AWS URL for machine-to-machine delivery.
+In AWS Secrets Manager in account `001961766018` and region `eu-west-2`, save the Kredal **test webhook signing secret** as a plain-text secret encrypted with the default Secrets Manager key. Copy its full ARN. Supply the ARN in the existing Preview Terraform variables for this and subsequent plans. Terraform only needs the ARN.
+
+From the Zayvi repository root on a commit containing `infra/terraform/kredal-webhook.tf`, run this with your usual Preview AWS profile and Terraform inputs. It saves a plan for review.
+
+```bash
+(
+  set -e
+  cd "$(git rev-parse --show-toplevel)"
+  test -f infra/terraform/kredal-webhook.tf
+  export AWS_REGION=eu-west-2 AWS_DEFAULT_REGION=eu-west-2 AWS_PAGER=
+  account="$(aws sts get-caller-identity --query Account --output text)"
+  if [ "$account" != "001961766018" ]; then
+    printf 'Expected Zayvi Preview account 001961766018, got %s\n' "$account" >&2
+    exit 1
+  fi
+
+  printf 'Paste the AWS Secrets Manager ARN for the Kredal test signing secret: '
+  IFS= read -r secret_arn
+  test -n "$secret_arn"
+  resolved_arn="$(aws secretsmanager describe-secret \
+    --secret-id "$secret_arn" --query ARN --output text)"
+  export TF_VAR_kredal_preview_webhook_secret_arn="$resolved_arn"
+
+  cd infra/terraform
+  terraform init -reconfigure -input=false
+  state_resources="$(terraform state list)"
+  printf '%s\n' "$state_resources" | grep -Fxq 'aws_lambda_function.api'
+  printf '%s\n' "$state_resources" | grep -Fxq 'aws_apigatewayv2_stage.default'
+  if printf '%s\n' "$state_resources" | grep -Fxq 'aws_lambda_function.db_bootstrap[0]'; then
+    bootstrap_enabled=true
+  else
+    bootstrap_enabled=false
+  fi
+
+  npm --prefix ../lambda ci
+  npm --prefix ../lambda run package
+  if [ "$bootstrap_enabled" = true ]; then
+    npm --prefix ../db-bootstrap ci
+    npm --prefix ../db-bootstrap run package
+  fi
+
+  terraform validate
+  plan_dir="$(mktemp -d "${TMPDIR:-/tmp}/zayvi-kredal-plan.XXXXXX")"
+  plan_file="$plan_dir/preview-kredal-webhook.tfplan"
+  terraform plan -input=false -var="enable_db_bootstrap=$bootstrap_enabled" -out="$plan_file"
+  printf '\nSaved plan: %s\n' "$plan_file"
+  terraform show -no-color "$plan_file"
+)
+```
+
+For a first activation, expect the dedicated webhook Lambda, log group, IAM role and policy, API Gateway route and integration, Lambda invoke permission, and an update to the existing stage for route throttling. If the plan also proposes commerce Lambda, RDS, VPC, S3, CloudFront, payment production configuration, or database bootstrap changes, resolve those separately before applying the webhook plan. The saved plan may contain sensitive values. Share only the action and resource names if you need someone else to review the scope.
+
+#### Apply and verify
+
+1. From `infra/terraform`, apply the reviewed plan with `terraform apply "/path/from-the-output/preview-kredal-webhook.tfplan"`. Then run `terraform output -raw kredal_preview_webhook_url`.
+2. Save the secret ARN in the Preview deployment inputs so later plans keep the webhook enabled.
+3. Register the URL in Kredal's **test** webhook settings with the matching signing secret. Keep Vercel Deployment Protection enabled.
+4. Send an unsigned POST to the AWS URL. Expect HTTP `401` and no ledger entry. An HTTP `403` means you still need to check gateway routing, activation, or the URL. Inspect the Preview gateway access log and the Kredal webhook Lambda log to see whether the request reached the handler.
+
+   ```bash
+   webhook_url="$(terraform output -raw kredal_preview_webhook_url)"
+   curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+     -H 'Content-Type: application/json' -d '{}' "$webhook_url"
+   ```
+
+5. Run one simulated payment and close checkout before it returns to Zayvi. Confirm the order reaches **Paid** and the corresponding event is **Applied** before using **Verify payment** or **Catch up events**.
