@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Package } from "lucide-react";
+import { ArrowUpRight, Package, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
@@ -30,7 +30,11 @@ function money(value: number, currency: string) {
   return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", { style: "currency", currency }).format(value);
 }
 
-function StatusPill({ value }: { value: string }) {
+function label(value: string) {
+  return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function StatusPill({ value, category }: { value: string; category: string }) {
   const normalized = value.toLowerCase();
   const positive = ["paid", "fulfilled", "completed"].includes(normalized);
   const pending = ["pending", "processing", "unfulfilled"].includes(normalized);
@@ -43,7 +47,7 @@ function StatusPill({ value }: { value: string }) {
 
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${className}`}>
-      {value.replaceAll("_", " ")}
+      {category}: {label(value)}
     </span>
   );
 }
@@ -51,17 +55,39 @@ function StatusPill({ value }: { value: string }) {
 export default function AdminOrdersPage() {
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
+  const [payment, setPayment] = useState("all");
+  const [fulfilment, setFulfilment] = useState("all");
+  const [orderState, setOrderState] = useState("all");
+  const [revision, setRevision] = useState(0);
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
   const [currency, setCurrency] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  function refresh() {
+    setLoading(true);
+    setError("");
+    setRevision((current) => current + 1);
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setPayment("all");
+    setFulfilment("all");
+    setOrderState("all");
+    setCurrency("all");
+  }
+
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     async function loadOrders() {
       try {
         const response = await fetch("/api/admin/orders", {
           credentials: "include",
           cache: "no-store",
+          signal: controller.signal,
         });
 
         if (response.status === 401) {
@@ -75,16 +101,22 @@ export default function AdminOrdersPage() {
           throw new Error(payload?.error || "Unable to load orders.");
         }
 
-        setData(payload);
+        if (!Array.isArray(payload?.orders)) throw new Error("The orders response could not be read.");
+        if (active) {
+          setData(payload);
+          setRefreshedAt(new Date().toISOString());
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load orders.");
+        if (active) setError(controller.signal.aborted ? "Orders took too long to load. Try refreshing." : err instanceof Error ? err.message : "Unable to load orders.");
       } finally {
-        setLoading(false);
+        window.clearTimeout(timeout);
+        if (active) setLoading(false);
       }
     }
 
-    loadOrders();
-  }, []);
+    void loadOrders();
+    return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
+  }, [revision]);
 
   const orders = useMemo(() => data?.orders ?? [], [data]);
   const currencies = [...new Set(orders.map((order) => order.currency))].sort();
@@ -93,11 +125,11 @@ export default function AdminOrdersPage() {
   const visibleOrders = currencyOrders.filter((order) => {
     const matchesSearch = !normalized || [order.orderNumber, order.customerName, order.customerEmail]
       .some((value) => value?.toLowerCase().includes(normalized));
-    const matchesStatus = status === "all" || [
-      order.paymentStatus, order.fulfilmentStatus, order.orderStatus,
-    ].includes(status);
-    return matchesSearch && matchesStatus;
+    return matchesSearch && (payment === "all" || order.paymentStatus === payment) &&
+      (fulfilment === "all" || order.fulfilmentStatus === fulfilment) &&
+      (orderState === "all" || order.orderStatus === orderState);
   });
+  const hasFilters = Boolean(normalized || payment !== "all" || fulfilment !== "all" || orderState !== "all" || currency !== "all");
   const paid = currencyOrders.filter((order) => order.paymentStatus === "paid").length;
   const unfulfilled = currencyOrders.filter((order) => order.fulfilmentStatus === "unfulfilled").length;
   const totals = new Map<string, number>();
@@ -108,10 +140,14 @@ export default function AdminOrdersPage() {
   return (
     <main className="min-h-screen">
       <AdminPageHeading section="Workspace" title="Orders" description="Track payment and fulfilment for Preview orders.">
+        <button type="button" onClick={refresh} disabled={loading} className={adminAction}><RefreshCw size={15} className="mr-2" aria-hidden="true" />{loading ? "Refreshing…" : "Refresh orders"}</button>
         <Link href="/admin/payments" prefetch={false} className={adminAction}>Payments</Link>
       </AdminPageHeading>
 
       <section className="mx-auto max-w-[1500px] space-y-5 px-4 py-5 sm:px-7 lg:px-8">
+        <p className="text-xs text-[#52635b]">Summary for {currency === "all" ? "all currencies" : currency}, before search and status filters. Search and totals cover loaded orders only.
+          {refreshedAt && !loading && !error && <> Last refreshed <time dateTime={refreshedAt}>{new Date(refreshedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })}</time> (London time).</>}
+        </p>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[
             { label: "Loaded orders", value: currencyOrders.length },
@@ -120,12 +156,12 @@ export default function AdminOrdersPage() {
           ].map(({ label, value }) => (
             <div key={label} className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
               <p className="text-xs font-medium text-[#52635b]">{label}</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums">{data ? value : "—"}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{data && !loading && !error ? value : "—"}</p>
             </div>
           ))}
           <div className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
             <p className="text-xs font-medium text-[#52635b]">Order value · all payment statuses</p>
-            {totals.size ? (
+            {totals.size && !loading && !error ? (
               <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {[...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, amount]) => (
                   <div key={code} className="min-w-0">
@@ -138,31 +174,33 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        <div className="grid gap-2 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-          <input
-            aria-label="Search orders"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search order, customer or email"
-            className="min-h-11 min-w-0 rounded-lg border border-[#dfe6e1] px-3 text-sm"
-          />
-          <select aria-label="Payment or fulfilment status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm">
-            <option value="all">All statuses</option>
-            <option value="paid">Paid</option>
-            <option value="unpaid">Unpaid</option>
-            <option value="pending">Pending payment</option>
-            <option value="unfulfilled">Unfulfilled</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select aria-label="Currency" value={currency} onChange={(event) => setCurrency(event.target.value)} className="min-h-11 rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm">
-            <option value="all">All currencies</option>
-            {currencies.map((code) => <option key={code} value={code}>{code}</option>)}
-          </select>
-        </div>
+        <fieldset disabled={loading} className="grid gap-3 rounded-xl border border-[#dfe6e1] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <legend className="sr-only">Filter orders</legend>
+          <label className="text-xs font-semibold text-[#52635b] sm:col-span-2 xl:col-span-4">Search orders
+            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Order number, customer or email"
+              className="mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#dfe6e1] px-3 text-sm font-normal text-[#172a21]" />
+          </label>
+          {[
+            {title: "Payment status", value: payment, set: setPayment, options: ["unpaid", "pending", "paid", "failed", "partially_refunded", "refunded"]},
+            {title: "Fulfilment status", value: fulfilment, set: setFulfilment, options: ["unfulfilled", "processing", "fulfilled", "cancelled"]},
+            {title: "Order status", value: orderState, set: setOrderState, options: ["draft", "pending_payment", "confirmed", "cancelled", "completed"]},
+            {title: "Currency", value: currency, set: setCurrency, options: currencies},
+          ].map(({title, value, set, options}) => (
+            <label key={title} className="min-w-0 text-xs font-semibold text-[#52635b]">{title}
+              <select aria-label={title} value={value} onChange={(event) => set(event.target.value)} className="mt-1 block min-h-11 w-full rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm font-normal text-[#172a21]">
+                <option value="all">All {title === "Currency" ? "currencies" : "statuses"}</option>
+                {options.map((option) => <option key={option} value={option}>{label(option)}</option>)}
+              </select>
+            </label>
+          ))}
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2 xl:col-span-4">
+            <p role="status" className="text-sm text-[#52635b]">{loading || error ? "Order count unavailable" : `${visibleOrders.length} of ${orders.length} loaded orders`}</p>
+            {hasFilters && <button type="button" onClick={clearFilters} className="min-h-11 px-2 text-sm font-semibold text-[#215241] underline">Clear filters</button>}
+          </div>
+        </fieldset>
 
         {loading && <p role="status" className="py-8 text-center text-sm text-[#52635b]">Loading orders…</p>}
-        {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {error && <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"><p>{error}</p><button type="button" onClick={refresh} className="mt-2 min-h-11 font-semibold underline">Retry loading orders</button></div>}
         {!loading && !error && (visibleOrders.length ? (
           <ul className="divide-y divide-[#e4eae5] rounded-xl border border-[#dfe6e1] bg-white" aria-label="Orders">
             {visibleOrders.map((order) => (
@@ -182,8 +220,9 @@ export default function AdminOrdersPage() {
                     </time>
                   </div>
                   <div className="col-span-2 flex flex-wrap gap-1.5 xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:pt-1">
-                    <StatusPill value={order.paymentStatus} />
-                    <StatusPill value={order.fulfilmentStatus} />
+                    <StatusPill value={order.paymentStatus} category="Payment" />
+                    <StatusPill value={order.fulfilmentStatus} category="Fulfilment" />
+                    {order.orderStatus && <StatusPill value={order.orderStatus} category="Order" />}
                   </div>
                 </Link>
               </li>
@@ -194,6 +233,7 @@ export default function AdminOrdersPage() {
             <Package size={27} className="mx-auto text-[#215241]" aria-hidden="true" />
             <h2 className="mt-3 font-semibold">{orders.length ? "No matching orders" : "No orders yet"}</h2>
             <p className="mt-1 text-sm text-[#52635b]">{orders.length ? "Try another search or clear the filters." : data?.message || "Orders will appear here once they are placed."}</p>
+            {hasFilters && <button type="button" onClick={clearFilters} className="mt-3 min-h-11 px-3 text-sm font-semibold text-[#215241] underline">Clear filters</button>}
           </div>
         ))}
       </section>
