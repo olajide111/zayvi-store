@@ -29,11 +29,18 @@ function MarketChecklist({ market }: { market: ContentMarket }) {
 
   const pages = setupPageSlugs.map((slug) => ({ slug, entry: entries.find((item) => item.slug === slug && item.kind === "page") }));
   const published = pages.filter(({ entry }) => entry?.published_at).length;
+  const nextPage = pages.find(({ entry }) => !entry?.published_at) ?? pages.find(({ entry }) => entry?.draft_changed);
   return (
     <div className="mt-4 space-y-4">
       <div>
         <label htmlFor="setup-page-progress" className="text-sm font-semibold">{published} of {pages.length} customer pages published</label>
         <progress id="setup-page-progress" className="mt-2 block h-2 w-full overflow-hidden rounded-full bg-[#e7efe8] [&::-moz-progress-bar]:bg-[#215241] [&::-webkit-progress-bar]:bg-[#e7efe8] [&::-webkit-progress-value]:bg-[#215241]" value={published} max={pages.length} />
+        {nextPage ? (
+          <Link href={`/admin/content?market=${market}&page=${nextPage.slug}`} prefetch={false}
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#215241] px-4 text-sm font-semibold text-white">
+            Continue setup: {nextPage.entry?.title ?? starterPages[nextPage.slug].title}<ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        ) : <p className="mt-3 text-sm text-[#215241]">Customer pages are published. Review them when your store policies change.</p>}
       </div>
       <ul className="divide-y divide-[#e4eae5]">
         {pages.map(({ slug, entry }) => {

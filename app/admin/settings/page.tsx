@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, CreditCard, FileText, Globe2, Link2, Palette, ShieldCheck, Truck } from "lucide-react";
 import StorefrontChecklist from "./StorefrontChecklist";
+import SetupOverview from "./SetupOverview";
 import AdminPageHeading from "@/components/admin/AdminPageHeading";
 
 const destinations = [
@@ -18,6 +19,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   return (
     <main className="min-h-screen">
       <AdminPageHeading section="Store" title="Store setup" description="Set up customer pages and review your store’s markets, delivery and payments." />
+      <SetupOverview />
       <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-7 lg:px-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <StorefrontChecklist market={market} />
         <section aria-labelledby="setup-destinations" className="grid content-start gap-3">
