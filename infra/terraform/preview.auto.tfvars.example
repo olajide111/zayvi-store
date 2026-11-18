@@ -1,0 +1,7 @@
+# Copy to preview.auto.tfvars privately. Never commit the populated file.
+# Match existing state: keep true until schema/flows are verified and cleanup is reviewed.
+enable_db_bootstrap = true
+# Use the ARN of the raw Kredal test signing secret, never an RDS secret or a key value.
+kredal_preview_webhook_secret_arn = "arn:aws:secretsmanager:eu-west-2:001961766018:secret:REPLACE_WITH_EXISTING_WEBHOOK_SECRET_ARN_SUFFIX"
+# Optional existing SNS topic; verify its subscriptions and topic policy separately.
+# operational_alarm_topic_arn = "arn:aws:sns:eu-west-2:001961766018:REPLACE_WITH_TOPIC_NAME"

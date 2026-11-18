@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListPreviewLogGroups",
+      "Effect": "Allow",
+      "Action": ["logs:DescribeLogGroups"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadPreviewLogs",
+      "Effect": "Allow",
+      "Action": ["logs:DescribeLogStreams", "logs:GetLogEvents", "logs:FilterLogEvents"],
+      "Resource": [
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-api:*",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-kredal-webhook:*",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-db-bootstrap:*",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/apigateway/zayvi-preview-api:*",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/rds/instance/zayvi-preview-postgres/postgresql:*"
+      ]
+    },
+    {
+      "Sid": "ReadMetricsAndAlarms",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:DescribeAlarms", "cloudwatch:DescribeAlarmHistory", "cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics"],
+      "Resource": "*"
+    }
+  ]
+}

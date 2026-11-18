@@ -6,7 +6,7 @@ terraform {
     encrypt      = true
     use_lockfile = true
   }
-  required_version = ">= 1.6.0"
+  required_version = ">= 1.10.0, < 2.0.0"
 
   required_providers {
     aws = {
@@ -21,7 +21,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region              = var.aws_region
+  allowed_account_ids = ["001961766018"]
 
   default_tags {
     tags = {
@@ -37,6 +38,11 @@ variable "aws_region" {
   description = "AWS region for the initial Zayvi environment."
   type        = string
   default     = "eu-west-2"
+
+  validation {
+    condition     = var.aws_region == "eu-west-2"
+    error_message = "This state is restricted to the London Preview region eu-west-2."
+  }
 }
 
 variable "name_prefix" {
@@ -444,6 +450,8 @@ resource "aws_lambda_permission" "allow_api_gateway" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "api_errors" {
+  alarm_actions       = local.operational_alarm_actions
+  ok_actions          = local.operational_alarm_actions
   alarm_name          = "${local.common_name}-lambda-errors"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
@@ -460,7 +468,7 @@ resource "aws_cloudwatch_metric_alarm" "api_errors" {
 }
 
 output "api_endpoint" {
-  description = "Preview API Gateway endpoint. Bootstrap returns HTTP 503 until application routes are implemented."
+  description = "Preview commerce HTTP API. The default route requires AWS IAM; the dedicated Kredal test webhook verifies its own signature."
   value       = aws_apigatewayv2_api.http.api_endpoint
 }
 

@@ -13,6 +13,7 @@ let cachedSecret;
 let secretExpiresAt = 0;
 
 function respond(statusCode, body) {
+  if (statusCode >= 500) console.error(JSON.stringify({ event: "kredal_webhook_server_error", statusCode }));
   return {
     statusCode,
     headers: { "content-type": "application/json", "cache-control": "no-store" },
