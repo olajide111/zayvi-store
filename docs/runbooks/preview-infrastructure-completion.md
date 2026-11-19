@@ -50,6 +50,27 @@ Expect a private/encrypted/protected database, retention at least seven days, an
 
 Send one unsigned webhook request: expect 401 and no ledger entry. Then run one simulated payment without returning through checkout and confirm an applied event and Paid order; do a refund and verify one provider refund. Keep real fulfilment blocked. Rerun the full helper after apply: unchanged source and inputs should not propose timestamp-only code changes. Inspect remaining drift rather than automatically applying it.
 
+## Recovering a partially applied monitoring plan
+
+On 19 November 2026 the owner reported a partial apply: commerce, bootstrap and receiver code updates completed, the bootstrap returned `bootstrap_complete` with no new migrations, and nine new alarms were created. Both log metric filters failed because `sensecore-deploy` lacked `logs:PutMetricFilter`. Their two dependent handled-server-error alarms were not created. The output listing 12 alarm names is configuration-derived; it is not evidence that every alarm exists.
+
+An authorised IAM administrator should review and attach `infra/iam/preview-metric-filter-deployer-policy.json` to the deployment identity. It permits creating, reading and deleting metric filters only on the two named Preview Lambda log groups. It does not grant general log-group deletion, secret reads or production access. The observer policy is read-only and cannot resolve this deployment denial.
+
+In the AWS IAM console: Users → sensecore-deploy → Permissions → Add permissions → Create inline policy → JSON. Paste the policy, review it, and save as `ZayviPreviewMetricFilterDeploy`. Use an administrator identity already authorised to manage that user; do not grant broad administrator access to the deployment user.
+
+Resume from the same worktree and same Preview remote state. Fetch the reviewed policy/runbook update, then rerun `bash infra/scripts/preview-plan.sh`. Do not reuse the old saved plan after a partial apply; successful changes are already recorded in state. Do not destroy/recreate the stack, remove state entries, rerun old Lambda deployments or target around the failures.
+
+If no other drift exists, the new plan should add **two metric filters and two dependent alarms**, with no further changes or deletions. Review the actual plan; investigate anything else before applying its newly saved file. After the successful apply, query CloudWatch for the actual alarms and metric filters instead of relying on Terraform's output names. Notifications remain console-only until a topic is configured and tested.
+
+```bash
+aws logs describe-metric-filters --region eu-west-2 \
+  --log-group-name /aws/lambda/zayvi-preview-api \
+  --query 'metricFilters[].{Name:filterName,Pattern:filterPattern}' --output table
+aws logs describe-metric-filters --region eu-west-2 \
+  --log-group-name /aws/lambda/zayvi-preview-kredal-webhook \
+  --query 'metricFilters[].{Name:filterName,Pattern:filterPattern}' --output table
+```
+
 ## 3. Monitoring response and notification test
 
 Handled server responses emit only an event marker and status code. The commerce marker covers direct Lambda calls as well as gateway requests. Runtime-error alarms cover exceptions/timeouts; throttling and duration are separate. Expected unsigned/stale requests and invalid test payloads do not produce a handled-server-error alarm. Existing diagnostic logs remain unchanged.

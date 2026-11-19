@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManagePreviewApplicationMetricFilters",
+      "Effect": "Allow",
+      "Action": [
+        "logs:PutMetricFilter",
+        "logs:DescribeMetricFilters",
+        "logs:DeleteMetricFilter"
+      ],
+      "Resource": [
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-api",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-api:*",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-kredal-webhook",
+        "arn:aws:logs:eu-west-2:001961766018:log-group:/aws/lambda/zayvi-preview-kredal-webhook:*"
+      ]
+    }
+  ]
+}
