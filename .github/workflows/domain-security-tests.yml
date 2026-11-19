@@ -2,7 +2,7 @@ name: Domain security tests
 
 on:
   push:
-    branches: [zayvi-aws-integration]
+    branches: [zayvi-aws-integration, zayvi-admin-dashboard]
   pull_request:
     branches: [main]
 

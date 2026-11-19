@@ -1,5 +1,9 @@
 "use client";
 
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 
 type InventoryItem = {
@@ -135,34 +139,22 @@ export default function AdminInventoryPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Inventory</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Inventory</h1>
-          </div>
-          <div className="flex gap-2">
-            <a href="/admin/replenishment" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">Replenishment</a>
-            <a href="/admin/dashboard" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">Back to overview</a>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Catalogue" title="Inventory" description="Check available stock and adjust quantities by market.">
+        <Link href="/admin/replenishment" prefetch={false} className={adminAction}>Replenishment</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
+        <div className="rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-sm font-semibold text-amber-800">Inventory readiness by market</div>
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-amber-700">
-                This uses the real PostgreSQL catalogue, pricing, publication and availability state.
-                Own-stock quantities are now tracked with on-hand, reserved and safety-stock controls.
-                Supplier and 3PL feeds can plug into the same ledger later.
-              </p>
+              <p className="text-sm font-semibold text-[#215241]">Stock by market</p>
+              <p className="mt-1 text-xs text-[#52635b]">Available to sell accounts for reservations and safety stock.</p>
             </div>
-            <div className="inline-flex rounded-xl border border-amber-200 bg-white p-1">
+            <div role="group" aria-label="Inventory market" className="inline-flex self-start rounded-lg border border-[#dfe6e1] bg-white p-1">
               {(["GB", "NG"] as const).map((code) => (
                 <button
                   key={code}
+                  aria-pressed={market === code}
                   onClick={() => setMarket(code)}
                   className={
                     "rounded-lg px-4 py-2 text-xs font-semibold " +
@@ -184,15 +176,15 @@ export default function AdminInventoryPage() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Catalogue items</div><div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Available</div><div className="mt-2 text-3xl font-semibold">{available}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Published</div><div className="mt-2 text-3xl font-semibold">{published}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Tracked</div><div className="mt-2 text-3xl font-semibold">{data?.items.filter((item) => item.inventoryManaged).length ?? 0}</div></div>
+        <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Catalogue items</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{data?.total ?? "—"}</div></div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Catalogue available</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{available}</div></div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Published</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{published}</div></div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Tracked</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{data?.items.filter((item) => item.inventoryManaged).length ?? 0}</div></div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by product or SKU" className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search inventory" placeholder="Search by product or SKU" className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]" />
         </div>
 
         {loading && <div className="py-16 text-center text-sm text-gray-400">Loading inventory...</div>}
@@ -200,35 +192,38 @@ export default function AdminInventoryPage() {
 
         {!loading && !error && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_140px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1fr)_130px_110px_110px_100px_100px_170px]">
+            <div className="hidden border-b xl:grid border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 xl:grid-cols-[minmax(0,1fr)_100px_62px_64px_56px_62px_132px]">
               <span>Product</span>
-              <span className="hidden md:block">SKU</span>
-              <span className="hidden md:block">On hand</span>
-              <span className="hidden md:block">Reserved</span>
-              <span className="hidden md:block">Safety</span>
-              <span className="hidden md:block">Available</span>
+              <span className="hidden xl:block">SKU</span>
+              <span className="hidden xl:block">On hand</span>
+              <span className="hidden xl:block">Reserved</span>
+              <span className="hidden xl:block">Safety</span>
+              <span className="hidden xl:block">Available</span>
               <span>Adjust</span>
             </div>
             {visible.map((item) => (
-              <div key={item.id} className="grid grid-cols-[1fr_140px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_130px_110px_110px_100px_100px_170px]">
+              <div key={item.id} className="grid grid-cols-1 items-center gap-3 border-b border-gray-100 px-3 py-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5 last:border-b-0 xl:grid-cols-[minmax(0,1fr)_100px_62px_64px_56px_62px_132px]">
                 <div className="flex min-w-0 items-center gap-4">
-                  <img src={item.image} alt="" className="h-12 w-12 rounded-xl border border-gray-100 object-cover" />
+                  <img src={item.image} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-gray-100 object-cover" />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{item.name}</div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {item.status} · {item.publicationStatus.replaceAll("_", " ")} · {formatMoney(item.price, item.currency)}
                     </div>
                     <div className="mt-1 text-[11px] text-gray-400">
                       {item.locationName || (market === "GB" ? "UK own stock" : "Nigeria own stock")}
                     </div>
+                    <p className="mt-1 text-xs font-medium text-[#215241] xl:hidden">
+                      {item.availableToSell == null ? "Stock not tracked" : `${item.availableToSell} available · ${item.reserved} reserved`}
+                    </p>
                   </div>
                 </div>
-                <div className="hidden text-xs text-gray-500 md:block">{item.sku}</div>
-                <div className="hidden text-sm font-semibold text-gray-800 md:block">{item.onHand ?? "—"}</div>
-                <div className="hidden text-sm text-gray-600 md:block">{item.reserved}</div>
-                <div className="hidden text-sm text-gray-600 md:block">{item.safetyStock}</div>
-                <div className="hidden text-sm font-semibold text-[#31543b] md:block">{item.availableToSell ?? "—"}</div>
-                <div className="flex items-center justify-end gap-2">
+                <div className="hidden text-xs text-gray-500 xl:block">{item.sku}</div>
+                <div className="hidden text-sm font-semibold text-gray-800 xl:block">{item.onHand ?? "—"}</div>
+                <div className="hidden text-sm text-gray-600 xl:block">{item.reserved}</div>
+                <div className="hidden text-sm text-gray-600 xl:block">{item.safetyStock}</div>
+                <div className="hidden text-sm font-semibold text-[#31543b] xl:block">{item.availableToSell ?? "—"}</div>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <button
                     type="button"
                     disabled={workingId === item.id}

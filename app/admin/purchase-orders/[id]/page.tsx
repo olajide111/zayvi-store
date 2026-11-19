@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { use, useEffect, useState } from "react";
 
 type PurchaseOrderItem = {
@@ -203,23 +206,14 @@ export default function PurchaseOrderDetailPage({
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <a href="/admin/purchase-orders" className="text-xs text-gray-400 hover:text-gray-600">← Purchase orders</a>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">{po.poNumber}</h1>
-            <div className="mt-1 text-xs text-gray-400">
-              {po.supplierName} · {po.marketCode} · {po.currency}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs capitalize text-gray-500">{po.status.replaceAll("_", " ")}</div>
-            <div className="mt-1 text-sm font-semibold">{money(total, po.currency)}</div>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Purchase orders" title={po.poNumber} description={`${po.supplierName} · ${po.marketCode} · ${po.currency}`}>
+        <Link href="/admin/purchase-orders" prefetch={false} className={adminAction}>All purchase orders</Link>
+        <p className="rounded-lg bg-[#edf4ee] px-3 py-2 text-sm text-[#215241]">
+          <span className="capitalize">{po.status.replaceAll("_", " ")}</span> · <strong>{money(total, po.currency)}</strong>
+        </p>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1200px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1200px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
           <div className="text-sm font-semibold text-blue-800">Manual supplier submission</div>
           <p className="mt-1 text-xs leading-5 text-blue-700">
@@ -235,7 +229,7 @@ export default function PurchaseOrderDetailPage({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold">Supplier response</h2>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-[#52635b]">
                 Supplier-reported evidence only. These updates do not approve, cancel or receive this PO.
               </p>
             </div>
@@ -287,19 +281,19 @@ export default function PurchaseOrderDetailPage({
 
         <div className="mt-6 grid gap-4 sm:grid-cols-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Supplier status</div>
+            <div className="text-xs text-[#52635b]">Supplier status</div>
             <div className="mt-2 text-sm font-semibold capitalize">{po.verificationStatus.replaceAll("_", " ")}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">PO status</div>
+            <div className="text-xs text-[#52635b]">PO status</div>
             <div className="mt-2 text-sm font-semibold capitalize">{po.status.replaceAll("_", " ")}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Lines</div>
+            <div className="text-xs text-[#52635b]">Lines</div>
             <div className="mt-2 text-2xl font-semibold">{po.items.length}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Total</div>
+            <div className="text-xs text-[#52635b]">Total</div>
             <div className="mt-2 text-lg font-semibold">{money(total, po.currency)}</div>
           </div>
         </div>
@@ -340,7 +334,7 @@ export default function PurchaseOrderDetailPage({
                 <div key={item.id} className="grid gap-4 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_120px_100px_120px_150px] lg:items-center">
                   <div>
                     <div className="text-sm font-semibold">{item.productName}</div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {item.supplierSku || item.canonicalCode}
                     </div>
                     <div className="mt-1 text-[11px] text-gray-400">
@@ -370,7 +364,7 @@ export default function PurchaseOrderDetailPage({
                         Receive stock
                       </button>
                     ) : (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-[#52635b]">
                         {remaining === 0 ? "Fully received" : "Not receivable yet"}
                       </span>
                     )}
@@ -399,7 +393,7 @@ export default function PurchaseOrderDetailPage({
                       <div className="text-sm font-semibold capitalize">
                         {event.eventType.replaceAll("_", " ")}
                       </div>
-                      <div className="mt-1 text-xs text-gray-400">
+                      <div className="mt-1 text-xs text-[#52635b]">
                         {event.supplierUserName || event.supplierUserEmail || "Supplier user"}
                         {" · "}
                         {new Date(event.createdAt).toLocaleString("en-GB")}

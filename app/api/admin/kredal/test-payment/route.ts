@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasAdminSession } from "@/lib/admin-auth";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { kredalTestReturnPath } from "@/lib/kredal-test-return";
+import { reconcileKredalTestPayment } from "@/lib/kredal-test-reconciliation";
 import {
   cancelKredalPayment,
   createKredalPayment,
@@ -20,6 +22,18 @@ function requireTestMode() {
   if (process.env.KREDAL_MODE !== "test") {
     throw new Error("KREDAL_MODE must be set to test.");
   }
+}
+
+function testCheckoutOrigin(request: NextRequest) {
+  const host = request.headers.get("host");
+  const isPreview = process.env.VERCEL_ENV === "preview";
+  if (host && /^[a-z0-9][a-z0-9.-]*(?::[0-9]{1,5})?$/i.test(host)) {
+    const protocol = isPreview ? "https:" : request.nextUrl.protocol;
+    return `${protocol}//${host}`;
+  }
+
+  const deployment = isPreview ? process.env.VERCEL_URL : undefined;
+  return deployment ? `https://${deployment}` : request.nextUrl.origin;
 }
 
 function toMinorUnits(amount: number) {
@@ -183,10 +197,7 @@ export async function POST(request: NextRequest) {
       idempotencyKey,
       description: "ZAYVI test order " + order.orderNumber,
       customerEmail: order.customerEmail,
-      callbackUrl:
-        (process.env.NEXT_PUBLIC_STORE_URL || request.nextUrl.origin) +
-        "/admin/payments?kredal_return=1&order_id=" +
-        encodeURIComponent(order.id),
+      callbackUrl: new URL(kredalTestReturnPath(order.id), testCheckoutOrigin(request)).href,
       metadata: {
         zayvi_order_id: order.id,
         mode: "test",
@@ -296,34 +307,16 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const applied = await callZayviAwsApi(
-      "/payment-attempts/kredal",
-      {
-        method: "PUT",
-        body: {
-          orderId,
-          providerPaymentState,
-          providerHoldState,
-          providerPayload: {
-            ...payment,
-            mode: "test",
-            verifiedAt: new Date().toISOString(),
-          },
-        },
-      }
+    const reconciliation = await reconcileKredalTestPayment(
+      orderId, payment, providerPaymentState, providerHoldState
     );
-
-    if (!applied.ok) {
-      throw new Error("Kredal verified but Zayvi could not apply the state.");
-    }
 
     return NextResponse.json({
       verified: true,
-      applied: true,
+      ...reconciliation,
       providerPaymentState,
       providerHoldState,
       payment,
-      state: (applied.data as { state?: unknown }).state || null,
       testMode: true,
     });
   } catch (error) {
@@ -363,24 +356,14 @@ export async function DELETE(request: NextRequest) {
       attempt.providerReference
     );
 
-    if (payment.payment_state === "cancelled") {
-      await callZayviAwsApi("/payment-attempts/kredal", {
-        method: "PUT",
-        body: {
-          orderId,
-          providerPaymentState: "cancelled",
-          providerHoldState: payment.hold_state ?? null,
-          providerPayload: {
-            ...payment,
-            mode: "test",
-            verifiedAt: new Date().toISOString(),
-          },
-        },
-      });
-    }
+    const cancelled = payment.payment_state === "cancelled";
+    const reconciliation = cancelled
+      ? await reconcileKredalTestPayment(orderId, payment, "cancelled", payment.hold_state ?? null)
+      : { applied: false };
 
     return NextResponse.json({
-      cancelled: payment.payment_state === "cancelled",
+      cancelled,
+      ...reconciliation,
       providerPaymentState: payment.payment_state || "unknown",
       providerHoldState: payment.hold_state ?? null,
       payment,

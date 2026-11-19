@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction, adminPrimaryAction } from "@/components/admin/AdminPageHeading";
+
 import { use, useEffect, useMemo, useState } from "react";
 
 type VerificationEvent = {
@@ -324,45 +327,16 @@ export default function SupplierDetailPage({
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1300px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <a
-              href="/admin/suppliers"
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              ← Suppliers
-            </a>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              {supplier.name}
-            </h1>
-            <div className="mt-1 text-xs text-gray-400">
-              {supplier.supplierCode} · {supplier.marketCode} ·{" "}
-              {supplier.supplierType}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <a
-              href={`/admin/suppliers/${supplier.id}/portal`}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-            >
-              Vendor portal access
-            </a>
-            <button
-              type="button"
-              onClick={() => setShowForm((value) => !value)}
-              className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
-            >
-              {showForm ? "Close" : "Add product offer"}
-            </button>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Suppliers" title={supplier.name} description={`${supplier.supplierCode} · ${supplier.marketCode} · ${supplier.supplierType.replaceAll("_", " ")}`}>
+        <Link href="/admin/suppliers" prefetch={false} className={adminAction}>All suppliers</Link>
+        <Link href={`/admin/suppliers/${supplier.id}/portal`} prefetch={false} className={adminAction}>Vendor portal access</Link>
+        <button type="button" onClick={() => setShowForm((value) => !value)} className={adminPrimaryAction}>{showForm ? "Close form" : "Add product offer"}</button>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1300px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1300px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Verification</div>
+            <div className="text-xs text-[#52635b]">Verification</div>
             <div className="mt-2 text-lg font-semibold capitalize">
               {supplier.verificationStatus.replaceAll("_", " ")}
             </div>
@@ -403,14 +377,14 @@ export default function SupplierDetailPage({
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Fulfilment model</div>
+            <div className="text-xs text-[#52635b]">Fulfilment model</div>
             <div className="mt-2 text-lg font-semibold capitalize">
               {supplier.fulfilmentModel.replaceAll("_", " ")}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Active offers</div>
-            <div className="mt-2 text-3xl font-semibold">{offers.length}</div>
+            <div className="text-xs text-[#52635b]">Active offers</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{offers.length}</div>
           </div>
         </div>
 
@@ -432,7 +406,7 @@ export default function SupplierDetailPage({
             className="mt-6 rounded-2xl border border-gray-200 bg-white p-5"
           >
             <h2 className="text-sm font-semibold">Link supplier to product</h2>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-[#52635b]">
               Cost and stock data are supplier-reported commercial inputs, not
               customer-facing prices.
             </p>
@@ -562,7 +536,7 @@ export default function SupplierDetailPage({
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
           <div>
             <h2 className="text-sm font-semibold">Verification history</h2>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-[#52635b]">
               Auditable review decisions for this supplier.
             </p>
           </div>
@@ -597,7 +571,7 @@ export default function SupplierDetailPage({
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-5 py-4">
             <h2 className="text-sm font-semibold">Product offers</h2>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-[#52635b]">
               Supplier commercial terms and external stock signals.
             </p>
           </div>
@@ -615,7 +589,7 @@ export default function SupplierDetailPage({
                 >
                   <div>
                     <div className="text-sm font-semibold">{offer.productName}</div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {offer.supplierSku || offer.canonicalCode}
                     </div>
                   </div>

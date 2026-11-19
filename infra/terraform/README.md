@@ -1,58 +1,55 @@
-# Zayvi AWS preview infrastructure
+# Zayvi AWS Preview infrastructure
 
-This directory contains the initial Terraform definition for the approved Zayvi preview infrastructure in `eu-west-2`.
+This Terraform root owns the existing Preview state in AWS account `001961766018`, region `eu-west-2`, S3 key `zayvi/preview/terraform.tfstate`. It is not a production Terraform root. Use Terraform 1.14.9 (pinned at repository root); the configuration requires at least 1.10 for S3 native locking. Provider versions and checksums remain pinned in `.terraform.lock.hcl`.
 
-## What this configuration defines
+## Current architecture
 
-- Dedicated VPC with two private subnets across two Availability Zones.
-- Separate public subnets and an Internet Gateway, but no public application workloads.
-- No NAT Gateway and no default internet route from private subnets.
-- Lambda security group with PostgreSQL-only egress.
-- RDS security group accepting PostgreSQL only from the Lambda security group.
-- Private, encrypted, Single-AZ PostgreSQL RDS with 20 GiB initial gp3 storage, managed master password, IAM database authentication and seven-day automated backups.
-- API Gateway HTTP API connected to a small Lambda bootstrap.
-- CloudWatch log groups with 30-day retention and an initial Lambda error alarm.
-- Least-privilege IAM policies for Lambda logs, VPC attachment and the scoped RDS IAM database user.
+- Dedicated VPC, two private application subnets, isolated database networking and no NAT Gateway.
+- Encrypted private PostgreSQL, IAM database authentication, seven-day automated backups, deletion protection and required final snapshot. Single-AZ remains the Preview availability trade-off.
+- Node.js 22 commerce Lambda using the restricted `zayvi_app` database role.
+- IAM-protected default HTTP API route. Vercel's existing backend role can invoke the API or commerce Lambda directly.
+- Optional public, exact-match Kredal **test** webhook route with raw-body signature checks, timestamp rejection and a separate signing secret in Secrets Manager. Its dedicated receiver invokes the commerce Lambda without opening the commerce default route.
+- Temporary database bootstrap applies versioned, checksum-protected migrations. Keep its enabled state until schema and application checks are complete; remove it only through a separate reviewed cleanup.
+- Thirty-day logs; Lambda runtime errors, handled application errors, throttling/duration, gateway server errors and database pressure alarms. An optional existing SNS topic enables notifications. Without it, alarms are visible in CloudWatch but do not contact anyone.
 
-The Lambda currently returns HTTP 503 intentionally. This is an infrastructure bootstrap, not a working commerce API. Do not connect the storefront or enable customer operations until authentication, request validation, tenant resolution, database migrations, application routes, rate limiting and security tests are implemented.
+The previously deployed build has demonstrated simulated payments, automatic signed-event reconciliation, refund, cancellation and duplicate event handling. See `docs/payments/kredal-pay.md` for evidence and remaining acceptance checks. Documentation of a resource is not evidence that a new change has been applied.
 
-## Important implementation notes
+Existing S3 media, CloudFront, production payments and RDS protection are outside the monitoring/tooling change. The account/region guards prevent accidentally using this root for another environment.
 
-1. The RDS master password is managed by RDS through Secrets Manager; it is not placed in Terraform variables or source control. This adds a small recurring Secrets Manager charge.
-2. The application database role `zayvi_app` and its PostgreSQL grants still need to be created securely. The IAM policy only authorises IAM database authentication for that named database user; it does not create the user or grant SQL permissions.
-3. The Lambda is placed in private subnets and has no general internet egress. External integrations must not be added until their network path and cost are designed.
-4. The API Gateway endpoint is publicly reachable, but the bootstrap exposes no business functionality and returns 503. A JWT/OIDC authorizer and route-level access policy are mandatory before real endpoints are enabled.
-5. Single-AZ is an explicit initial availability trade-off. Backups are enabled, but they do not provide Multi-AZ failover.
-6. The existing S3 bucket, CloudFront distribution and Vercel upload role are deliberately not modified.
+## Validate without applying
 
-## Before planning or applying
-
-Do not apply this configuration until all of the following are complete:
-
-- Confirm the AWS account ID and region from an authenticated AWS session.
-- Inspect existing VPCs, CIDR allocations, IAM names, RDS identifiers, quotas and service availability to avoid collisions.
-- Verify the selected RDS class and PostgreSQL engine version are available in London.
-- Validate the configuration with a pinned Terraform CLI and provider lock file.
-- Configure a secure remote Terraform state backend with encryption, versioning, restricted access and state locking. Never commit `terraform.tfstate`, plan files, credentials or generated Lambda archives.
-- Generate and inspect a saved plan. Confirm it creates only the approved resources and does not modify existing S3, CloudFront or Vercel resources.
-- Re-check the complete monthly estimate in AWS Pricing Calculator, including RDS, managed master-password secret, API Gateway, Lambda, CloudWatch logs/alarms, storage, snapshots and data transfer. Terraform plan is not a cost estimate.
-- Confirm the estimated recurring cost remains within the approved £50/month target before applying.
-
-## Safe local checks
-
-From this directory, after installing Terraform:
+From repository root, use Node.js 22+ and Terraform from `.terraform-version`:
 
 ```bash
-terraform fmt -check -recursive
-terraform init -backend=false
-terraform validate
-terraform plan -out=zayvi-preview.tfplan
+node --test infra/scripts/*.test.cjs
+npm --prefix infra/lambda ci
+npm --prefix infra/lambda run package
+npm --prefix infra/db-bootstrap ci
+npm --prefix infra/db-bootstrap run package
+terraform -chdir=infra/terraform fmt -check -recursive
+terraform -chdir=infra/terraform init -backend=false -input=false -lockfile=readonly
+terraform -chdir=infra/terraform validate
+terraform -chdir=infra/terraform test
 ```
 
-The plan command requires authenticated AWS access for data lookups and must be reviewed. Do not run `terraform apply` until the plan and current cost estimate have been checked against the approved scope.
+Both archive builds use stable names, file order and ZIP metadata. Repacking unchanged source does not create timestamp-only updates. The first switch from the old ZIP format changes package hashes once. The CA bundle and dependency toolchain are still build inputs: intentional changes to either can change package bytes. `terraform test` uses mocked AWS/archive providers and plan-only runs; it does not apply resources or contact AWS. Provider installation still requires network access.
 
-For the first apply, configure the approved remote backend before creating billable infrastructure. Do not use a shared or production state file.
+CI runs on `zayvi-admin-dashboard`, `zayvi-aws-integration` and PRs to `main`. It packages real archives, validates Terraform and checks protected Preview invariants.
 
-## Teardown
+## Plan and deploy
 
-RDS deletion protection is enabled and final snapshots are required. Teardown therefore needs a deliberate maintenance step: confirm retention/legal requirements, disable deletion protection, take and verify a final snapshot, then destroy only the resources created by this Terraform state. Never delete the existing media bucket or CloudFront distribution as part of this stack.
+Read [Preview infrastructure completion](../../docs/runbooks/preview-infrastructure-completion.md). From a clean reviewed commit:
+
+```bash
+bash infra/scripts/preview-plan.sh
+```
+
+The helper checks AWS identity, uses the existing default workspace, preserves bootstrap state and discovers the active signing-secret ARN without reading its value. It builds real archives and saves a full plan, then prints only resource actions in its scope check. Destructive changes, database/network/media changes and IAM changes are blocked for separate review. No `-target`, no state migration and no automatic apply are used.
+
+Copy `preview.auto.tfvars.example` to a private `preview.auto.tfvars` only after replacing the example with your existing secret ARN and matching bootstrap state. An ARN is a resource identifier, not the signing-secret value. Keep optional notification inputs persistent too. Do not commit populated inputs, state, plans, logs or generated archives. Saved plans may contain sensitive infrastructure values; inspect them locally.
+
+After review, apply only the saved plan printed by the helper. Additional alarms/custom metrics can add CloudWatch charges: review the current account estimate against the existing Preview budget before apply. No cost estimate or AWS apply is performed by the helper.
+
+## Operational boundaries
+
+A successful plan is not a backup restore test, an alert-delivery test, a security review or a production release. External seller authentication, tenant identity/RBAC, production payment handling, live credentials, production capacity/failover and recovery objectives need their own release evidence. Do not enable real charges or real fulfilment from this Preview stack.

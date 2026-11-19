@@ -1,5 +1,10 @@
 "use client";
 
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
+
 import { useEffect, useMemo, useState } from "react";
 
 type AuditEvent = {
@@ -88,50 +93,25 @@ export default function OperationsAuditPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1450px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Operations audit</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Operations audit
-            </h1>
-          </div>
-          <a
-            href="/admin/operations-inbox"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Operations inbox
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Operations" title="Operations audit" description="Review the permanent record of Admin and vendor actions.">
+        <Link href="/admin/operations-inbox" prefetch={false} className={adminAction}>Operations inbox</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1450px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-          <div className="text-sm font-semibold text-blue-800">
-            Append-only operational evidence
-          </div>
-          <p className="mt-1 max-w-4xl text-xs leading-5 text-blue-700">
-            This timeline records critical Admin and vendor actions across supplier
-            verification, discovery decisions, purchase orders and returns. The
-            application role can insert and read events, but cannot update or delete
-            historical audit entries.
-          </p>
-        </div>
-
+      <section className="mx-auto max-w-[1450px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Recorded events</div>
-            <div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div>
+            <div className="text-xs text-[#52635b]">Recorded events</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{data?.total ?? "—"}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Admin events</div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div className="text-xs text-[#52635b]">Admin events</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {data?.events.filter((event) => event.actorType === "admin").length ?? "—"}
             </div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Vendor events</div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div className="text-xs text-[#52635b]">Vendor events</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">
               {data?.events.filter((event) => event.actorType === "vendor").length ?? "—"}
             </div>
           </div>
@@ -139,12 +119,14 @@ export default function OperationsAuditPage() {
 
         <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 lg:flex-row">
           <input
+            aria-label="Search audit"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search action, summary or actor"
             className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm"
           />
           <select
+            aria-label="Actor"
             value={actor}
             onChange={(event) => setActor(event.target.value)}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
@@ -155,6 +137,7 @@ export default function OperationsAuditPage() {
             <option value="system">System</option>
           </select>
           <select
+            aria-label="Entity type"
             value={entity}
             onChange={(event) => setEntity(event.target.value)}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
@@ -181,10 +164,10 @@ export default function OperationsAuditPage() {
         )}
 
         {!loading && !error && visible.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-12 text-center">
+          <div className="mt-6 rounded-xl border border-[#dfe6e1] bg-white px-4 py-8 text-center">
             <h2 className="text-base font-semibold">No matching audit events</h2>
             <p className="mt-2 text-sm text-gray-500">
-              Events are recorded prospectively after migration 0024 is active.
+              {data?.total ? "Try a different search or clear the filters." : "New audited actions will appear here as they happen."}
             </p>
           </div>
         )}
@@ -194,8 +177,9 @@ export default function OperationsAuditPage() {
             <div className="divide-y divide-gray-100">
               {visible.map((event) => (
                 <details key={event.id} className="group px-5 py-4">
-                  <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                    <div className="grid gap-3 md:grid-cols-[100px_190px_minmax(0,1fr)_190px] md:items-start">
+                  <summary className="relative cursor-pointer list-none rounded-lg pr-6 hover:bg-[#f5f8f5] [&::-webkit-details-marker]:hidden">
+                    <ChevronDown size={16} className="absolute top-1 right-0 text-[#52635b] group-open:rotate-180" aria-hidden="true" />
+                    <div className="grid gap-3 lg:grid-cols-[80px_110px_minmax(0,1fr)_124px] lg:items-start">
                       <div>
                         <span
                           className={
@@ -222,7 +206,7 @@ export default function OperationsAuditPage() {
                           {event.action}
                         </div>
                       </div>
-                      <div className="text-xs text-gray-400 md:text-right">
+                      <div className="text-xs text-[#52635b] md:text-right">
                         {new Date(event.createdAt).toLocaleString("en-GB")}
                         <div className="mt-1">
                           {event.actorReference || "No actor reference"}

@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useState } from "react";
 
 type PurchaseOrder = {
@@ -47,6 +50,8 @@ export default function PurchaseOrdersPage() {
   const [data, setData] = useState<PurchaseOrdersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("");
+  const [status, setStatus] = useState("all");
 
   useEffect(() => {
     fetch("/api/admin/purchase-orders", { credentials: "include", cache: "no-store" })
@@ -68,21 +73,20 @@ export default function PurchaseOrdersPage() {
   const open = data?.purchaseOrders.filter((po) => ["approved","submitted","partially_received"].includes(po.status)).length ?? 0;
   const received = data?.purchaseOrders.filter((po) => po.status === "received").length ?? 0;
 
+  const purchaseOrders = data?.purchaseOrders ?? [];
+  const term = filter.trim().toLowerCase();
+  const visible = purchaseOrders.filter((po) =>
+    (status === "all" || po.status === status) &&
+    (!term || [po.poNumber, po.supplierName, po.marketCode].some((value) => value?.toLowerCase().includes(term))),
+  );
+
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Purchase orders</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Purchase orders</h1>
-          </div>
-          <a href="/admin/replenishment" className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">
-            Replenishment
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Operations" title="Purchase orders" description="Review supplier purchases from draft through receipt.">
+        <Link href="/admin/replenishment" prefetch={false} className={adminAction}>Replenishment</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
           <div className="text-sm font-semibold text-blue-800">Human-controlled supplier purchasing</div>
           <p className="mt-1 max-w-4xl text-xs leading-5 text-blue-700">
@@ -92,35 +96,48 @@ export default function PurchaseOrdersPage() {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Drafts</div><div className="mt-2 text-3xl font-semibold">{drafts}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Open</div><div className="mt-2 text-3xl font-semibold">{open}</div></div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-gray-400">Received</div><div className="mt-2 text-3xl font-semibold">{received}</div></div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Drafts</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{drafts}</div></div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Open</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{open}</div></div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5"><div className="text-xs text-[#52635b]">Received</div><div className="mt-1.5 text-2xl font-semibold tabular-nums">{received}</div></div>
         </div>
 
         {loading && <div className="py-16 text-center text-sm text-gray-400">Loading purchase orders...</div>}
         {error && <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
-        {!loading && !error && data && data.purchaseOrders.length > 0 && (
+        {!loading && !error && purchaseOrders.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2 rounded-xl border border-[#dfe6e1] bg-white p-3">
+            <input aria-label="Search purchase orders" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search number, supplier or market" className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#dfe6e1] px-3 text-sm" />
+            <select aria-label="Purchase order status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm">
+              <option value="all">All statuses</option>
+              {[...new Set(purchaseOrders.map((po) => po.status))].sort().map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}
+            </select>
+          </div>
+        )}
+
+        {!loading && !error && data && visible.length > 0 && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[145px_minmax(0,1fr)_100px_110px_120px_150px_120px]">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 xl:grid-cols-[112px_minmax(0,1fr)_75px_85px_82px_110px_94px]">
               <span>PO</span>
-              <span className="hidden md:block">Supplier</span>
-              <span className="hidden md:block">Market</span>
-              <span className="hidden md:block">PO status</span>
-              <span className="hidden md:block">Supplier</span>
-              <span className="hidden md:block">Shipment</span>
+              <span className="hidden xl:block">Supplier</span>
+              <span className="hidden xl:block">Market</span>
+              <span className="hidden xl:block">PO status</span>
+              <span className="hidden xl:block">Supplier</span>
+              <span className="hidden xl:block">Shipment</span>
               <span>Total</span>
             </div>
-            {data.purchaseOrders.map((po) => (
-              <div key={po.id} className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[145px_minmax(0,1fr)_100px_110px_120px_150px_120px]">
-                <a href={`/admin/purchase-orders/${po.id}`} className="text-sm font-semibold text-[#23432d] hover:underline">{po.poNumber}</a>
-                <div className="hidden truncate text-sm text-gray-700 md:block">{po.supplierName}</div>
-                <div className="hidden text-xs text-gray-500 md:block">{po.marketCode}</div>
-                <div className="hidden text-xs capitalize text-gray-600 md:block">{po.status.replaceAll("_", " ")}</div>
-                <div className="hidden text-xs capitalize text-gray-600 md:block">
+            {visible.map((po) => (
+              <div key={po.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 xl:grid-cols-[112px_minmax(0,1fr)_75px_85px_82px_110px_94px]">
+                <div className="min-w-0">
+                  <Link href={`/admin/purchase-orders/${encodeURIComponent(po.id)}`} prefetch={false} className="text-sm font-semibold break-words text-[#215241] hover:underline">{po.poNumber}</Link>
+                  <p className="mt-1 text-xs break-words text-[#52635b] xl:hidden">{po.supplierName} · {po.marketCode} · {po.status.replaceAll("_", " ")}</p>
+                </div>
+                <div className="hidden truncate text-sm text-gray-700 xl:block">{po.supplierName}</div>
+                <div className="hidden text-xs text-gray-500 xl:block">{po.marketCode}</div>
+                <div className="hidden text-xs capitalize text-gray-600 xl:block">{po.status.replaceAll("_", " ")}</div>
+                <div className="hidden text-xs capitalize text-gray-600 xl:block">
                   {(po.supplierAckStatus || "pending").replaceAll("_", " ")}
                 </div>
-                <div className="hidden text-xs text-gray-600 md:block">
+                <div className="hidden text-xs text-gray-600 xl:block">
                   {po.latestTrackingNumber || po.latestCarrier
                     ? [po.latestCarrier, po.latestTrackingNumber].filter(Boolean).join(" · ")
                     : "—"}
@@ -131,7 +148,11 @@ export default function PurchaseOrdersPage() {
           </div>
         )}
 
-        {!loading && !error && data && data.purchaseOrders.length === 0 && (
+        {!loading && !error && purchaseOrders.length > 0 && visible.length === 0 && (
+          <p className="mt-5 rounded-xl border border-[#dfe6e1] bg-white p-4 text-sm text-[#52635b]">No purchase orders match these filters.</p>
+        )}
+
+        {!loading && !error && data && purchaseOrders.length === 0 && (
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-12 text-center">
             <h2 className="text-base font-semibold">No purchase orders yet</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500">

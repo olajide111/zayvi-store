@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowUpRight, Package, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 type Order = {
   id: string;
@@ -11,6 +14,7 @@ type Order = {
   currency: string;
   paymentStatus: string;
   fulfilmentStatus: string;
+  orderStatus?: string;
   createdAt: string;
 };
 
@@ -22,7 +26,15 @@ type OrdersResponse = {
   message?: string;
 };
 
-function StatusPill({ value }: { value: string }) {
+function money(value: number, currency: string) {
+  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", { style: "currency", currency }).format(value);
+}
+
+function label(value: string) {
+  return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function StatusPill({ value, category }: { value: string; category: string }) {
   const normalized = value.toLowerCase();
   const positive = ["paid", "fulfilled", "completed"].includes(normalized);
   const pending = ["pending", "processing", "unfulfilled"].includes(normalized);
@@ -35,7 +47,7 @@ function StatusPill({ value }: { value: string }) {
 
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${className}`}>
-      {value.replaceAll("_", " ")}
+      {category}: {label(value)}
     </span>
   );
 }
@@ -43,16 +55,39 @@ function StatusPill({ value }: { value: string }) {
 export default function AdminOrdersPage() {
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("All");
+  const [payment, setPayment] = useState("all");
+  const [fulfilment, setFulfilment] = useState("all");
+  const [orderState, setOrderState] = useState("all");
+  const [revision, setRevision] = useState(0);
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
+  const [currency, setCurrency] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  function refresh() {
+    setLoading(true);
+    setError("");
+    setRevision((current) => current + 1);
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setPayment("all");
+    setFulfilment("all");
+    setOrderState("all");
+    setCurrency("all");
+  }
+
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     async function loadOrders() {
       try {
         const response = await fetch("/api/admin/orders", {
           credentials: "include",
           cache: "no-store",
+          signal: controller.signal,
         });
 
         if (response.status === 401) {
@@ -66,178 +101,141 @@ export default function AdminOrdersPage() {
           throw new Error(payload?.error || "Unable to load orders.");
         }
 
-        setData(payload);
+        if (!Array.isArray(payload?.orders)) throw new Error("The orders response could not be read.");
+        if (active) {
+          setData(payload);
+          setRefreshedAt(new Date().toISOString());
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load orders.");
+        if (active) setError(controller.signal.aborted ? "Orders took too long to load. Try refreshing." : err instanceof Error ? err.message : "Unable to load orders.");
       } finally {
-        setLoading(false);
+        window.clearTimeout(timeout);
+        if (active) setLoading(false);
       }
     }
 
-    loadOrders();
-  }, []);
+    void loadOrders();
+    return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
+  }, [revision]);
 
-  const visibleOrders = useMemo(() => {
-    const orders = data?.orders ?? [];
-    const normalized = query.trim().toLowerCase();
-
-    return orders.filter((order) => {
-      const matchesSearch =
-        !normalized ||
-        order.orderNumber.toLowerCase().includes(normalized) ||
-        order.customerName.toLowerCase().includes(normalized) ||
-        order.customerEmail.toLowerCase().includes(normalized);
-
-      const matchesStatus =
-        status === "All" ||
-        order.paymentStatus === status ||
-        order.fulfilmentStatus === status;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [data, query, status]);
-
-  const paid = data?.orders.filter((order) => order.paymentStatus === "paid").length ?? 0;
-  const unfulfilled =
-    data?.orders.filter((order) => order.fulfilmentStatus === "unfulfilled").length ?? 0;
-  const revenue =
-    data?.orders.reduce((sum, order) => sum + Number(order.total || 0), 0) ?? 0;
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+  const currencies = [...new Set(orders.map((order) => order.currency))].sort();
+  const currencyOrders = orders.filter((order) => currency === "all" || order.currency === currency);
+  const normalized = query.trim().toLowerCase();
+  const visibleOrders = currencyOrders.filter((order) => {
+    const matchesSearch = !normalized || [order.orderNumber, order.customerName, order.customerEmail]
+      .some((value) => value?.toLowerCase().includes(normalized));
+    return matchesSearch && (payment === "all" || order.paymentStatus === payment) &&
+      (fulfilment === "all" || order.fulfilmentStatus === fulfilment) &&
+      (orderState === "all" || order.orderStatus === orderState);
+  });
+  const hasFilters = Boolean(normalized || payment !== "all" || fulfilment !== "all" || orderState !== "all" || currency !== "all");
+  const paid = currencyOrders.filter((order) => order.paymentStatus === "paid").length;
+  const unfulfilled = currencyOrders.filter((order) => order.fulfilmentStatus === "unfulfilled").length;
+  const totals = new Map<string, number>();
+  for (const order of currencyOrders) {
+    totals.set(order.currency, (totals.get(order.currency) ?? 0) + Number(order.total));
+  }
 
   return (
-    <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Orders</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Orders</h1>
-          </div>
-          <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-          >
-            Back to overview
-          </a>
-        </div>
-      </header>
+    <main className="min-h-screen">
+      <AdminPageHeading section="Workspace" title="Orders" description="Track payment and fulfilment for Preview orders.">
+        <button type="button" onClick={refresh} disabled={loading} className={adminAction}><RefreshCw size={15} className="mr-2" aria-hidden="true" />{loading ? "Refreshing…" : "Refresh orders"}</button>
+        <Link href="/admin/payments" prefetch={false} className={adminAction}>Payments</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
-          <div className="text-sm font-semibold text-[#23432d]">
-            Orders workspace is connected to the Preview backend
-          </div>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-[#55705b]">
-            Order persistence is now part of the Preview commerce model. Customer
-            checkout and payment processing remain disabled until fulfilment and
-            payment controls are completed.
-          </p>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Total orders</div>
-            <div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Paid</div>
-            <div className="mt-2 text-3xl font-semibold">{paid}</div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Unfulfilled</div>
-            <div className="mt-2 text-3xl font-semibold">{unfulfilled}</div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Order value</div>
-            <div className="mt-2 text-3xl font-semibold">£{revenue.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 md:flex-row">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search order, customer or email"
-            className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
-          />
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none"
-          >
-            <option>All</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending payment</option>
-            <option value="unfulfilled">Unfulfilled</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-
-        {loading && (
-          <div className="py-16 text-center text-sm text-gray-400">Loading orders...</div>
-        )}
-
-        {error && (
-          <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && visibleOrders.length > 0 && (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_110px_120px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[150px_minmax(0,1fr)_130px_130px_120px_120px]">
-              <span>Order</span>
-              <span className="hidden md:block">Customer</span>
-              <span className="hidden md:block">Payment</span>
-              <span className="hidden md:block">Fulfilment</span>
-              <span>Total</span>
-              <span>Date</span>
+      <section className="mx-auto max-w-[1500px] space-y-5 px-4 py-5 sm:px-7 lg:px-8">
+        <p className="text-xs text-[#52635b]">Summary for {currency === "all" ? "all currencies" : currency}, before search and status filters. Search and totals cover loaded orders only.
+          {refreshedAt && !loading && !error && <> Last refreshed <time dateTime={refreshedAt}>{new Date(refreshedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })}</time> (London time).</>}
+        </p>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {[
+            { label: "Loaded orders", value: currencyOrders.length },
+            { label: "Paid", value: paid },
+            { label: "Unfulfilled", value: unfulfilled },
+          ].map(({ label, value }) => (
+            <div key={label} className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
+              <p className="text-xs font-medium text-[#52635b]">{label}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">{data && !loading && !error ? value : "—"}</p>
             </div>
-
-            {visibleOrders.map((order) => (
-              <div
-                key={order.id}
-                className="grid grid-cols-[1fr_110px_120px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[150px_minmax(0,1fr)_130px_130px_120px_120px]"
-              >
-                <a href={`/admin/orders/${order.id}`} className="text-sm font-semibold text-[#23432d] hover:underline">{order.orderNumber}</a>
-                <div className="hidden min-w-0 md:block">
-                  <div className="truncate text-sm font-medium">{order.customerName}</div>
-                  <div className="mt-1 truncate text-xs text-gray-400">
-                    {order.customerEmail}
+          ))}
+          <div className="min-w-0 rounded-xl border border-[#dfe6e1] bg-white p-3 sm:p-4">
+            <p className="text-xs font-medium text-[#52635b]">Order value · all payment statuses</p>
+            {totals.size && !loading && !error ? (
+              <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                {[...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, amount]) => (
+                  <div key={code} className="min-w-0">
+                    <dt className="text-[11px] font-semibold text-[#52635b]">{code}</dt>
+                    <dd className="font-semibold break-words tabular-nums">{money(amount, code)}</dd>
                   </div>
-                </div>
-                <div className="hidden md:block">
-                  <StatusPill value={order.paymentStatus} />
-                </div>
-                <div className="hidden md:block">
-                  <StatusPill value={order.fulfilmentStatus} />
-                </div>
-                <div className="text-sm font-semibold">
-                  {order.currency === "GBP" ? "£" : ""}
-                  {Number(order.total).toFixed(2)}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {new Date(order.createdAt).toLocaleDateString("en-GB")}
-                </div>
-              </div>
-            ))}
+                ))}
+              </dl>
+            ) : <p className="mt-2 text-xl font-semibold">—</p>}
           </div>
-        )}
+        </div>
 
-        {!loading && !error && visibleOrders.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf4ed] text-xl text-[#31543b]">
-              ▤
-            </div>
-            <h2 className="mt-5 text-base font-semibold">No orders yet</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500">
-              {data?.message ||
-                "Orders will appear here when customers begin purchasing from the storefront."}
-            </p>
-            <div className="mt-5 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-              Payments disabled in Preview
-            </div>
+        <fieldset disabled={loading} className="grid gap-3 rounded-xl border border-[#dfe6e1] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <legend className="sr-only">Filter orders</legend>
+          <label className="text-xs font-semibold text-[#52635b] sm:col-span-2 xl:col-span-4">Search orders
+            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Order number, customer or email"
+              className="mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#dfe6e1] px-3 text-sm font-normal text-[#172a21]" />
+          </label>
+          {[
+            {title: "Payment status", value: payment, set: setPayment, options: ["unpaid", "pending", "paid", "failed", "partially_refunded", "refunded"]},
+            {title: "Fulfilment status", value: fulfilment, set: setFulfilment, options: ["unfulfilled", "processing", "fulfilled", "cancelled"]},
+            {title: "Order status", value: orderState, set: setOrderState, options: ["draft", "pending_payment", "confirmed", "cancelled", "completed"]},
+            {title: "Currency", value: currency, set: setCurrency, options: currencies},
+          ].map(({title, value, set, options}) => (
+            <label key={title} className="min-w-0 text-xs font-semibold text-[#52635b]">{title}
+              <select aria-label={title} value={value} onChange={(event) => set(event.target.value)} className="mt-1 block min-h-11 w-full rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm font-normal text-[#172a21]">
+                <option value="all">All {title === "Currency" ? "currencies" : "statuses"}</option>
+                {options.map((option) => <option key={option} value={option}>{label(option)}</option>)}
+              </select>
+            </label>
+          ))}
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2 xl:col-span-4">
+            <p role="status" className="text-sm text-[#52635b]">{loading || error ? "Order count unavailable" : `${visibleOrders.length} of ${orders.length} loaded orders`}</p>
+            {hasFilters && <button type="button" onClick={clearFilters} className="min-h-11 px-2 text-sm font-semibold text-[#215241] underline">Clear filters</button>}
           </div>
-        )}
+        </fieldset>
+
+        {loading && <p role="status" className="py-8 text-center text-sm text-[#52635b]">Loading orders…</p>}
+        {error && <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"><p>{error}</p><button type="button" onClick={refresh} className="mt-2 min-h-11 font-semibold underline">Retry loading orders</button></div>}
+        {!loading && !error && (visibleOrders.length ? (
+          <ul className="divide-y divide-[#e4eae5] rounded-xl border border-[#dfe6e1] bg-white" aria-label="Orders">
+            {visibleOrders.map((order) => (
+              <li key={order.id} className="min-w-0">
+                <Link href={`/admin/orders/${encodeURIComponent(order.id)}`} prefetch={false} className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] items-start gap-x-3 gap-y-2 rounded-lg px-3 py-3.5 hover:bg-[#f5f8f5] sm:px-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold break-words text-[#215241]">{order.orderNumber}</p>
+                    <p className="mt-0.5 truncate text-xs text-[#52635b]">{order.customerName || order.customerEmail || "Guest"}</p>
+                  </div>
+                  <div className="col-start-2 row-start-1 text-right xl:col-start-3">
+                    <p className="flex items-start justify-end gap-1.5 text-sm font-semibold break-words tabular-nums">
+                      <span className="min-w-0">{money(order.total, order.currency)}</span>
+                      <ArrowUpRight size={15} className="shrink-0 text-[#52635b]" aria-hidden="true" />
+                    </p>
+                    <time dateTime={order.createdAt} className="text-xs text-[#52635b]">
+                      {new Date(order.createdAt).toLocaleDateString("en-GB")}
+                    </time>
+                  </div>
+                  <div className="col-span-2 flex flex-wrap gap-1.5 xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:pt-1">
+                    <StatusPill value={order.paymentStatus} category="Payment" />
+                    <StatusPill value={order.fulfilmentStatus} category="Fulfilment" />
+                    {order.orderStatus && <StatusPill value={order.orderStatus} category="Order" />}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="rounded-xl border border-[#dfe6e1] bg-white px-5 py-8 text-center">
+            <Package size={27} className="mx-auto text-[#215241]" aria-hidden="true" />
+            <h2 className="mt-3 font-semibold">{orders.length ? "No matching orders" : "No orders yet"}</h2>
+            <p className="mt-1 text-sm text-[#52635b]">{orders.length ? "Try another search or clear the filters." : data?.message || "Orders will appear here once they are placed."}</p>
+            {hasFilters && <button type="button" onClick={clearFilters} className="mt-3 min-h-11 px-3 text-sm font-semibold text-[#215241] underline">Clear filters</button>}
+          </div>
+        ))}
       </section>
     </main>
   );

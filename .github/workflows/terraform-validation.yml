@@ -5,13 +5,20 @@ on:
     branches:
       - main
     paths:
-      - "infra/terraform/**"
+      - "infra/**"
+      - "database/migrations/**"
+      - "lib/kredal-signature.cjs"
+      - ".terraform-version"
       - ".github/workflows/terraform-validation.yml"
   push:
     branches:
       - zayvi-aws-integration
+      - zayvi-admin-dashboard
     paths:
-      - "infra/terraform/**"
+      - "infra/**"
+      - "database/migrations/**"
+      - "lib/kredal-signature.cjs"
+      - ".terraform-version"
       - ".github/workflows/terraform-validation.yml"
 
 permissions:
@@ -31,23 +38,33 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.9.8"
+          terraform_version: "1.14.9"
           terraform_wrapper: false
 
       - name: Check formatting
         run: terraform fmt -check -recursive
 
-      - name: Create validation-only Lambda package placeholders
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test deployment tooling
+        working-directory: .
+        run: node --test infra/scripts/*.test.cjs
+
+      - name: Build real Lambda archives
+        working-directory: .
         run: |
-          # terraform validate evaluates filebase64sha256() even though no
-          # infrastructure is created. Deployment packaging is handled
-          # separately; these empty files exist only so static validation can
-          # evaluate the configuration in CI.
-          : > zayvi-api-bootstrap.zip
-          : > zayvi-db-bootstrap.zip
+          npm --prefix infra/lambda ci
+          npm --prefix infra/lambda run package
+          npm --prefix infra/db-bootstrap ci
+          npm --prefix infra/db-bootstrap run package
 
       - name: Initialise providers without a backend
-        run: terraform init -backend=false -input=false
+        run: terraform init -backend=false -input=false -lockfile=readonly
 
       - name: Validate configuration
         run: terraform validate -no-color
+
+      - name: Test Preview invariants without AWS credentials
+        run: terraform test -no-color

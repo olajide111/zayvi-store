@@ -20,7 +20,10 @@ export function createAdminSession() {
 }
 
 export function hasAdminSession(request: NextRequest) {
-  const value = request.cookies.get(ADMIN_COOKIE)?.value;
+  return isAdminSessionCookieValid(request.cookies.get(ADMIN_COOKIE)?.value);
+}
+
+export function isAdminSessionCookieValid(value: string | undefined) {
   if (!value) return false;
 
   const [timestamp, signature] = value.split(".");

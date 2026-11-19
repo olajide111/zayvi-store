@@ -1,537 +1,397 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck,
+  ClipboardList, Inbox, RefreshCw, ShoppingBag,
+} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
-type DashboardData = {
-  store: {
-    name: string;
-    status: string;
-    purchasingEnabled: boolean;
-  };
-  catalogue: {
-    totalProducts: number;
-    categories: string[];
-  };
-  payments: {
-    status: string;
-    providers: { name: string; status: string }[];
-  };
-  markets: {
-    code: string;
-    name: string;
-    currency: string;
-  }[];
-  theme: {
-    template: { family: string; version: string };
-    brand: {
-      palette: string;
-      headingFont: string;
-      bodyFont: string;
-    };
-  };
-  availableTemplates: {
-    family: string;
-    name: string;
-    description: string;
-    recommendedFor: string[];
-  }[];
-  backend: {
-    status: string;
-    database: boolean;
-    httpStatus: number;
-  };
+const markets = [
+  { code: "GB", name: "United Kingdom", shortName: "UK", currency: "GBP" },
+  { code: "NG", name: "Nigeria", shortName: "Nigeria", currency: "NGN" },
+] as const;
+
+type MarketCode = (typeof markets)[number]["code"];
+type MarketFilter = MarketCode | "all";
+
+type MarketMetric = {
+  marketCode: string;
+  currency: string;
+  orderCount: number;
+  paidOrders: number;
+  paidValue: number;
 };
 
-const navigation = [
-  {
-    group: "COMMERCE",
-    items: [
-      ["Overview", "◫", "/admin/dashboard"],
-      ["Orders", "▤", "/admin/orders"],
-      ["Products & Catalogue", "◇", "/admin/products"],
-      ["Inventory", "▦", "/admin/inventory"],
-      ["Customers", "♙", "/admin/customers"],
-      ["Suppliers", "⌑", "/admin/suppliers"],
-      ["Purchase Orders", "▣", "/admin/purchase-orders"],
-    ],
-  },
-  {
-    group: "STOREFRONT",
-    items: [
-      ["Themes & Layouts", "▧", "/admin/themes"],
-      ["Page Builder", "▤", "#"],
-      ["Navigation & Menus", "☷", "#"],
-      ["Banners & Media", "▧", "/admin"],
-      ["Custom Pages", "▤", "#"],
-    ],
-  },
-  {
-    group: "FINANCE",
-    items: [
-      ["Payments", "◉", "/admin/payments"],
-      ["Payouts & Settlements", "⇄", "#"],
-      ["Financial Reports", "▥", "#"],
-    ],
-  },
-  {
-    group: "GROWTH",
-    items: [
-      ["Marketing", "↗", "#"],
-      ["Promotions & Discounts", "%", "#"],
-      ["Shipping", "⇢", "/admin/shipping"],
-      ["Returns & Refunds", "↩", "/admin/returns"],
-    ],
-  },
-  {
-    group: "INTELLIGENCE",
-    items: [
-      ["Sales Analytics", "⌁", "/admin/analytics"],
-      ["Product Intelligence", "✧", "/admin/sourcing"],
-      ["Supplier Performance", "↗", "/admin/supplier-performance"],
-      ["Operations Inbox", "!", "/admin/operations-inbox"],
-      ["Operations Audit", "≡", "/admin/operations-audit"],
-      ["Product Discovery", "⌕", "/admin/discovery"],
-      ["Forecasting", "⌇", "#"],
-    ],
-  },
-  {
-    group: "PLATFORM",
-    items: [
-      ["Markets & Currencies", "◎", "/admin/markets"],
-      ["Integrations Hub", "⌘", "#"],
-      ["Team & Permissions", "♧", "#"],
-      ["Settings", "⚙", "/admin/settings"],
-      ["System Readiness", "✓", "/admin/system-readiness"],
-    ],
-  },
-];
+type Analytics = {
+  markets: MarketMetric[];
+  recentOrders: {
+    id: string;
+    orderNumber: string;
+    marketCode: string;
+    currency: string;
+    total: number;
+    paymentStatus: string;
+    fulfilmentStatus: string;
+    createdAt: string;
+  }[];
+};
 
-function Status({ children }: { children: string }) {
-  const positive = ["active", "enabled", "ready"].includes(
-    children.toLowerCase()
+type Operations = {
+  total: number;
+  counts: { urgent: number; overdue: number };
+  items: {
+    id: string;
+    title: string;
+    detail: string;
+    href: string;
+    severity: "urgent" | "attention" | "action" | "review";
+    overdue: boolean;
+  }[];
+};
+
+type StockWatch = {
+  items: {
+    tenantProductId: string;
+    inventoryLevelId: string | null;
+    productName: string;
+    locationName: string | null;
+    availableToSell: number | null;
+    severity: "setup" | "critical" | "warning";
+  }[];
+};
+
+type Source<T> =
+  | { status: "loading" }
+  | { status: "unavailable" }
+  | { status: "ready"; data: T };
+
+const panelClass = "min-w-0 rounded-[22px] border border-[#dfe6e1] bg-white shadow-[0_2px_8px_#173b2810]";
+const quietLink = "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg text-sm font-semibold text-[#215241] hover:text-[#112c22]";
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London",
+});
+
+function useDashboardSource<T>(url: string, revision: number): Source<T> {
+  const [result, setResult] = useState<{ revision: number; source: Source<T> } | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    const timer = window.setTimeout(() => controller.abort(), 15_000);
+
+    async function load() {
+      try {
+        const response = await fetch(url, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (response.status === 401) {
+          if (active) window.location.replace("/admin?next=dashboard");
+          return;
+        }
+        if (!response.ok) throw new Error("Dashboard source unavailable.");
+        const data: T = await response.json();
+
+        if (active) {
+          setResult({ revision, source: { status: "ready", data } });
+        }
+      } catch {
+        if (active) {
+          setResult({ revision, source: { status: "unavailable" } });
+        }
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [url, revision]);
+
+  return result?.revision === revision ? result.source : { status: "loading" };
+}
+
+function money(value: number, currency: string) {
+  return new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-GB", {
+    style: "currency",
+    currency,
+  }).format(value);
+}
+
+function statusLabel(status: string) {
+  return status.replaceAll("_", " ");
+}
+
+function PanelHeading({ title, subtitle, href, linkLabel }: {
+  title: string;
+  subtitle?: string;
+  href: string;
+  linkLabel: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 px-4 pt-3 sm:px-5 sm:pt-4">
+      <div className="pt-2">
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs leading-relaxed text-[#52635b]">{subtitle}</p>}
+      </div>
+      <Link href={href} prefetch={false} className={quietLink}>
+        {linkLabel}<ArrowUpRight size={15} aria-hidden="true" />
+      </Link>
+    </div>
   );
+}
+
+function PanelNotice({ children }: { children: ReactNode }) {
+  return <p role="status" className="px-4 py-5 text-sm text-[#52635b] sm:px-5">{children}</p>;
+}
+
+function OperationsPanel({ source }: { source: Source<Operations> }) {
+  return (
+    <section className={panelClass + " min-h-52 overflow-hidden"} aria-labelledby="attention-heading">
+      <div className="bg-gradient-to-br from-[#183e30] to-[#255441] px-4 py-4 text-white sm:px-5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/12"><Inbox size={19} aria-hidden="true" /></span>
+            <h2 id="attention-heading" className="text-base font-semibold tracking-tight sm:text-lg">Needs attention</h2>
+          </div>
+          <Link href="/admin/operations-inbox" prefetch={false} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg text-xs font-semibold text-[#eff8eb] hover:underline">
+            Open inbox <ArrowUpRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
+        {source.status === "ready" && (
+          <p className="mt-2 text-xs text-[#d4e7da]">
+            {source.data.total} open{" · "}{source.data.counts.urgent} urgent
+            {Number.isFinite(source.data.counts.overdue) ? " · " + source.data.counts.overdue + " overdue" : ""}
+          </p>
+        )}
+      </div>
+      {source.status === "loading" && <PanelNotice>Checking the operations inbox…</PanelNotice>}
+      {source.status === "unavailable" && <PanelNotice>Inbox data is unavailable. Open the inbox for details.</PanelNotice>}
+      {source.status === "ready" && (
+        source.data.items.length ? (
+          <ul className="divide-y divide-[#e8ede9] px-4 sm:px-5">
+            {source.data.items.slice(0, 3).map((item) => (
+              <li key={item.id}>
+                <Link href={item.href} prefetch={false} className="group flex min-h-14 items-center gap-3 rounded-md py-2.5 hover:bg-[#f5f8f5]">
+                  <span className={"grid size-8 shrink-0 place-items-center rounded-lg " + (item.severity === "urgent" || item.overdue ? "bg-[#faeee4] text-[#93401d]" : "bg-[#eaf2ec] text-[#25604a]")}>
+                    {item.severity === "urgent" || item.overdue ? <CircleAlert size={16} aria-hidden="true" /> : <ClipboardList size={16} aria-hidden="true" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 text-sm font-semibold break-words">{item.title}</span>
+                    <span className="line-clamp-2 text-xs break-words text-[#52635b]">
+                      {item.severity === "urgent" ? "Urgent · " : item.overdue ? "Overdue · " : ""}{item.detail}
+                    </span>
+                  </span>
+                  <ArrowRight className="shrink-0 text-[#52635b] group-hover:text-[#215241]" size={15} aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : <PanelNotice><CircleCheck size={16} className="mr-2 inline text-[#25604a]" aria-hidden="true" />No open items in the operations inbox.</PanelNotice>
+      )}
+    </section>
+  );
+}
+
+function PerformancePanel({ source, market }: { source: Source<Analytics>; market: MarketFilter }) {
+  const selectedMarkets = market === "all" ? markets : markets.filter(({ code }) => code === market);
 
   return (
-    <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
-        positive
-          ? "bg-emerald-50 text-emerald-700"
-          : "bg-amber-50 text-amber-700"
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          positive ? "bg-emerald-500" : "bg-amber-500"
-        }`}
-      />
-      {String(children ?? "unknown").replaceAll("_", " ")}
-    </span>
+    <section className={panelClass}>
+      <PanelHeading title="Market performance" subtitle="All-time Preview orders, including test activity" href="/admin/analytics" linkLabel="Analytics" />
+      {source.status === "loading" && <PanelNotice>Loading sales and order totals…</PanelNotice>}
+      {source.status === "unavailable" && <PanelNotice>Sales and order totals are unavailable.</PanelNotice>}
+      {source.status === "ready" && (
+        <div className={"grid gap-3 px-4 pt-4 pb-4 sm:px-5 sm:pb-5 " + (market === "all" ? "min-[375px]:grid-cols-2" : "")}>
+          {selectedMarkets.map(({ code, name, shortName, currency }) => {
+            const metric = source.data.markets.find((item) => item.marketCode === code && item.currency === currency);
+            const orderCount = metric?.orderCount ?? 0;
+            const paidOrders = metric?.paidOrders ?? 0;
+            const paidPercent = orderCount > 0 ? Math.round(paidOrders / orderCount * 100) : 0;
+            return (
+              <div key={code} className="min-w-0 rounded-2xl border border-[#e3ebe4] bg-[#f5f8f3] px-3 py-3.5 sm:px-4 sm:py-4">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                  <span className="font-semibold text-[#294538]"><span className="sm:hidden">{shortName}</span><span className="hidden sm:inline">{name}</span></span>
+                  <span className="rounded-md bg-[#e5eee4] px-1.5 py-0.5 font-semibold text-[#305844]">{currency}</span>
+                </div>
+                <div className="mt-2.5 text-[clamp(1.05rem,4.6vw,1.75rem)] font-semibold leading-tight tracking-tight break-words tabular-nums" aria-label={money(metric?.paidValue ?? 0, currency) + " paid order value"}>
+                  {money(metric?.paidValue ?? 0, currency)}
+                </div>
+                <p className="mt-0.5 text-xs text-[#52635b]">Paid order value</p>
+                <div aria-hidden="true" className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#dce7dd]">
+                  <div className="h-full rounded-full bg-[#3b795c]" style={{ width: paidPercent + "%" }} />
+                </div>
+                <p className="mt-2 text-xs font-medium text-[#52635b]">{paidOrders} paid / {orderCount} orders</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function OrdersPanel({ source, market }: { source: Source<Analytics>; market: MarketFilter }) {
+  const orders = source.status === "ready" ? source.data.recentOrders
+    .filter((order) => market === "all" || order.marketCode === market)
+    .slice(0, 5) : [];
+
+  return (
+    <section className={panelClass + " lg:col-start-1"}>
+      <PanelHeading title="Recent orders" subtitle={market === "all" ? "Latest recorded activity" : "Selected market in the latest store activity"} href="/admin/orders" linkLabel="All orders" />
+      {source.status === "loading" && <PanelNotice>Loading recent orders…</PanelNotice>}
+      {source.status === "unavailable" && <PanelNotice>Recent orders are unavailable.</PanelNotice>}
+      {source.status === "ready" && (orders.length ? (
+        <ul className="mt-2 divide-y divide-[#e8ede9] px-4 pb-2 sm:px-5">
+          {orders.map((order) => (
+            <li key={order.id}>
+              <Link href={"/admin/orders/" + encodeURIComponent(order.id)} prefetch={false} className="group flex min-h-[64px] items-center gap-2.5 rounded-md py-2 hover:bg-[#f5f8f5]">
+                <span className="hidden size-9 shrink-0 place-items-center rounded-lg bg-[#edf3ee] text-[#33644e] sm:grid">
+                  <ShoppingBag size={16} aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold" title={order.orderNumber}>{order.orderNumber}</span>
+                  <span className="block truncate text-xs text-[#52635b]">{order.marketCode} · <time dateTime={order.createdAt}>{dateFormatter.format(new Date(order.createdAt))}</time></span>
+                </span>
+                <span className="hidden max-w-30 truncate text-xs capitalize text-[#52635b] md:block">{statusLabel(order.fulfilmentStatus)}</span>
+                <span className="flex max-w-[48%] shrink-0 flex-col items-end gap-1 text-right">
+                  <span className="text-sm font-semibold break-words tabular-nums">{money(order.total, order.currency)}</span>
+                  <span className={"max-w-full rounded-md px-1.5 py-0.5 text-[11px] leading-tight font-semibold capitalize " +
+                    (order.paymentStatus === "paid" ? "bg-[#e6f0e9] text-[#215241]" : order.paymentStatus === "failed" ? "bg-[#faeee4] text-[#93401d]" : "bg-[#eff2ef] text-[#52635b]")}>
+                    {statusLabel(order.paymentStatus)}
+                  </span>
+                </span>
+                <ArrowUpRight className="hidden shrink-0 text-[#52635b] group-hover:text-[#215241] sm:block" size={15} aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : <PanelNotice>No orders in this view.</PanelNotice>)}
+    </section>
+  );
+}
+
+function InventoryPanel({ sources, market }: { sources: Record<MarketCode, Source<StockWatch>>; market: MarketFilter }) {
+  const selectedMarkets = market === "all" ? markets : markets.filter(({ code }) => code === market);
+
+  return (
+    <section className={panelClass + " lg:col-start-2"}>
+      <PanelHeading title="Stock watch" href="/admin/replenishment" linkLabel="Watchlist" />
+      <div className="grid gap-2.5 px-4 pt-2 pb-4 sm:px-5 sm:pb-5">
+        {selectedMarkets.map(({ code, name }) => {
+          const source = sources[code];
+          const items = source.status === "ready" ? source.data.items : [];
+          const alerts = items.filter((item) => item.severity !== "setup")
+            .sort((left, right) => Number(right.severity === "critical") - Number(left.severity === "critical"));
+          const setupCount = items.length - alerts.length;
+          return (
+            <div key={code} className="rounded-xl border border-[#e3ebe4] bg-[#f8faf7] p-3">
+              <h3 className="text-sm font-semibold">{name}</h3>
+              {source.status === "loading" && <p className="mt-1 text-xs text-[#52635b]" role="status">Checking stock…</p>}
+              {source.status === "unavailable" && <p className="mt-1 text-xs text-[#52635b]" role="status">Stock watch is unavailable.</p>}
+              {source.status === "ready" && (
+                <>
+                  <p className="mt-1 text-xs text-[#52635b]">
+                    {alerts.length === 0 ? "No alerts for tracked stock" : alerts.length + (alerts.length === 1 ? " inventory alert" : " inventory alerts")}
+                    {setupCount > 0 && " · " + setupCount + " untracked"}
+                  </p>
+                  {alerts.length > 0 && (
+                    <ul className="mt-2.5 space-y-2">
+                      {alerts.slice(0, 2).map((item) => (
+                        <li key={item.inventoryLevelId ?? item.tenantProductId} className="flex gap-2 text-xs">
+                          <ArrowDownRight size={15} className="shrink-0 text-[#93401d]" aria-hidden="true" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold" title={item.productName}>{item.productName}</span>
+                            {item.locationName && <span className="block truncate text-[#52635b]">{item.locationName}</span>}
+                          </span>
+                          <span className="shrink-0 text-[#93401d]">{item.availableToSell ?? "—"} available</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
 export default function AdminDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const response = await fetch("/api/admin/dashboard", {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        if (response.status === 401) {
-          window.location.href = "/admin";
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error("Unable to load dashboard information.");
-        }
-
-        const result: DashboardData = await response.json();
-        setData(result);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Something went wrong loading the dashboard."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDashboard();
-  }, []);
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f7f8f6]">
-        <div className="text-sm text-gray-500">Loading your workspace...</div>
-      </main>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f7f8f6] p-6">
-        <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-lg font-semibold text-gray-900">
-            Dashboard unavailable
-          </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            {error || "We could not retrieve your store information."}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-5 rounded-lg bg-[#17251e] px-5 py-2.5 text-sm font-medium text-white"
-          >
-            Try again
-          </button>
-        </div>
-      </main>
-    );
-  }
+  const [revision, setRevision] = useState(0);
+  const [market, setMarket] = useState<MarketFilter>("all");
+  const operations = useDashboardSource<Operations>("/api/admin/operations-inbox", revision);
+  const analytics = useDashboardSource<Analytics>("/api/admin/analytics", revision);
+  const stockGB = useDashboardSource<StockWatch>("/api/admin/replenishment?market=GB", revision);
+  const stockNG = useDashboardSource<StockWatch>("/api/admin/replenishment?market=NG", revision);
+  const loading = [operations, analytics, stockGB, stockNG].some((source) => source.status === "loading");
 
   return (
-    <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[258px] flex-col border-r border-white/10 bg-[#17251e] text-white lg:flex">
-        <div className="flex h-[76px] items-center border-b border-white/10 px-7">
+    <main className="min-h-screen bg-[#f2f5f1] font-sans text-[#172a21]">
+      <header className="flex min-h-14 items-center justify-between gap-2 border-b border-[#dfe6e1] bg-white px-4 sm:px-7 lg:px-8">
+        <span className="text-sm font-semibold lg:hidden">Zayvi Store</span>
+        <span className="hidden text-sm font-medium text-[#52635b] lg:inline">Workspace <span aria-hidden="true">/</span> Overview</span>
+        <div className="flex items-center gap-2.5">
+          <Link href="/admin/system-readiness" prefetch={false} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-[#52635b] hover:text-[#215241]">
+            <span className="size-1.5 rounded-full bg-[#92713f]" aria-hidden="true" /> Preview
+          </Link>
+          <button
+            type="button"
+            aria-label={loading ? "Refreshing dashboard" : "Refresh dashboard"}
+            aria-busy={loading}
+            disabled={loading}
+            onClick={() => setRevision((previous) => previous + 1)}
+            className="grid size-11 place-items-center rounded-xl text-[#215241] hover:bg-[#edf3ee] disabled:opacity-60"
+          >
+            <RefreshCw size={18} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      <div className="mx-auto max-w-[1490px] px-4 pt-5 pb-8 sm:px-7 sm:pt-7 lg:px-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
           <div>
-            <div className="text-xl font-semibold tracking-[0.18em]">
-              ZAYVI
-            </div>
-            <div className="mt-0.5 text-[10px] tracking-[0.2em] text-white/45">
-              COMMERCE PLATFORM
-            </div>
+            <h1 className="text-[clamp(1.75rem,4vw,2.75rem)] leading-tight font-semibold tracking-[-0.045em]">Store overview</h1>
+            <p className="mt-1 text-sm text-[#52635b]">Orders, stock and outstanding work.</p>
           </div>
+          <Link href="/admin/operations-audit" prefetch={false} className="hidden min-h-11 items-center gap-2 rounded-xl border border-[#dbe5dd] bg-white px-3 text-sm font-semibold text-[#215241] hover:bg-[#eaf2ec] sm:inline-flex">
+            Operations audit <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
         </div>
-
-        <div className="border-b border-white/10 px-5 py-5">
-          <div className="text-[10px] font-semibold tracking-[0.16em] text-white/40">
-            WORKSPACE
-          </div>
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.07] px-3 py-3">
-            <div>
-              <div className="text-sm font-medium">Zayvi Store</div>
-              <div className="mt-1 text-xs text-white/45">Main store</div>
-            </div>
-            <span className="text-white/50">⌄</span>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
-          {navigation.map((section) => (
-            <div key={section.group}>
-              <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.15em] text-white/35">
-                {section.group}
-              </div>
-              <div className="space-y-1">
-                {section.items.map(([label, icon, href]) => {
-                  const active = label === "Overview";
-                  return (
-                    <a
-                      key={label}
-                      href={href}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition ${
-                        active
-                          ? "bg-[#d8e7d9] font-semibold text-[#17251e]"
-                          : "text-white/65 hover:bg-white/[0.07] hover:text-white"
-                      }`}
-                    >
-                      <span className="w-5 text-center text-base">{icon}</span>
-                      {label}
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-white/10 p-5">
-          <div className="text-xs text-white/45">Zayvi Commerce</div>
-          <div className="mt-1 text-xs text-white/65">Platform preview</div>
-        </div>
-      </aside>
-
-      <section className="lg:pl-[258px]">
-        <header className="sticky top-0 z-10 flex h-[76px] items-center justify-between border-b border-gray-200 bg-white/90 px-5 backdrop-blur-md md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Overview</div>
-            <div className="mt-1 text-sm font-semibold">Store overview</div>
-          </div>
-          <div className="flex items-center gap-3">
-            <a
-              href="/admin"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
-            >
-              Image uploader
-            </a>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e5ede5] text-sm font-semibold text-[#31543b]">
-              Z
-            </div>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-[1500px] px-5 py-8 md:px-9 md:py-10">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div>
-              <div className="text-sm text-gray-500">Good to see you</div>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#17251e]">
-                Welcome to Zayvi.
-              </h1>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-gray-500">
-                Manage your commerce operations, catalogue, storefront and
-                international markets from one workspace.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Status>preview</Status>
-              <Status>{data.backend?.status ?? "unavailable"}</Status>
-              <span className="text-xs text-gray-400">
-                Store environment · AWS backend {data.backend?.database ? "database ready" : "checking"}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5 md:flex md:items-center md:justify-between md:px-7">
-            <div className="flex gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg text-[#31543b]">
-                !
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-[#23432d]">
-                  Your store is currently in preview mode
-                </h2>
-                <p className="mt-1 max-w-2xl text-xs leading-5 text-[#55705b]">
-                  Product and market information is being prepared. Provider
-                  test payments are available for controlled validation, while
-                  live checkout and real fulfilment remain disabled until the
-                  remaining release controls are verified.
-                </p>
-              </div>
-            </div>
-            <span className="mt-4 inline-block text-xs font-semibold text-[#31543b] md:mt-0">
-              Live purchasing disabled
-            </span>
-          </div>
-
-          <div className="mt-9">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold">Store at a glance</h2>
-              <a
-                href="/admin/products"
-                className="text-xs font-semibold text-[#31543b] hover:underline"
-              >
-                Manage catalogue →
-              </a>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                {
-                  label: "Catalogue products",
-                  value: data.catalogue.totalProducts.toString(),
-                  note: "Products currently configured",
-                  icon: "◇",
-                },
-                {
-                  label: "Product categories",
-                  value: data.catalogue.categories.length.toString(),
-                  note: "Categories represented",
-                  icon: "▦",
-                },
-                {
-                  label: "Markets configured",
-                  value: data.markets.length.toString(),
-                  note: "UK and Nigeria",
-                  icon: "◎",
-                },
-                {
-                  label: "Payment providers",
-                  value: data.payments.providers.length.toString(),
-                  note: "Configuration records",
-                  icon: "⇄",
-                },
-              ].map((metric) => (
-                <div
-                  key={metric.label}
-                  className="rounded-2xl border border-gray-200 bg-white p-5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-500">
-                      {metric.label}
-                    </span>
-                    <span className="text-lg text-[#66816b]">
-                      {metric.icon}
-                    </span>
-                  </div>
-                  <div className="mt-5 text-3xl font-semibold tracking-tight">
-                    {metric.value}
-                  </div>
-                  <div className="mt-1 text-xs text-gray-400">
-                    {metric.note}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-9 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-            <section className="rounded-2xl border border-gray-200 bg-white p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold">Market setup</h2>
-                  <p className="mt-1 text-xs text-gray-400">
-                    Configured commerce regions
-                  </p>
-                </div>
-                <span className="text-xs text-gray-400">02 markets</span>
-              </div>
-
-              <div className="mt-5 divide-y divide-gray-100">
-                {data.markets.map((market) => (
-                  <div
-                    key={market.code}
-                    className="flex items-center justify-between py-4"
+        <div className="grid items-start gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <OperationsPanel source={operations} />
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <div role="group" aria-label="Market filter" className="inline-flex max-w-full gap-0.5 rounded-xl border border-[#dfe6e1] bg-white p-1">
+                {([{ code: "all", shortName: "All markets" }, ...markets] as const).map(({ code, shortName }) => (
+                  <button
+                    key={code}
+                    type="button"
+                    aria-pressed={market === code}
+                    onClick={() => setMarket(code)}
+                    className={"min-h-11 rounded-lg px-2.5 whitespace-nowrap sm:px-3.5 " +
+                      (market === code ? "bg-[#e6f0e9] text-[#16372e]" : "text-[#52635b] hover:bg-[#f1f5f2]")}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f1f4f0] text-xs font-semibold text-[#31543b]">
-                        {market.code}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">
-                          {market.name}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-400">
-                          Market currency
-                        </div>
-                      </div>
-                    </div>
-                    <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600">
-                      {market.currency}
-                    </span>
-                  </div>
+                    <span className="text-xs font-semibold">{shortName}</span>
+                  </button>
                 ))}
               </div>
-            </section>
-
-            <section className="rounded-2xl border border-gray-200 bg-white p-6">
-              <h2 className="text-base font-semibold">Payment configuration</h2>
-              <p className="mt-1 text-xs text-gray-400">
-                Provider readiness
-              </p>
-              <div className="mt-5 space-y-4">
-                {data.payments.providers.map((provider) => (
-                  <div
-                    key={provider.name}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="text-sm font-medium">
-                      {provider.name}
-                    </span>
-                    <Status>{provider.status}</Status>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 rounded-xl bg-[#f7f8f6] p-4">
-                <div className="text-xs font-semibold text-gray-700">
-                  Live payments are not active
-                </div>
-                <p className="mt-1 text-xs leading-5 text-gray-500">
-                  Test-mode payment integration is available for validation.
-                  Live charging remains behind the release gate until provider,
-                  fulfilment and policy controls are approved.
-                </p>
-              </div>
-            </section>
-          </div>
-
-          <div className="mt-9">
-            <div className="mb-4">
-              <h2 className="text-base font-semibold">Storefront foundation</h2>
-              <p className="mt-1 text-xs text-gray-400">
-                Your current theme configuration and available design systems
-              </p>
+              <Link className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#215241] sm:hidden" href="/admin/operations-audit" prefetch={false}>
+                Audit <ArrowUpRight size={14} aria-hidden="true" />
+              </Link>
             </div>
-
-            <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-              <section className="rounded-2xl border border-gray-200 bg-white p-6">
-                <div className="text-xs font-medium text-gray-400">
-                  CURRENT THEME
-                </div>
-                <h3 className="mt-3 text-xl font-semibold capitalize">
-                  {String(data.theme?.template?.family ?? "editorial").replaceAll("-", " ")}
-                </h3>
-                <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Colour palette</span>
-                    <span className="font-medium capitalize">
-                      {String(data.theme?.brand?.palette ?? "warm-neutral").replaceAll("-", " ")}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Heading font</span>
-                    <span className="font-medium">
-                      {data.theme?.brand?.headingFont ?? "modern-sans"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Body font</span>
-                    <span className="font-medium">{data.theme?.brand?.bodyFont ?? "modern-sans"}</span>
-                  </div>
-                </div>
-                <div className="mt-6 border-t border-gray-100 pt-5">
-                  <a
-                    href="#theme-library"
-                    className="text-xs font-semibold text-[#31543b] hover:underline"
-                  >
-                    Explore theme library →
-                  </a>
-                </div>
-              </section>
-
-              <section
-                id="theme-library"
-                className="rounded-2xl border border-gray-200 bg-white p-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Available templates</h3>
-                  <span className="text-xs text-gray-400">
-                    {data.availableTemplates.length} design systems
-                  </span>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {data.availableTemplates.map((template) => (
-                    <div
-                      key={template.family}
-                      className="rounded-xl border border-gray-100 bg-[#fafbf9] p-4"
-                    >
-                      <div className="text-sm font-semibold">
-                        {template.name}
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-gray-500">
-                        {template.description}
-                        <div className="mt-2 text-[11px] text-gray-400">
-                          {template.recommendedFor?.join(" · ") ?? ""}
-                        </div>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
+            <PerformancePanel source={analytics} market={market} />
           </div>
-
-          <footer className="mt-12 border-t border-gray-200 py-6 text-xs text-gray-400">
-            Zayvi Commerce Platform · Store configuration overview
-          </footer>
+          <OrdersPanel source={analytics} market={market} />
+          <InventoryPanel sources={{ GB: stockGB, NG: stockNG }} market={market} />
         </div>
-      </section>
+      </div>
     </main>
   );
 }

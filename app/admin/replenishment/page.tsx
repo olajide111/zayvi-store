@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useMemo, useState } from "react";
 
 type FallbackSupplier = {
@@ -178,24 +181,12 @@ export default function AdminReplenishmentPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Replenishment</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Replenishment watchlist
-            </h1>
-          </div>
-          <a
-            href="/admin/inventory"
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-          >
-            Back to inventory
-          </a>
-        </div>
-      </header>
+      <AdminPageHeading section="Operations" title="Replenishment watchlist" description="Review stock gaps and create draft purchase orders from verified offers.">
+        <Link href="/admin/inventory" prefetch={false} className={adminAction}>Inventory</Link>
+        <Link href="/admin/purchase-orders" prefetch={false} className={adminAction}>Purchase orders</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -230,16 +221,16 @@ export default function AdminReplenishmentPage() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-red-100 bg-white p-5">
-            <div className="text-xs text-gray-400">No sellable stock</div>
-            <div className="mt-2 text-3xl font-semibold">{critical}</div>
+            <div className="text-xs text-[#52635b]">No sellable stock</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{critical}</div>
           </div>
           <div className="rounded-2xl border border-amber-100 bg-white p-5">
-            <div className="text-xs text-gray-400">At safety threshold</div>
-            <div className="mt-2 text-3xl font-semibold">{warnings}</div>
+            <div className="text-xs text-[#52635b]">At safety threshold</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{warnings}</div>
           </div>
           <div className="rounded-2xl border border-blue-100 bg-white p-5">
-            <div className="text-xs text-gray-400">Inventory setup needed</div>
-            <div className="mt-2 text-3xl font-semibold">{setup}</div>
+            <div className="text-xs text-[#52635b]">Inventory setup needed</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{setup}</div>
           </div>
         </div>
 
@@ -288,7 +279,7 @@ export default function AdminReplenishmentPage() {
                       <div className="truncate text-sm font-semibold">
                         {item.productName}
                       </div>
-                      <div className="mt-1 text-xs text-gray-400">
+                      <div className="mt-1 text-xs text-[#52635b]">
                         {item.canonicalCode} · {item.publicationStatus.replaceAll("_", " ")}
                       </div>
                       <div className="mt-2 inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-600">

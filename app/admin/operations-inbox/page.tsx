@@ -1,5 +1,9 @@
 "use client";
 
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 
 type InboxItem = {
@@ -118,39 +122,13 @@ export default function OperationsInboxPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1450px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Operations inbox</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Operations inbox</h1>
-          </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 disabled:opacity-40"
-          >
-            Refresh
-          </button>
-        </div>
-      </header>
+      <AdminPageHeading section="Operations" title="Operations inbox" description="Find open work across suppliers, product discovery, purchase orders and returns.">
+        <Link href="/admin/operations-audit" prefetch={false} className={adminAction}>View audit</Link>
+        <button type="button" onClick={() => void load()} disabled={loading} className={adminAction}>Refresh</button>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1450px] px-5 py-8 md:px-9">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-          <div className="text-sm font-semibold text-blue-800">Human-in-the-loop operations queue</div>
-          <p className="mt-1 max-w-4xl text-xs leading-5 text-blue-700">
-            This inbox surfaces work that already exists in Zayvi. It does not approve suppliers,
-            publish products, send purchase orders, receive inventory or process returns automatically.
-            Open an item to complete the action in its controlled workspace.
-          </p>
-          <p className="mt-2 max-w-4xl text-[11px] leading-5 text-blue-700">
-            Escalation is time-based and transparent: supplier verification targets 72h,
-            product discovery 48h, supplier PO acknowledgement 24h, and return/refund
-            follow-up 24h. Each item shows its own target and urgent threshold.
-          </p>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="mx-auto max-w-[1450px] px-4 py-5 sm:px-7 lg:px-8">
+        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           {[
             ["urgent", "Urgent", data?.counts.urgent],
             ["attention", "Attention", data?.counts.attention],
@@ -170,22 +148,25 @@ export default function OperationsInboxPage() {
                   setOverdueOnly(false);
                 }
               }}
-              className="rounded-2xl border border-gray-200 bg-white p-5 text-left"
+              aria-pressed={String(label) === "Overdue" ? overdueOnly : !overdueOnly && severity === value}
+              className="rounded-xl border border-[#dfe6e1] bg-white p-3 text-left hover:bg-[#f1f6f1] aria-pressed:border-[#769681] aria-pressed:bg-[#e8f1e9] sm:p-4"
             >
-              <div className="text-xs text-gray-400">{String(label)}</div>
-              <div className="mt-2 text-3xl font-semibold">{count ?? "—"}</div>
+              <div className="text-xs text-[#52635b]">{String(label)}</div>
+              <div className="mt-1.5 text-2xl font-semibold tabular-nums">{count ?? "—"}</div>
             </button>
           ))}
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 lg:flex-row">
+        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 xl:flex-row">
           <input
+            aria-label="Search operational tasks"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search operational tasks"
             className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm"
           />
           <select
+            aria-label="Priority"
             value={severity}
             onChange={(event) => setSeverity(event.target.value)}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
@@ -197,6 +178,7 @@ export default function OperationsInboxPage() {
             <option value="review">Review</option>
           </select>
           <select
+            aria-label="Workspace"
             value={type}
             onChange={(event) => setType(event.target.value)}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
@@ -230,10 +212,10 @@ export default function OperationsInboxPage() {
         )}
 
         {!loading && !error && visible.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-12 text-center">
-            <h2 className="text-base font-semibold">No matching operational work</h2>
+          <div className="mt-6 rounded-xl border border-[#dfe6e1] bg-white px-4 py-8 text-center">
+            <h2 className="text-base font-semibold">{data?.total ? "No matching operational work" : "You’re all caught up"}</h2>
             <p className="mt-2 text-sm text-gray-500">
-              Clear the filters or refresh after new supplier, product, PO or return activity.
+              {data?.total ? "Clear the filters to see open work." : "New tasks appear here when they need a review or an action."}
             </p>
           </div>
         )}
@@ -245,7 +227,7 @@ export default function OperationsInboxPage() {
                 <a
                   key={item.id}
                   href={item.href}
-                  className="grid gap-4 px-5 py-5 hover:bg-[#fafbf9] md:grid-cols-[120px_130px_minmax(0,1fr)_180px]"
+                  className="grid gap-4 px-5 py-5 hover:bg-[#fafbf9] xl:grid-cols-[105px_115px_minmax(0,1fr)_146px]"
                 >
                   <div>
                     <span className={"inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold capitalize " + severityClasses(item.severity)}>
@@ -292,7 +274,7 @@ export default function OperationsInboxPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400 md:text-right">
+                  <div className="text-xs text-[#52635b] md:text-right">
                     {item.createdAt ? new Date(item.createdAt).toLocaleString("en-GB") : "—"}
                     <div className="mt-1 font-semibold text-[#31543b]">Open workspace →</div>
                   </div>

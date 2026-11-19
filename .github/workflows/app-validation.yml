@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - zayvi-aws-integration
+      - zayvi-admin-dashboard
   pull_request:
     branches:
       - main

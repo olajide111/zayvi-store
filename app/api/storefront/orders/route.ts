@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { storefrontApiMarket } from "@/lib/storefront-market-server";
+import { isDeliveryQuote } from "@/lib/delivery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +22,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid order request." }, { status: 400 });
   }
 
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid order request." }, { status: 400 });
+  }
+
   const payload = body as {
     customerName?: unknown;
     customerEmail?: unknown;
@@ -27,6 +33,8 @@ export async function POST(request: NextRequest) {
     idempotencyKey?: unknown;
     marketCode?: unknown;
     items?: unknown;
+    deliveryAddress?: unknown;
+    shippingMinor?: unknown;
   };
 
   const customerName =
@@ -39,14 +47,9 @@ export async function POST(request: NextRequest) {
     typeof payload.phone === "string" && payload.phone.trim()
       ? payload.phone.trim()
       : undefined;
-  const marketCode =
-    typeof payload.marketCode === "string"
-      ? payload.marketCode.trim().toUpperCase()
-      : "GB";
-
-  if (!["GB", "NG"].includes(marketCode)) {
-    return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
-  }
+  const requestedMarket = typeof payload.marketCode === "string"
+    ? payload.marketCode.trim().toUpperCase()
+    : payload.marketCode;
 
   const idempotencyKey =
     typeof payload.idempotencyKey === "string"
@@ -93,6 +96,21 @@ export async function POST(request: NextRequest) {
     };
   });
 
+  const selection = await storefrontApiMarket(requestedMarket);
+  if (selection.error) return selection.error;
+  const { market: marketCode } = selection;
+
+  if (payload.deliveryAddress !== undefined) {
+    if (!Number.isSafeInteger(payload.shippingMinor) || Number(payload.shippingMinor) < 0) {
+      return NextResponse.json({ error: "Review the current delivery fee before saving." }, { status: 400 });
+    }
+
+    const quote = await callZayviAwsApi(`/delivery-settings?market=${marketCode}`);
+    if (!quote.ok || !isDeliveryQuote(quote.data, marketCode)) {
+      return NextResponse.json({ error: "Preview delivery setup is unavailable." }, { status: 503 });
+    }
+  }
+
   const result = await callZayviAwsApi("/orders", {
     method: "POST",
     body: {
@@ -102,6 +120,8 @@ export async function POST(request: NextRequest) {
       idempotencyKey,
       marketCode,
       items,
+      deliveryAddress: payload.deliveryAddress,
+      shippingMinor: payload.shippingMinor,
     },
   });
 

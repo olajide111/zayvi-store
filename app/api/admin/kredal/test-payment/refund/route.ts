@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasAdminSession } from "@/lib/admin-auth";
 import { callZayviAwsApi } from "@/lib/aws-api";
+import { reconcileKredalTestPayment } from "@/lib/kredal-test-reconciliation";
 import {
   getKredalPayment,
   refundKredalPayment,
@@ -110,27 +111,13 @@ export async function POST(request: NextRequest) {
         ? payment.hold_state.trim().toLowerCase()
         : null;
 
-    if (
-      providerPaymentState === "refunded" ||
-      providerPaymentState === "partially_refunded"
-    ) {
-      await callZayviAwsApi("/payment-attempts/kredal", {
-        method: "PUT",
-        body: {
-          orderId,
-          providerPaymentState,
-          providerHoldState,
-          providerPayload: {
-            ...payment,
-            mode: "test",
-            verifiedAt: new Date().toISOString(),
-          },
-        },
-      });
-    }
+    const reconciliation = ["refunded", "partially_refunded"].includes(providerPaymentState)
+      ? await reconcileKredalTestPayment(orderId, payment, providerPaymentState, providerHoldState)
+      : { applied: false };
 
     return NextResponse.json({
       refundRequested: true,
+      ...reconciliation,
       providerPaymentState: providerPaymentState || "unknown",
       providerHoldState,
       payment,

@@ -23,7 +23,7 @@ export async function POST(
   }
 
   const result = await callZayviAwsApi(
-    `/discovery-candidates/${encodeURIComponent(id)}/approve`,
+    `/discovery-candidates/${encodeURIComponent(id)}/approve-with-image-review`,
     { method: "POST", body }
   );
 

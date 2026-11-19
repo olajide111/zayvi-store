@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
+
 import { use, useEffect, useState } from "react";
 
 type SupplierInventorySyncRun = {
@@ -345,23 +348,11 @@ export default function SupplierPortalAccessPage({
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <a
-              href={`/admin/suppliers/${id}`}
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              ← Supplier
-            </a>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">
-              Vendor portal access
-            </h1>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Suppliers" title="Vendor portal access" description="Manage access and API credentials for this supplier.">
+        <Link href={`/admin/suppliers/${id}`} prefetch={false} className={adminAction}>Supplier details</Link>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1200px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1200px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
           <div className="text-sm font-semibold text-blue-800">
             Invite-only supplier access
@@ -417,27 +408,27 @@ export default function SupplierPortalAccessPage({
         >
           <h2 className="text-sm font-semibold">Invite vendor user</h2>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <input
               type="email"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Vendor email"
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+              className="min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-sm"
             />
             <input
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               placeholder="Display name (optional)"
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+              className="min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-sm"
             />
             <select
               value={role}
               onChange={(event) =>
                 setRole(event.target.value as "owner" | "editor" | "viewer")
               }
-              className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm md:col-span-2"
+              className="min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm md:col-span-2"
             >
               <option value="owner">Owner — can update supplier offers</option>
               <option value="editor">Editor — can update supplier offers</option>
@@ -489,18 +480,18 @@ export default function SupplierPortalAccessPage({
           )}
 
           <form onSubmit={createApiCredential} className="mt-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
               <input
                 required
                 value={credentialLabel}
                 onChange={(event) => setCredentialLabel(event.target.value)}
                 placeholder="Credential label"
-                className="rounded-xl border border-gray-200 px-4 py-3 text-sm"
+                className="min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-sm"
               />
               <select
                 value={credentialExpiryDays}
                 onChange={(event) => setCredentialExpiryDays(event.target.value)}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+                className="min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
               >
                 <option value="30">Expires in 30 days</option>
                 <option value="90">Expires in 90 days</option>
@@ -515,7 +506,7 @@ export default function SupplierPortalAccessPage({
                     event.target.value as "feed" | "inventory" | "both"
                   )
                 }
-                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+                className="min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
               >
                 <option value="feed">Product feed only</option>
                 <option value="inventory">Inventory sync only</option>
@@ -539,7 +530,7 @@ export default function SupplierPortalAccessPage({
                   className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_160px_140px_120px]"
                 >
                   <div>
-                    <div className="text-sm font-semibold">{credential.label}</div>
+                    <div className="text-sm font-semibold break-words">{credential.label}</div>
                     <div className="mt-1 font-mono text-[11px] text-gray-400">
                       {credential.keyPrefix}••••••••
                     </div>
@@ -590,7 +581,7 @@ export default function SupplierPortalAccessPage({
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-5 py-4">
             <h2 className="text-sm font-semibold">Supplier inventory sync history</h2>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-[#52635b]">
               Supplier-reported stock evidence only. Owned inventory and publication are never changed by these syncs.
             </p>
           </div>
@@ -610,7 +601,7 @@ export default function SupplierPortalAccessPage({
                     <div className="text-sm font-semibold capitalize">
                       {run.status.replaceAll("_", " ")}
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {run.sourceReference || run.sourceType} ·{" "}
                       {new Date(run.createdAt).toLocaleString("en-GB")}
                     </div>
@@ -661,7 +652,7 @@ export default function SupplierPortalAccessPage({
                     <div className="text-sm font-semibold">
                       {user.displayName || user.email}
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-1 text-xs text-[#52635b]">
                       {user.email}
                     </div>
                     {user.lastLoginAt && (

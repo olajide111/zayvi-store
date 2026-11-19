@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
+import { productPath } from "@/lib/storefront-market";
 
 const STORE_COLOR = "#16a34a";
 
@@ -14,13 +15,13 @@ type Props = {
 
 export default function ProductCard({ product, onView, onAdd }: Props) {
   const [hov, setHov] = useState(false);
+  const productHref = productPath(product.id, product.marketCode);
   const currency = product.currency || (product.marketCode === "NG" ? "NGN" : "GBP");
   const formattedPrice = new Intl.NumberFormat(
     product.marketCode === "NG" ? "en-NG" : "en-GB",
     {
       style: "currency",
       currency,
-      maximumFractionDigits: currency === "NGN" ? 0 : 2,
     }
   ).format(Number(product.price));
 
@@ -38,7 +39,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
       }}
     >
       <div style={{ background: "#f7f7f5", height: 240, position: "relative", overflow: "hidden" }}>
-        <Link href={`/product/${product.id}`}>
+        <Link href={productHref}>
           <img
             src={product.image}
             alt={product.name}
@@ -81,7 +82,7 @@ export default function ProductCard({ product, onView, onAdd }: Props) {
       </div>
 
       <div style={{ padding: "16px 16px 18px" }}>
-        <Link href={`/product/${product.id}`} style={{ textDecoration: "none" }}>
+        <Link href={productHref} style={{ textDecoration: "none" }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 4, lineHeight: 1.3 }}>
             {product.name}
           </div>

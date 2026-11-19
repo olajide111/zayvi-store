@@ -3,6 +3,13 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { Pool } = require("pg");
 const { Signer } = require("@aws-sdk/rds-signer");
+const { checkoutError, deliveryMigration, normalizeDeliveryAddress, previewDeliveryQuote } = require("./checkout-delivery");
+
+const { contentMigration, queryStorefrontContent } = require("./storefront-content");
+const { marketsMigration, queryStorefrontMarkets, storeMarketSettings } = require("./storefront-markets");
+const { socialLinksMigration, querySocialLinks } = require("./storefront-social-links");
+const { reviewSupplierImage, storefrontImage } = require("./supplier-image-rights");
+const { mapKredalPaymentState } = require("./kredal-payment-state");
 
 let pool;
 
@@ -102,7 +109,7 @@ function normalizeProduct(row) {
     slug: row.slug,
     name: row.name,
     category: attributes.category || row.product_type || "Uncategorised",
-    image: attributes.image || "",
+    image: storefrontImage(attributes, row.market_code),
     emoji: attributes.emoji || "",
     desc: attributes.desc || "",
     longDesc: attributes.longDesc || "",
@@ -1014,6 +1021,11 @@ async function createOrder(input) {
     return { id, quantity, selectedColor, selectedSize };
   });
 
+  const deliveryAddress = input?.deliveryAddress === undefined
+    ? null
+    : normalizeDeliveryAddress(input.deliveryAddress, marketCode);
+  const shippingQuote = deliveryAddress ? previewDeliveryQuote(marketCode) : null;
+
   const requestFingerprint = crypto
     .createHash("sha256")
     .update(
@@ -1022,7 +1034,8 @@ async function createOrder(input) {
         customerEmail,
         phone,
         marketCode,
-        items: normalizedItems
+        items: normalizedItems,
+        ...(deliveryAddress ? { deliveryAddress } : {})
       })
     )
     .digest("hex");
@@ -1031,8 +1044,13 @@ async function createOrder(input) {
 
   try {
     return await withTenant(client, async (tx, tenantId) => {
+      const marketDefinition = schemaMigrationDefinitions.find(({ name }) => name === marketsMigration);
+      const marketsReady = await probeSchemaMigration(tx, marketDefinition);
       const storeResult = await tx.query(
-        "SELECT id FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active' LIMIT 1",
+        marketsReady
+          ? `SELECT id, default_market_code, storefront_market_codes, storefront_market_switcher
+             FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active' FOR SHARE`
+          : "SELECT id FROM stores WHERE tenant_id = $1 AND slug = 'main' AND status = 'active'",
         [tenantId]
       );
 
@@ -1042,6 +1060,10 @@ async function createOrder(input) {
 
       const storeId = storeResult.rows[0].id;
 
+      await tx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        `order:${tenantId}:${idempotencyKey}`
+      ]);
+
       const replay = await tx.query(
         `
           SELECT
@@ -1049,6 +1071,8 @@ async function createOrder(input) {
             order_number,
             customer_name,
             customer_email,
+            subtotal,
+            shipping_total,
             total,
             currency_code,
             order_status,
@@ -1080,6 +1104,8 @@ async function createOrder(input) {
           orderNumber: existing.order_number,
           customerName: existing.customer_name,
           customerEmail: existing.customer_email,
+          subtotal: Number(existing.subtotal),
+          shippingTotal: Number(existing.shipping_total),
           total: Number(existing.total),
           currency: existing.currency_code,
           orderStatus: existing.order_status,
@@ -1089,6 +1115,20 @@ async function createOrder(input) {
           purchasingEnabled: false,
           idempotentReplay: true
         };
+      }
+
+      if (marketsReady && !storeMarketSettings(storeResult.rows[0]).enabledMarkets.includes(marketCode)) {
+        throw checkoutError("This store does not sell in the selected market.", 409);
+      }
+
+      if (shippingQuote) {
+        const definition = schemaMigrationDefinitions.find(({ name }) => name === deliveryMigration);
+        if (!(await probeSchemaMigration(tx, definition))) {
+          throw checkoutError("Preview delivery setup is unavailable.", 503);
+        }
+        if (input.shippingMinor !== shippingQuote.shippingMinor) {
+          throw checkoutError("The delivery fee changed. Review the current fee and try again.", 409);
+        }
       }
 
       const marketResult = await tx.query(
@@ -1213,6 +1253,11 @@ async function createOrder(input) {
           0
         ) / 100;
 
+      if (shippingQuote && shippingQuote.currency !== marketCurrency) {
+        throw checkoutError("The delivery fee does not match this market.", 409);
+      }
+
+      const shippingTotal = (shippingQuote?.shippingMinor ?? 0) / 100;
       const customer = await tx.query(
         `
           INSERT INTO commerce_customers (
@@ -1258,12 +1303,14 @@ async function createOrder(input) {
             source,
             idempotency_key,
             request_fingerprint
+            ${deliveryAddress ? ", delivery_address" : ""}
           )
           VALUES (
             $1, $2, $3, $4, $5, $6,
             'draft', 'unpaid', 'unfulfilled',
-            $7, $8, $9, 0, 0, $9, 'preview',
-            $10, $11
+            $7, $8, $9::numeric, $10::numeric, 0, $9::numeric + $10::numeric, 'preview',
+            $11, $12
+            ${deliveryAddress ? ', $13::jsonb' : ''}
           )
           RETURNING *
         `,
@@ -1277,8 +1324,10 @@ async function createOrder(input) {
           customerName,
           customerEmail,
           subtotal,
+          shippingTotal,
           idempotencyKey,
-          requestFingerprint
+          requestFingerprint,
+          ...(deliveryAddress ? [JSON.stringify(deliveryAddress)] : [])
         ]
       );
 
@@ -1331,6 +1380,8 @@ async function createOrder(input) {
         orderNumber: order.order_number,
         customerName: order.customer_name,
         customerEmail: order.customer_email,
+        subtotal: Number(order.subtotal),
+        shippingTotal: Number(order.shipping_total),
         total: Number(order.total),
         currency: order.currency_code,
         orderStatus: order.order_status,
@@ -1368,6 +1419,7 @@ async function getOrder(orderId) {
             o.fulfilment_status,
             o.subtotal,
             o.shipping_total,
+            to_jsonb(o) -> 'delivery_address' AS delivery_address,
             o.tax_total,
             o.total,
             o.source,
@@ -1491,6 +1543,7 @@ async function getOrder(orderId) {
         fulfilmentStatus: row.fulfilment_status,
         subtotal: Number(row.subtotal),
         shippingTotal: Number(row.shipping_total),
+        deliveryAddress: row.delivery_address ?? null,
         taxTotal: Number(row.tax_total),
         total: Number(row.total),
         source: row.source,
@@ -7190,9 +7243,11 @@ async function approveDiscoveryCandidate(candidateId, input) {
       const slug =
         `${slugBase}-${crypto.randomBytes(3).toString("hex")}`;
 
+      const { image, imageRights } = reviewSupplierImage(candidate, input);
       const attributes = {
         category: candidate.category,
-        image: candidate.image_url || "",
+        image,
+        ...(imageRights ? { imageRights } : {}),
         desc: candidate.description || "",
         longDesc: candidate.description || "",
         discoverySource: "supplier_feed",
@@ -7381,7 +7436,8 @@ async function approveDiscoveryCandidate(candidateId, input) {
           customerPrice,
           currency: targetCurrency,
           reviewNote,
-          duplicateReviewConfirmed: confirmDuplicateReview
+          duplicateReviewConfirmed: confirmDuplicateReview,
+          ...(imageRights ? { imageRights } : {})
         }
       });
 
@@ -7545,6 +7601,30 @@ const schemaMigrationDefinitions = [
     feature: "Operations audit",
     description: "Append-only cross-workflow audit evidence for critical commerce actions.",
     probe: { type: "table", table: "commerce_operations_audit_events" }
+  },
+  {
+    name: deliveryMigration,
+    feature: "Checkout delivery",
+    description: "Delivery address snapshots and market shipping fees for Preview draft orders.",
+    probe: { type: "column", table: "commerce_orders", column: "delivery_address" }
+  },
+  {
+    name: contentMigration,
+    feature: "Storefront publishing",
+    description: "Market-specific page and article drafts with explicit publication.",
+    probe: { type: "table", table: "commerce_storefront_content" }
+  },
+  {
+    name: marketsMigration,
+    feature: "Storefront markets",
+    description: "Store-specific enabled countries, default market and country switcher.",
+    probe: { type: "column", table: "stores", column: "storefront_market_codes" }
+  },
+  {
+    name: socialLinksMigration,
+    feature: "Storefront social links",
+    description: "Seller-managed social profile links in the storefront footer.",
+    probe: { type: "column", table: "stores", column: "storefront_social_links" }
   }
 ];
 
@@ -7598,6 +7678,22 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if (routePath.endsWith("/storefront-social-links")) {
+    return [socialLinksMigration];
+  }
+
+  if (routePath.endsWith("/storefront-market-settings")) {
+    return [marketsMigration];
+  }
+
+  if (/\/(store-content|published-content)$/.test(routePath)) {
+    return [contentMigration];
+  }
+
+  if (routePath.endsWith("/delivery-settings")) {
+    return [deliveryMigration];
+  }
+
   if (routePath.endsWith("/inventory") || routePath.endsWith("/inventory/adjust")) {
     return ["0011_inventory_ledger.sql"];
   }
@@ -7705,7 +7801,7 @@ function requiredSchemaMigrationsForRoute(routePath) {
     ];
   }
 
-  if (/\/discovery-candidates\/[0-9a-f-]{36}\/(approve|reject)$/i.test(routePath)) {
+  if (/\/discovery-candidates\/[0-9a-f-]{36}\/(approve|approve-with-image-review|reject)$/i.test(routePath)) {
     return [
       "0012_supplier_registry.sql",
       "0017_supplier_feed_discovery.sql",
@@ -11721,7 +11817,7 @@ exports.handler = async (event, context) => {
 
   if (
     method === "POST" &&
-    /\/discovery-candidates\/[0-9a-f-]{36}\/approve$/i.test(routePath)
+    /\/discovery-candidates\/[0-9a-f-]{36}\/(approve|approve-with-image-review)$/i.test(routePath)
   ) {
     try {
       const parts = routePath.split("/").filter(Boolean);
@@ -12236,6 +12332,44 @@ exports.handler = async (event, context) => {
     }
   }
 
+  if (routePath.endsWith("/storefront-social-links") && ["GET", "PUT"].includes(method)) {
+    try {
+      const save = method === "PUT";
+      let input;
+      if (save) {
+        try {
+          input = parseBody(event);
+        } catch {
+          throw checkoutError("Invalid social profile links.");
+        }
+      }
+      return response(200, await querySocialLinks({ getPool, withTenant }, input, save));
+    } catch (error) {
+      return response(error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Social links are unavailable."
+      });
+    }
+  }
+
+  if (routePath.endsWith("/storefront-market-settings") && ["GET", "PATCH"].includes(method)) {
+    try {
+      const save = method === "PATCH";
+      let input;
+      if (save) {
+        try {
+          input = parseBody(event);
+        } catch {
+          throw checkoutError("Invalid market settings.");
+        }
+      }
+      return response(200, await queryStorefrontMarkets({ getPool, withTenant }, input, save));
+    } catch (error) {
+      return response(error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Storefront market settings are unavailable."
+      });
+    }
+  }
+
   if (method === "GET" && routePath.endsWith("/markets")) {
     try {
       const markets = await listMarkets();
@@ -12437,6 +12571,29 @@ exports.handler = async (event, context) => {
             ? error.message
             : "order_update_failed"
       });
+    }
+  }
+
+  const adminContentRoute = routePath.endsWith("/store-content");
+  const publicContentRoute = routePath.endsWith("/published-content");
+  if ((adminContentRoute && ["GET", "POST"].includes(method)) || (publicContentRoute && method === "GET")) {
+    try {
+      const input = method === "POST" ? parseBody(event) : event?.queryStringParameters;
+      const operation = method === "POST" ? "write" : publicContentRoute ? "public" : "admin";
+      return response(200, await queryStorefrontContent({ getPool, withTenant }, input, operation));
+    } catch (error) {
+      return response(error.statusCode || 500, {
+        error: error.statusCode ? error.message : "Storefront content is unavailable."
+      });
+    }
+  }
+
+  if (method === "GET" && routePath.endsWith("/delivery-settings")) {
+    try {
+      const marketCode = event?.queryStringParameters?.market || "GB";
+      return response(200, previewDeliveryQuote(marketCode));
+    } catch (error) {
+      return response(error.statusCode || 500, { error: error.statusCode ? error.message : "Delivery settings unavailable." });
     }
   }
 

@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
   const secret = process.env.KREDAL_WEBHOOK_SECRET;
 
   if (!secret) {
+    console.error("Kredal webhook signing secret is missing");
     return NextResponse.json(
       { error: "Kredal webhook verification is not configured." },
       { status: 503 }
@@ -39,24 +40,14 @@ export async function POST(request: NextRequest) {
       secret,
     })
   ) {
+    console.warn("Kredal webhook rejected: invalid or stale signature");
     return NextResponse.json(
       { error: "Invalid or stale Kredal signature." },
       { status: 401 }
     );
   }
 
-  let payload: unknown;
-
-  try {
-    payload = JSON.parse(rawBody);
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid Kredal webhook payload." },
-      { status: 400 }
-    );
-  }
-
-  const event = payload as {
+  let payload: {
     id?: unknown;
     type?: unknown;
     sequence?: unknown;
@@ -64,20 +55,36 @@ export async function POST(request: NextRequest) {
     data?: unknown;
   };
 
-  const eventId = typeof event.id === "string" ? event.id.trim() : "";
-  const eventType = typeof event.type === "string" ? event.type.trim() : "";
-  const sequence = Number(event.sequence);
+  try {
+    const parsed: unknown = JSON.parse(rawBody);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new TypeError("Expected a Kredal event object");
+    }
+    payload = parsed;
+  } catch {
+    console.warn("Kredal webhook rejected: invalid payload");
+    return NextResponse.json(
+      { error: "Invalid Kredal webhook payload." },
+      { status: 400 }
+    );
+  }
+
+  const eventId = typeof payload.id === "string" ? payload.id.trim() : "";
+  const eventType = typeof payload.type === "string" ? payload.type.trim() : "";
+  const sequence = payload.sequence;
 
   if (
     !/^evt_[A-Za-z0-9._:-]{1,180}$/.test(eventId) ||
     !ALLOWED_EVENTS.has(eventType) ||
+    typeof sequence !== "number" ||
     !Number.isSafeInteger(sequence) ||
     sequence < 0 ||
-    event.livemode !== false ||
-    !event.data ||
-    typeof event.data !== "object" ||
-    Array.isArray(event.data)
+    payload.livemode !== false ||
+    !payload.data ||
+    typeof payload.data !== "object" ||
+    Array.isArray(payload.data)
   ) {
+    console.warn("Kredal webhook rejected: unsupported event envelope");
     return NextResponse.json(
       { error: "Unsupported Kredal webhook event." },
       { status: 400 }
@@ -94,10 +101,32 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
+    console.error("Kredal webhook could not be persisted", {
+      eventId,
+      eventType,
+      sequence,
+      backendStatus: result.status,
+    });
     return NextResponse.json(
       { error: "Kredal event could not be persisted." },
       { status: 502 }
     );
+  }
+
+  const outcome = result.data as {
+    duplicate?: boolean;
+    applied?: boolean;
+    ignored?: boolean;
+  } | null;
+  const eventContext = { eventId, eventType, sequence };
+  if (outcome?.duplicate) {
+    console.info("Kredal webhook duplicate", eventContext);
+  } else if (outcome?.ignored) {
+    console.info("Kredal webhook ignored", eventContext);
+  } else if (outcome?.applied) {
+    console.info("Kredal webhook applied", eventContext);
+  } else {
+    console.warn("Kredal webhook stored without applying an update", eventContext);
   }
 
   return NextResponse.json({ received: true });

@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import AdminPageHeading, { adminAction, adminPrimaryAction } from "@/components/admin/AdminPageHeading";
+
 import { useEffect, useMemo, useState } from "react";
 
 type Supplier = {
@@ -161,31 +164,12 @@ export default function AdminSuppliersPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f8f6] text-[#202923]">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 md:px-9">
-          <div>
-            <div className="text-xs text-gray-400">Workspace / Suppliers</div>
-            <h1 className="mt-1 text-xl font-semibold text-[#17251e]">Suppliers</h1>
-          </div>
-          <div className="flex gap-2">
-            <a
-              href="/admin/dashboard"
-              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600"
-            >
-              Back to overview
-            </a>
-            <button
-              type="button"
-              onClick={() => setShowForm((value) => !value)}
-              className="rounded-lg bg-[#17251e] px-4 py-2 text-xs font-semibold text-white"
-            >
-              {showForm ? "Close" : "Add supplier"}
-            </button>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeading section="Operations" title="Suppliers" description="Manage supplier records, verification and offers.">
+        <Link href="/admin/supplier-performance" prefetch={false} className={adminAction}>Supplier performance</Link>
+        <button type="button" onClick={() => setShowForm((value) => !value)} className={adminPrimaryAction}>{showForm ? "Close form" : "Add supplier"}</button>
+      </AdminPageHeading>
 
-      <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-9">
+      <section className="mx-auto max-w-[1500px] px-4 py-5 sm:px-7 lg:px-8">
         <div className="rounded-2xl border border-[#dce7dc] bg-[#edf4ed] p-5">
           <div className="text-sm font-semibold text-[#23432d]">Supplier registry is active</div>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-[#55705b]">
@@ -207,7 +191,7 @@ export default function AdminSuppliersPage() {
           >
             <div className="mb-4">
               <h2 className="text-sm font-semibold">Add supplier</h2>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-[#52635b]">
                 Supplier verification starts as pending review.
               </p>
             </div>
@@ -320,16 +304,16 @@ export default function AdminSuppliersPage() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Suppliers</div>
-            <div className="mt-2 text-3xl font-semibold">{data?.total ?? "—"}</div>
+            <div className="text-xs text-[#52635b]">Suppliers</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{data?.total ?? "—"}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Verified</div>
-            <div className="mt-2 text-3xl font-semibold">{verified}</div>
+            <div className="text-xs text-[#52635b]">Verified</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{verified}</div>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="text-xs text-gray-400">Active offers</div>
-            <div className="mt-2 text-3xl font-semibold">{activeOffers}</div>
+            <div className="text-xs text-[#52635b]">Active offers</div>
+            <div className="mt-1.5 text-2xl font-semibold tabular-nums">{activeOffers}</div>
           </div>
         </div>
 
@@ -337,7 +321,7 @@ export default function AdminSuppliersPage() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search supplier, code or type"
+            aria-label="Search suppliers" placeholder="Search supplier, code or type"
             className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
           />
         </div>
@@ -354,19 +338,19 @@ export default function AdminSuppliersPage() {
 
         {!loading && !error && visible.length > 0 && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="grid grid-cols-[1fr_110px] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 md:grid-cols-[minmax(0,1fr)_120px_110px_150px_120px_100px]">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] border-b border-gray-100 bg-[#fafbf9] px-5 py-3 text-xs font-semibold text-gray-400 xl:grid-cols-[minmax(0,1fr)_105px_95px_124px_105px_85px]">
               <span>Supplier</span>
-              <span className="hidden md:block">Market</span>
-              <span className="hidden md:block">Type</span>
-              <span className="hidden md:block">Fulfilment</span>
-              <span className="hidden md:block">Verification</span>
+              <span className="hidden xl:block">Market</span>
+              <span className="hidden xl:block">Type</span>
+              <span className="hidden xl:block">Fulfilment</span>
+              <span className="hidden xl:block">Verification</span>
               <span>Offers</span>
             </div>
 
             {visible.map((supplier) => (
               <div
                 key={supplier.id}
-                className="grid grid-cols-[1fr_110px] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_120px_110px_150px_120px_100px]"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-gray-100 px-5 py-4 last:border-b-0 xl:grid-cols-[minmax(0,1fr)_105px_95px_124px_105px_85px]"
               >
                 <div className="min-w-0">
                   <a
@@ -375,21 +359,21 @@ export default function AdminSuppliersPage() {
                   >
                     {supplier.name}
                   </a>
-                  <div className="mt-1 text-xs text-gray-400">
+                  <div className="mt-1 text-xs text-[#52635b]">
                     {supplier.supplierCode}
                     {supplier.contactEmail ? ` · ${supplier.contactEmail}` : ""}
                   </div>
                 </div>
-                <div className="hidden text-xs text-gray-600 md:block">
+                <div className="hidden text-xs text-gray-600 xl:block">
                   {supplier.marketCode}
                 </div>
-                <div className="hidden text-xs capitalize text-gray-600 md:block">
+                <div className="hidden text-xs capitalize text-gray-600 xl:block">
                   {supplier.supplierType}
                 </div>
-                <div className="hidden text-xs capitalize text-gray-600 md:block">
+                <div className="hidden text-xs capitalize text-gray-600 xl:block">
                   {supplier.fulfilmentModel.replaceAll("_", " ")}
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden xl:block">
                   <StatusPill value={supplier.verificationStatus} />
                 </div>
                 <div className="text-sm font-semibold">{supplier.activeOffers}</div>
