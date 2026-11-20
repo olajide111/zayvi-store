@@ -93,3 +93,13 @@ The owner explicitly requested reworking the previously protected Adire and Accr
 - **Gallery:** five curated groups cover all 26 themes once: African signatures; fashion/considered spaces; immersive/premium; everyday retail/home; equipment/trade. Existing search, industry, style and access filters apply before grouping. Live thumbnail iframes now show Adire and Accra’s actual designs.
 
 Validation: production build/typecheck, 24 model/motion/registry/contract/colour tests, sixteen refined-theme screen renders/custom appearances, distinct African-shop SSR checks and six parsed local SVG assets. Native browser visual review remains pending. No tenant publication, live checkout, payment, database or infrastructure changes.
+
+## London signatures: Mayfair and Camden
+
+Added two free London-inspired signature previews as peers to the African signatures. These are separate registry entries (`mayfair`, `camden`), not replacements for any existing theme or changes to the six direction contracts. The gallery now has 28 themes in six groups, with a dedicated London signatures group.
+
+- **Mayfair:** oyster, claret and a warm stone wardrobe; balanced house-style masthead, an original architectural illustration, framed garment plate, switchable wardrobe chapters and a six-piece tailoring/accessory edit.
+- **Camden:** signal red, asphalt and chalk; graphic campaign typography, a switchable style edit, inspiration photography clearly separated from illustrated product concepts, category blocks and a six-piece streetwear edit.
+- Both default to GBP but have explicit GBP and NGN sample prices. Market switching retains selected basket items/variants. Search, categories, sort, sizes, bag quantities, removals and empty states use the existing demo engine. Neither theme implies British product origin or an actual London retail address.
+- The editor exposes brand, palette, font and motion controls, with local drafts. Unsupported live catalogue/headline controls are hidden. These previews create no orders or payments and are not tenant publishing integrations.
+- Validation: production build/typecheck; 26 model/motion/registry/contract/colour tests; 24 initial-screen/custom-appearance SSR renders, plus existing African-shop checks. Native browser visual review remains pending because Preview is protected; no share link or authentication change was requested for this update.

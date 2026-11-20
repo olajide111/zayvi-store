@@ -40,3 +40,17 @@ test('Forma keeps a six-piece wardrobe with valid size-specific footwear lines',
  assert.equal(bag[0].variant,'EU 43');assert.equal(refinedTotals(items,bag,'NG').total,435000);
  assert.deepEqual(refinedChange(items,bag,'forma-loafer','EU 36',1),bag);
 });
+
+test('London wardrobes retain size choices and explicit prices in both markets',()=>{
+ for(const family of ['mayfair','camden'] as const){
+  const items=REFINED_PRODUCTS[family];assert.equal(items.length,6);
+  assert(items.every(p=>p.gb>0&&p.ng>0&&p.sizes?.length));
+  const p=items[0],size=p.sizes![1];
+  const bag=refinedChange(items,[],p.id,size,2);
+  assert.equal(bag[0].variant,size);
+  assert.equal(refinedTotals(items,bag,'GB').total,p.gb*2);
+  assert.equal(refinedTotals(items,bag,'NG').total,p.ng*2);
+  assert.equal(refinedFilter(items,p.name,'All','edit','GB')[0].id,p.id);
+  assert.equal(refinedFilter(items,'no_such_london_item','All','edit','GB').length,0);
+ }
+});
