@@ -33,3 +33,10 @@ test('comparison aligns different technical fields, deduplicates and limits to t
  assert.deepEqual(result.rows.find(r=>r.key==='Capacity')?.values,['—','5120 Wh','—']);
  assert.deepEqual(result.rows.find(r=>r.key==='Certification')?.values,['Not supplied','Not supplied','Not supplied']);
 });
+test('Forma keeps a six-piece wardrobe with valid size-specific footwear lines',()=>{
+ const items=REFINED_PRODUCTS['atelier-minimal'];assert.equal(items.length,6);
+ assert.equal(refinedFilter(items,'','Accessories','edit','GB').length,2);
+ const bag=refinedChange(items,[],'forma-loafer','EU 43',1);
+ assert.equal(bag[0].variant,'EU 43');assert.equal(refinedTotals(items,bag,'NG').total,435000);
+ assert.deepEqual(refinedChange(items,bag,'forma-loafer','EU 36',1),bag);
+});

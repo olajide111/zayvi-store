@@ -168,7 +168,7 @@ export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
     allowedSections: ["full-height-hero", "statement", "collection-strip", "bag-drawer", "footer-policies"],
     defaultSections: ["full-height-hero", "statement", "collection-strip"],
     colourTokens: ["ivory", "ink", "stone"],
-    defaultColours: { ivory: "#F7F4EE", ink: "#111111", stone: "#CFC8BA" },
+    defaultColours: { ivory: "#E6F2F5", ink: "#173C49", stone: "#8EC3CF" },
     headingFont: "Cormorant Garamond",
     bodyFont: "Jost",
     requires: ["Consistent, evenly lit photography (4:5)"],

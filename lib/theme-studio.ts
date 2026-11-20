@@ -36,9 +36,14 @@ export function themeFitsIndustry(theme:Pick<ThemeDesign,'industries'>,industry:
 }
 
 export function designDemoProducts(theme:Pick<ThemeDesign,'id'|'family'>):StudioProduct[]{
- if(!['adire','accra'].includes(theme.id))return demoProducts(theme.family);
+ if(theme.id==='accra')return demoProducts('general-commerce').map((p,i)=>({...p,id:`accra-${i}`}));
+ if(theme.id!=='adire')return demoProducts(theme.family);
  return [
-  {id:'textile-study-1',name:'The textile edit',category:'Textiles',price:32,image:'/demo-photos/textiles-display.webp'},
-  {id:'textile-study-2',name:'Colour study',category:'Textiles',price:28,image:'/demo-photos/textiles-detail.webp'},
- ].map(p=>({...p,currency:'GBP',description:'Photographic demonstration content, not a product for sale. Photo by WyteShot on Unsplash. Prices are examples. This design does not certify origin, materials or artisan production.'}));
+  {id:'adire-agbada',name:'The Agbada Set',category:"Men’s attire",price:165,image:'/demo-attire/agbada.svg'},
+  {id:'adire-iro',name:'Iro & Buba',category:"Women’s attire",price:138,image:'/demo-attire/iro-buba.svg'},
+  {id:'adire-boubou',name:'The Boubou Dress',category:'Occasion wear',price:128,image:'/demo-attire/boubou.svg'},
+  {id:'adire-kaftan',name:'The Kaftan Set',category:"Men’s attire",price:115,image:'/demo-attire/kaftan.svg'},
+  {id:'adire-wrap',name:'The Occasion Wrap',category:"Women’s attire",price:98,image:'/demo-attire/wrap.svg'},
+  {id:'adire-gele',name:'The Gele Headwrap',category:'Accessories',price:38,image:'/demo-attire/gele.svg'},
+ ].map(p=>({...p,currency:'GBP',description:'Original sample attire illustration with an Adire-inspired resist-pattern concept. This is not a product photograph or a claim about a maker, region or production technique. Prices are examples; sizes, materials and availability must be supplied by the seller.'}));
 }

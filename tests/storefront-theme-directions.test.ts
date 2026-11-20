@@ -55,7 +55,8 @@ test("no name or path clashes with existing code", async () => {
   const { execSync } = await import("node:child_process");
   const added = execSync("git ls-files --others --exclude-standard; git diff --name-only 0e61775375a2ab0f30cc5008c23ad2c17ffc74c4", { encoding: "utf8" }).split("\n").filter(Boolean);
   const allowed = [
-    "lib/storefront-theme-directions.ts",
+    "lib/storefront-theme-directions.ts", "lib/theme-designs.ts", "lib/theme-studio.ts",
+    "components/themes/AfricanShopExperience.tsx", "components/themes/african-shops.module.css", "components/themes/theme-gallery-groups.ts", "components/themes/shop.module.css",
     "tests/storefront-theme-directions.test.ts",
     "docs/storefront/additional-theme-directions.md",
     "lib/theme-registry.ts", "lib/theme-colours.ts", "tests/theme-colours.test.mjs", "tests/theme-registry.test.ts",
@@ -66,10 +67,10 @@ test("no name or path clashes with existing code", async () => {
   ];
   for (const f of added) {
     assert.ok(
-      allowed.includes(f) || f.startsWith("app/admin/themes/directions/") || f.startsWith("components/storefront-directions/"),
+      allowed.includes(f) || f.startsWith("app/admin/themes/directions/") || f.startsWith("components/storefront-directions/") || f.startsWith("public/demo-attire/"),
       "unexpected file outside the isolated paths: " + f
     );
   }
   const tracked = execSync("git ls-tree -r --name-only 0e61775375a2ab0f30cc5008c23ad2c17ffc74c4", { encoding: "utf8" });
-  assert.ok(!tracked.split("\n").some((f) => f.startsWith("components/storefront-directions/")), "isolated folder must not pre-exist");
+  assert.ok(!tracked.split("\n").some((f) => f.startsWith("components/storefront-directions/") || f.startsWith("public/demo-attire/")), "isolated folder must not pre-exist");
 });

@@ -1,6 +1,14 @@
-export type RefinedFamily='fresh-market'|'african-editorial'|'spec-sheet';
+export type RefinedFamily='fresh-market'|'african-editorial'|'spec-sheet'|'atelier-minimal';
 export type RefinedProduct={id:string;name:string;category:string;gb:number;ng:number;note:string;detail:string;colour:string;unit?:string;pack?:number;basis?:string;sizes?:string[];specs?:Record<string,string>};
 export const REFINED_PRODUCTS:Record<RefinedFamily,RefinedProduct[]>={
+ 'atelier-minimal':[
+  {id:'forma-coat',name:'The Merino Coat',category:'Outerwear',gb:420,ng:700000,note:'01 / MERINO WOOL CONCEPT',detail:'A long single-breasted coat concept with a soft shoulder and an unlined silhouette. Sample design and material notes; real care and fibre content must come from the seller.',colour:'#879DA5',sizes:['XS','S','M','L','XL']},
+  {id:'forma-blouse',name:'The Silk Blouse',category:'Clothing',gb:210,ng:350000,note:'02 / WASHED SILK CONCEPT',detail:'A fluid blouse concept with a concealed placket. Sample illustration, not a photograph or a verified material claim.',colour:'#D8E7E8',sizes:['XS','S','M','L','XL']},
+  {id:'forma-tote',name:'The Leather Tote',category:'Accessories',gb:340,ng:570000,note:'03 / LEATHER CONCEPT',detail:'A structured tote concept with one main compartment and an inner pocket. Sample leather texture and construction notes.',colour:'#507B88',sizes:['One size']},
+  {id:'forma-trouser',name:'The Wool Trouser',category:'Clothing',gb:190,ng:320000,note:'04 / WOOL TWILL CONCEPT',detail:'A high-waisted straight-leg trouser concept with a quiet, clean front. All product details and prices are illustrative.',colour:'#4B6874',sizes:['XS','S','M','L','XL']},
+  {id:'forma-scarf',name:'The Cashmere Scarf',category:'Accessories',gb:130,ng:218000,note:'05 / CASHMERE CONCEPT',detail:'A generous brushed scarf concept with a soft edge. Replace these sample material notes with verified product information before publishing.',colour:'#ACCDD2',sizes:['One size']},
+  {id:'forma-loafer',name:'The Leather Loafer',category:'Footwear',gb:260,ng:435000,note:'06 / LEATHER CONCEPT',detail:'A minimal loafer concept on a slim sole. This demo uses illustrative EU sizes; a real store must supply an accurate fit guide.',colour:'#294A58',sizes:['EU 37','EU 38','EU 39','EU 40','EU 41','EU 42','EU 43']},
+ ],
  'fresh-market':[
   {id:'plantain',name:'Ripe plantain',category:'Fresh produce',gb:2.2,ng:1800,note:'Golden edges. Sunday mornings.',detail:'A bunch of four ripe plantain for frying, roasting or a familiar family favourite. Store at room temperature.',colour:'#f2c844',unit:'Bunch of 4',pack:4,basis:'each'},
   {id:'yam',name:'White yam',category:'Fresh produce',gb:3.8,ng:3500,note:'The foundation of a good meal.',detail:'Whole white yam. Sample pack weight: 1 kg. Store in a cool, dry place.',colour:'#b0956a',unit:'1 kg',pack:1,basis:'kg'},
