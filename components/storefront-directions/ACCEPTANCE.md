@@ -55,3 +55,14 @@ User requested a stronger marketplace experience after the source-board integrat
 - Brand, palette and font controls still feed the renderer. Motion-off and system reduced-motion settings suppress transitions.
 - Preview content remains fictional/sample. No catalogue writes, orders, delivery calculations, payment execution or publish/entitlement changes were introduced.
 - Validation: Next production build; marketplace model tests; SSR smoke tests for four initial screens and custom appearance; existing registry/contract/colour tests and reference-port smoke tests. Live browser visual review remains pending.
+
+## Fresh Market, African Editorial and Spec Sheet refinements
+
+The owner requested three distinct improvements after approving the marketplace direction. These three IDs now use responsive renderers in `ZdxRefinedStorefronts.tsx`. The source exports and generated reference ports are kept intact.
+
+- **Fresh Market:** warm illustrated harvest, four aisle cards, pack/unit prices, inline quantity controls, desktop basket, mobile basket bar and a four-item pantry bundle. Delivery slots are explicitly unconnected; the demo never reserves one.
+- **African Editorial Boutique:** oversized magazine typography, textile photography, asymmetric numbered garment plates, cloth journal and material notes. Size selection is required, and different sizes remain separate bag lines. Illustrations are labelled as concepts, with no claim that the sample photographs depict the garments or their makers.
+- **Spec Sheet:** dark technical workbench, equipment illustrations, searchable model/SKU/specification index, up-to-three-product comparison, visible missing fields and a sample quote list. No datasheets, compatibility guarantees or real quote submission are fabricated.
+- Shared controls continue to support custom brand, palette and fonts; system reduced motion and the existing motion-off control suppress animation/transitions. Search/filter/sort, explicit UK/Nigeria prices, quantities, removals and empty states work within each mounted demo. No persistence or live catalogue integration is implied.
+- Validation: production build; 19 data/model/registry/colour/contract tests; 12 SSR initial-screen renders plus custom appearance checks for all three themes; prior marketplace/reference-port checks. Live browser visual review remains pending.
+- The refined Modern African Marketplace, Fashion Showroom, Atelier Minimal and original twenty theme definitions are unchanged by this refinement. Access tiers, billing, checkout, database and infrastructure remain outside this change.
