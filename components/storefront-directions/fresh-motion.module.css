@@ -1,0 +1,57 @@
+/* Fresh Market only. The other directions do not inherit these effects. */
+.motion{position:relative;padding-bottom:85px!important}
+.motion main{animation:marketArrival .42s ease-out both}
+.motion [data-fresh-harvest]>div>div{animation:harvestDrift 6s ease-in-out infinite;will-change:translate}
+.motion [data-fresh-harvest]>div>div:nth-child(2){animation-delay:-1.5s;animation-duration:7.5s}
+.motion [data-fresh-harvest]>div>div:nth-child(3){animation-delay:-3s;animation-duration:6.5s}
+.motion [data-fresh-harvest]>div>div:nth-child(4){animation-delay:-4.2s;animation-duration:8s}
+.motion [data-fresh-item]{transition:box-shadow .24s ease,border-color .24s ease}
+.motion [data-fresh-selected=true]>div:first-child{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--r-accent) 50%,transparent)}
+.motion button{transition:background-color .18s ease,box-shadow .18s ease}
+.motion button:active:not(:disabled){translate:0 1px}
+.simulationBar{display:flex;align-items:center;gap:16px;margin:8px 0 25px;padding:12px 0;border-bottom:1px solid var(--r-line)}
+.simulationBar>span{display:flex;gap:8px;align-items:center;font-size:8px;font-weight:800;letter-spacing:1px}
+.simulationBar i{width:6px;height:6px;background:var(--r-accent);border-radius:50%;box-shadow:0 0 0 4px color-mix(in srgb,var(--r-accent) 12%,transparent)}
+.simulationBar button{margin-left:auto;min-height:36px!important;border:1px solid var(--r-line);border-radius:30px;background:var(--r-panel);font-size:10px;padding:0 14px;white-space:nowrap}
+.simulationBar p{font-size:10px;color:var(--r-muted)}
+.inBasket{position:absolute;right:10px;top:10px;border-radius:20px;background:var(--r-accent);color:var(--r-on);font-size:8px;font-weight:800;padding:5px 9px;animation:labelArrival .25s ease-out both;pointer-events:none}
+.tick{display:inline-block;animation:quantityTick .28s ease-out both;font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.motion>button[data-fresh-basket-target=dock]{position:fixed;display:flex;align-items:center;gap:12px;left:auto;right:25px;bottom:24px;z-index:35;padding:14px 20px;border:0;border-radius:40px;background:var(--r-accent);color:var(--r-on);box-shadow:0 9px 28px #0002;font-size:12px;min-height:57px}
+.motion>button[data-fresh-basket-target=dock] strong{font-size:17px;font-variant-numeric:tabular-nums}
+.drawer{position:fixed;inset:0 0 0 auto;margin:0;width:470px;max-width:100%;height:100dvh;max-height:100dvh;padding:0;border:0;border-left:1px solid var(--r-line);background:var(--r-bg);color:var(--r-ink);font:inherit;box-shadow:-20px 0 80px #0002;display:none;transform:translateX(100%);transition:transform .26s ease,display .26s allow-discrete,overlay .26s allow-discrete;overflow:hidden}
+.drawer[open]{display:flex;flex-direction:column;transform:translateX(0)}
+.drawer::backdrop{background:#17241766;backdrop-filter:blur(3px);opacity:0;transition:opacity .26s ease,display .26s allow-discrete,overlay .26s allow-discrete}
+.drawer[open]::backdrop{opacity:1}
+@starting-style{.drawer[open]{transform:translateX(100%)}.drawer[open]::backdrop{opacity:0}}
+.drawerHead{display:flex;gap:20px;align-items:center;justify-content:space-between;padding:27px 25px 24px;border-bottom:1px solid var(--r-line)}
+.drawerHead h2{font:850 27px/1.2 var(--r-display);letter-spacing:-.8px;margin:10px 0 0}
+.drawerHead button{display:grid;place-items:center;background:var(--r-panel);border:1px solid var(--r-line);border-radius:50%;min-width:44px;min-height:44px}
+.drawerStatus{display:flex;gap:10px;align-items:center;padding:14px 25px;font-size:12px;background:var(--r-panel);border-bottom:1px solid var(--r-line)}
+.drawerStatus strong{margin-left:auto;font-size:17px}
+.drawerBody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 25px}
+.drawerLine{display:grid;grid-template-columns:75px 1fr auto;gap:14px;padding:23px 0;border-bottom:1px solid var(--r-line);align-items:center;animation:marketArrival .25s ease-out both}
+.drawerArt{padding:0;border:0;border-radius:9px;background:var(--r-panel)}
+.drawerArt svg{display:block;width:100%;height:80px}
+.drawerLine>div:nth-child(2)>button{font-size:14px!important;font-weight:850;min-height:34px!important}
+.drawerLine p{font-size:10px;color:var(--r-muted);margin:0 0 12px}
+.drawerLineEnd{align-self:start;display:flex;flex-direction:column;align-items:end;gap:14px;padding-top:7px;font-size:13px;white-space:nowrap}
+.drawerLineEnd button{background:none;border:0;display:grid;place-items:center;min-width:35px;min-height:35px}
+.drawerFoot{padding:23px 25px max(22px,env(safe-area-inset-bottom));border-top:1px solid var(--r-line);background:var(--r-bg);box-shadow:0 -10px 25px #00000005}
+.drawerFoot>div{display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:12px}
+.drawerFoot strong{font-size:25px;letter-spacing:-.7px}
+.drawerFoot p{font-size:10px;line-height:1.8;color:var(--r-muted);margin:12px 0 18px}
+.drawerFoot>button{width:100%}
+.drawerFoot>button:last-child{justify-content:center;margin-top:8px}
+.drawerEmpty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;padding:55px 15px}
+.drawerEmpty h3{font:850 24px/1.25 var(--r-display);letter-spacing:-.6px}
+.drawerEmpty p{font-size:12px;color:var(--r-muted);line-height:1.8;max-width:270px}
+@keyframes marketArrival{from{opacity:0;translate:0 9px}to{opacity:1;translate:0 0}}
+@keyframes harvestDrift{0%,100%{translate:0 0}50%{translate:0 -9px}}
+@keyframes labelArrival{from{opacity:0;scale:.85}to{opacity:1;scale:1}}
+@keyframes quantityTick{0%{opacity:.5;scale:.87}55%{opacity:1;scale:1.13}100%{opacity:1;scale:1}}
+.motion[data-fresh-motion=off] *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+.motion[data-fresh-motion=off] button:active{translate:none}
+@media(max-width:760px){.motion{padding-bottom:85px!important}.simulationBar{gap:10px;flex-wrap:wrap;margin:5px 0 24px;padding:12px 0}.simulationBar>span{font-size:6px;letter-spacing:.7px}.simulationBar button{font-size:9px;padding:0 12px;min-height:34px!important}.simulationBar p{width:100%;font-size:9px}.motion>button[data-fresh-basket-target=dock]{left:12px;right:12px;bottom:12px;border-radius:16px;min-height:57px;padding:15px 16px;gap:9px;font-size:11px}.motion>button[data-fresh-basket-target=dock]>span{flex:1;text-align:left}.motion>button[data-fresh-basket-target=dock] strong{font-size:18px}.inBasket{top:7px;right:6px;padding:4px 7px;font-size:6px}.drawer{width:100%;border-left:0}.drawerHead{padding:22px 20px}.drawerHead h2{font-size:25px}.drawerHead>div>span{font-size:7px}.drawerStatus{padding:12px 20px;font-size:11px}.drawerBody{padding:0 20px}.drawerLine{grid-template-columns:65px 1fr auto;gap:12px;padding:20px 0}.drawerLine>div:nth-child(2)>button{font-size:13px!important}.drawerLine p{font-size:9px;margin-bottom:10px}.drawerLineEnd{font-size:12px}.drawerLineEnd button{min-width:30px;min-height:35px}.drawerFoot{padding:20px 20px max(18px,env(safe-area-inset-bottom))}.drawerFoot strong{font-size:24px}.drawerFoot p{font-size:9px;margin:10px 0 15px}.drawerEmpty{padding:45px 10px}}
+@media(prefers-reduced-motion:reduce){.motion *,.drawer,.drawer::backdrop{animation:none!important;transition:none!important;scroll-behavior:auto!important}.motion button:active{translate:none}}
+.motion[data-fresh-motion=off] .drawer::backdrop,:global(.zdx-motion-off) .drawer,:global(.zdx-motion-off) .drawer::backdrop{animation:none!important;transition:none!important}

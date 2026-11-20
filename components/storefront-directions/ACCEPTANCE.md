@@ -66,3 +66,11 @@ The owner requested three distinct improvements after approving the marketplace 
 - Shared controls continue to support custom brand, palette and fonts; system reduced motion and the existing motion-off control suppress animation/transitions. Search/filter/sort, explicit UK/Nigeria prices, quantities, removals and empty states work within each mounted demo. No persistence or live catalogue integration is implied.
 - Validation: production build; 19 data/model/registry/colour/contract tests; 12 SSR initial-screen renders plus custom appearance checks for all three themes; prior marketplace/reference-port checks. Live browser visual review remains pending.
 - The refined Modern African Marketplace, Fashion Showroom, Atelier Minimal and original twenty theme definitions are unchanged by this refinement. Access tiers, billing, checkout, database and infrastructure remain outside this change.
+
+## Fresh Market motion simulation
+
+Owner requested a more lifelike shopping simulation. Fresh Market now has gentle harvest motion, shelf entrance and quantity/total feedback, product illustrations flying to a visible basket target, selected-item markers, an always-visible basket dock and a native modal basket drawer. The drawer supports in-place quantity changes/removal and a separate full basket review. Basket updates do not wait for animations; decorative flights are bounded during rapid taps and cleaned up when the component unmounts or motion is disabled.
+
+The local motion toggle, Studio motion-off wrapper and OS reduced-motion preference all suppress decorative effects. Native dialog behaviour provides modal focus containment, Escape handling and focus restoration; background scrolling is locked while open. Basket updates have a polite screen-reader status. No payment or ordering flow is activated.
+
+Validation: production build and typecheck; existing 19 model/registry/contract/colour tests; motion preference gate test; SSR checks include the closed native dialog, basket target and motion control. Live browser interaction/animation and visual review remain pending. Other directions retain their previous layout and behaviour.
