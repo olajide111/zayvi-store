@@ -5,6 +5,7 @@ import SetupOverview from "./SetupOverview";
 import AdminPageHeading from "@/components/admin/AdminPageHeading";
 
 const destinations = [
+  { href: "/admin/get-started", title: "Design your store", description: "Tell us about your business and explore recommended themes in the full-window studio.", icon: Palette },
   { href: "/admin/markets", title: "Markets & currencies", description: "Choose where your store sells and manage regional pricing.", icon: Globe2 },
   { href: "/admin/content", title: "Content publishing", description: "Set up storefront pages and write articles by market.", icon: FileText },
   { href: "/admin/settings/social-links", title: "Social links", description: "Choose which social profiles appear in your storefront footer.", icon: Link2 },

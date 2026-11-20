@@ -31,7 +31,7 @@ function WorkspaceLink({ item, pathname }: { item: Destination; pathname: string
 
 export default function AdminWorkspace({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (!pathname || pathname === "/admin") return children;
+  if (!pathname || pathname === "/admin" || pathname.startsWith("/admin/themes/") || pathname === "/admin/get-started") return children;
 
   const activeGroup = adminGroups.find(({ items }) =>
     items.some(({ href }) => isAdminRouteActive(pathname, href)),

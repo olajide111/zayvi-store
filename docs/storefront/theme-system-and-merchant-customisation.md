@@ -1,18 +1,24 @@
 # Zayvi storefront themes and business configuration
 
-## Theme collection studio — current implementation
+## Theme studio and design setup — current implementation
 
-Admin → Themes now contains twelve private design concepts. Six Signature concepts (Atelier, Horizon, Circuit, Pantry, Habitat and Trade) cover the six existing industry families. Six Expressive concepts (Pulse, Orbit, Studio, Bazaar, Monolith and Playroom) explore poster, circular, gallery and colour-block shopping compositions. These are twelve concepts across six layout structures, not twelve complete storefront implementations.
+Admin → Design your store opens a three-step design questionnaire for an existing admin account: store name, business category and preferred visual direction. Answers are remembered on that browser and used to filter the theme gallery. This is not seller registration, tenant provisioning, cross-device onboarding, identity verification or launch readiness. Do not redirect all existing accounts into it automatically.
 
-The gallery supports name/description search, industry and collection filters, desktop/mobile preview widths, finite entrance animation with Off/Subtle/Expressive controls, replay and a demonstration bag. The operating system reduced-motion preference disables animations and transitions. Preview products are labelled as samples; no price, stock, review or delivery promises are invented. No preview action writes to the commerce API or creates an order.
+The gallery contains twelve design concepts across six layout structures. Each opens a full-window editor without the admin sidebar. It uses an independently scrolling storefront iframe with genuine desktop, tablet and mobile viewport widths rather than shrinking a card. Sellers can also open the preview in a full tab. The editor provides brand name, headline, safe colour styles, typography and Off/Subtle/Expressive motion. Changes can be saved on that browser with an explicit local-only label.
 
-Theme choices are session-local. This replaces the earlier template/palette sample page; the live storefront is unchanged. The next implementation must connect approved designs to tenant-scoped draft, preview, publish and rollback, restore brand-level colour/type controls within that editor, and render matching collection, product, cart and content pages. Do not market these concepts as publishable themes until that work and the quality gates below pass.
+Each concept has interactive Home, Collection, Product, Bag and Story previews. The demo catalogue varies by industry. Search, category filters, product detail, bag quantities, removal, empty states and currency-separated preview subtotals work without creating orders or executing payments. Theme changes remain design previews, not published storefronts. Current store catalogue mode loads only the public storefront API in the configured default market; errors and empty results are explicit and never silently replaced with demo products. Public catalogue mode does not yet load saved store content or brand assets.
 
-### Product direction
+Onboarding recommendations do not limit catalogue eligibility or alter selling markets. Browser storage is validated and failures are non-fatal. No product, market, payment or tenant record is changed. All preview pages identify demonstration mode, and checkout is unavailable. The actual storefront and commerce services remain unchanged.
 
-Theme variety should be a primary reason sellers choose Zayvi: premium conventional shops alongside distinctive visual identities. Offer reusable sections and optional motion packs (product reveals, gallery transitions, staggered collections and bag feedback), with no forced animation, autoplay audio, flashing effects or scroll hijacking. Product images and commerce facts remain seller-owned and server-authoritative. Theme changes retain products, customers, orders, markets and provider connections.
+### Reference patterns and next delivery
 
-Before release, each approved design needs real-catalogue previews, accessible palette and font controls, section editing, keyboard and touch QA, responsive imagery, measured performance, and a complete purchase journey. Grocery and trade styling must not imply that recurring orders, tier pricing or trade-account rules exist before those services are implemented and verified.
+WordPress separates theme discovery, demo/own-content previews and activation: https://wordpress.com/support/themes/choose-a-theme/
+Shopify distinguishes editable draft themes from the single published theme: https://help.shopify.com/en/manual/online-store/themes/adding-themes
+Zayvi adopts those workflow principles with original theme designs.
+
+Still required: server-backed seller registration and tenant/store creation; authenticated store-scoped setup persistence; recommended defaults from the actual catalogue and markets; asset ownership; editable sections; immutable theme drafts with store previews; safe publishing and rollback; applying the approved renderer to actual customer routes. Twelve studio concepts must not be marketed as twelve released themes.
+
+Themes are intended as a principal selling point, with both conventional premium shops and expressive motion-led designs. Every released theme must cover homepage, collection/search, product, bag, content and responsive navigation. No autoplay audio, flashing effects, infinite animations or scroll hijacking. Motion respects reduced-motion settings, and the final commerce journey remains server-authoritative.
 
 ## Decision
 
