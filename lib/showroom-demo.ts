@@ -1,5 +1,6 @@
 import type {StudioProduct} from './theme-studio';
-// Original sample artwork. No stock, supplier or product claims.
+// Photographs are editorial demo assets, not seller stock or 3D models.
 export const SHOWROOM_DEMO_PRODUCTS:StudioProduct[]=[
- ['storm','Storm blue','Outerwear',85],['ember','Ember orange','Outerwear',85],['moss','Moss green','Everyday',72],['chalk','Chalk white','Everyday',72],['midnight','Midnight navy','Outerwear',95],['rose','Dusty rose','Everyday',72],
-].map(([id,colour,category,price])=>({id:`showroom-${id}`,name:`${colour} studio jacket`,image:`/demo-garments/${id}.svg`,price:Number(price),currency:'GBP',category:String(category),description:'Original Zayvi sample garment illustration. Demo price only: this is not available for purchase and has no stock or supplier. Explore the design, open product details and try the preview bag.'}));
+ {id:'photo-puffer',name:'Puffer jacket study',category:'Outerwear',price:85,image:'/demo-photos/puffer.webp',credit:'Erik Mclean',photo:'https://unsplash.com/photos/black-bubble-jacket-on-hanger-jo6IYbEnQ58'},
+ {id:'photo-denim',name:'Denim jacket study',category:'Denim',price:72,image:'/demo-photos/denim.webp',credit:'kemal alkan',photo:'https://unsplash.com/photos/blue-washed-jacket-hanging-on-white-door-_BDBEP0ePQc'},
+].map(p=>({...p,currency:'GBP',description:`Real photograph by ${p.credit} on Unsplash, used as demonstration content. Demo price only: not available for purchase, not seller stock and not a rotatable 3D garment.`}));

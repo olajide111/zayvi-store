@@ -34,3 +34,11 @@ export function themeFitsIndustry(theme:Pick<ThemeDesign,'industries'>,industry:
  if(industry==='All'||industry==='Other')return true;
  return theme.industries.includes(industry)||(INDUSTRY_FAMILIES[industry]||[]).some(i=>theme.industries.includes(i));
 }
+
+export function designDemoProducts(theme:Pick<ThemeDesign,'id'|'family'>):StudioProduct[]{
+ if(!['adire','accra'].includes(theme.id))return demoProducts(theme.family);
+ return [
+  {id:'textile-study-1',name:'The textile edit',category:'Textiles',price:32,image:'/demo-photos/textiles-display.webp'},
+  {id:'textile-study-2',name:'Colour study',category:'Textiles',price:28,image:'/demo-photos/textiles-detail.webp'},
+ ].map(p=>({...p,currency:'GBP',description:'Photographic demonstration content, not a product for sale. Photo by WyteShot on Unsplash. Prices are examples. This design does not certify origin, materials or artisan production.'}));
+}
