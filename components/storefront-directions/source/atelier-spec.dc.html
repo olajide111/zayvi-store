@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Showroom spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1200px;height:1300px;box-sizing:border-box;padding:48px 56px;background:#F6F4EF;color:#151515;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;flex-direction:column;gap:26px;overflow:hidden">
+  <div><div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#111111">4 · ATELIER MINIMAL · SPEC</div><h1 style="margin:8px 0 0;font-size:38px;line-height:1.1;font-weight:800">Assets, motion and how it fits the theme system</h1></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Required assets</h2><div style="font-size:14px;line-height:1.55"><b>Photography.</b> One quiet, evenly lit image per piece on a plain warm background (4:5, 2400 px tall), plus one hero and two detail shots. A consistent crop matters more than volume.</div><div style="font-size:14px;line-height:1.55"><b>Fonts.</b> Cormorant Garamond 400, 500, 600 for headlines; Jost 400, 500, 600 for labels. Open licence, self-hosted.</div><div style="font-size:14px;line-height:1.55"><b>Words.</b> One line per collection and a short fabric note per product.</div><div style="font-size:14px;line-height:1.55"><b>No decorative assets.</b> The design is type, space and photography only.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Motion behaviour</h2><div style="font-size:14px;line-height:1.55"><b>Collection strip.</b> Slides sideways 552 px (desktop) or 318 px (mobile) over 0.7 s, easing cubic-bezier(.22,.8,.2,1).</div><div style="font-size:14px;line-height:1.55"><b>Bag.</b> Slides in as a drawer (desktop) or sheet (mobile) in 0.4 s over a 35% dim, closes on Escape.</div><div style="font-size:14px;line-height:1.55"><b>Everything else.</b> Fades only. Nothing loops or autoplays.</div><div style="font-size:14px;line-height:1.55"><b>Reduced motion.</b> Strip and drawer switch instantly.</div></section></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Navigation and page composition</h2><div style="font-size:14px;line-height:1.55"><b>Header.</b> Three parts: two text links, the wordmark, and market plus bag. No mega menu.</div><div style="font-size:14px;line-height:1.55"><b>Home.</b> A full-height hero, one statement, three pieces.</div><div style="font-size:14px;line-height:1.55"><b>Collection.</b> One horizontal strip, one piece at a time, with arrow controls.</div><div style="font-size:14px;line-height:1.55"><b>Product.</b> A very large image and a narrow text column with Details and Delivery rows.</div><div style="font-size:14px;line-height:1.55"><b>Bag.</b> A drawer over the collection, so shoppers never leave their place.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Fit with the existing theme system</h2><div style="font-size:14px;line-height:1.55"><b>Template family.</b> A new family, 'atelier', beside the existing six. Existing themes are untouched.</div><div style="font-size:14px;line-height:1.55"><b>Tokens.</b> Ivory, ink, stone, heading and body fonts, strip item width.</div><div style="font-size:14px;line-height:1.55"><b>Best for.</b> Small ranges (under about 30 pieces) of premium fashion, accessories or home goods.</div><div style="font-size:14px;line-height:1.55"><b>Rules kept.</b> No invented claims; WCAG 2.2 AA; 44 px targets; drawer traps focus and returns it on close.</div></section></div>
+  <div style="background:#151515;color:#fff;border-radius:14px;padding:20px 26px;font-size:14px;line-height:1.55"><b>Open points for the review.</b> (1) Needs consistent, high-quality photography to work. (2) Not suited to large catalogues. (3) Nothing is built or applied; it needs sign-off from the named owner first.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

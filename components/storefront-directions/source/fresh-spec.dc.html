@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Showroom spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1200px;height:1300px;box-sizing:border-box;padding:48px 56px;background:#F6F4EF;color:#151515;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;flex-direction:column;gap:26px;overflow:hidden">
+  <div><div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#2E7D32">5 · FRESH MARKET · SPEC</div><h1 style="margin:8px 0 0;font-size:38px;line-height:1.1;font-weight:800">Assets, motion and how it fits the theme system</h1></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Required assets</h2><div style="font-size:14px;line-height:1.55"><b>Product images.</b> One square image per product on a light background (1200 px). Produce and staples can use a simple, consistent style.</div><div style="font-size:14px;line-height:1.55"><b>Banner art.</b> Two or three promo banners with live text over them.</div><div style="font-size:14px;line-height:1.55"><b>Fonts.</b> Nunito 400 to 900, open licence.</div><div style="font-size:14px;line-height:1.55"><b>Product data (essential).</b> Pack size, unit price per kg or litre, origin and storage notes for every item.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Motion behaviour</h2><div style="font-size:14px;line-height:1.55"><b>Steppers.</b> Quantity changes update the basket total at once, with a 0.15 s highlight. No page reload.</div><div style="font-size:14px;line-height:1.55"><b>Cards.</b> Soft shadow on hover. No movement.</div><div style="font-size:14px;line-height:1.55"><b>Mobile basket bar.</b> Rises 40 px when the first item is added.</div><div style="font-size:14px;line-height:1.55"><b>Reduced motion.</b> The rise and highlight are removed.</div></section></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Navigation and page composition</h2><div style="font-size:14px;line-height:1.55"><b>Aisles.</b> A permanent left rail on desktop, scrolling chips on mobile.</div><div style="font-size:14px;line-height:1.55"><b>Home.</b> A banner with an add-the-whole-list button, then weekly staples with steppers on each card.</div><div style="font-size:14px;line-height:1.55"><b>Aisle page.</b> Dense list rows: image, name, pack size, unit price, stepper.</div><div style="font-size:14px;line-height:1.55"><b>Product.</b> Pack size, origin, storage and a substitution note.</div><div style="font-size:14px;line-height:1.55"><b>Basket.</b> Always visible on desktop; a delivery slot area on the review page.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Fit with the existing theme system</h2><div style="font-size:14px;line-height:1.55"><b>Template family.</b> Extends the grocery family with the aisle rail, stepper rows, a persistent basket and a slot picker. Existing grocery theme untouched.</div><div style="font-size:14px;line-height:1.55"><b>Tokens.</b> Leaf green, tomato accent, cream surface, density.</div><div style="font-size:14px;line-height:1.55"><b>Best for.</b> Food, household goods and repeat orders with many small items.</div><div style="font-size:14px;line-height:1.55"><b>Rules kept.</b> Delivery slots are sample layout only; real slots come from seller delivery settings. No stock or freshness claims; WCAG 2.2 AA.</div></section></div>
+  <div style="background:#151515;color:#fff;border-radius:14px;padding:20px 26px;font-size:14px;line-height:1.55"><b>Open points for the review.</b> (1) Unit pricing and pack sizes must exist in the catalogue. (2) Delivery slots and substitutions need the shipping engine (item 13 on the build plan). (3) Nothing is built or applied; it needs sign-off from the named owner first.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
