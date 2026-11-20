@@ -44,3 +44,14 @@ All additions are for owner review. Tenant persistence, entitlements, real produ
 The owner subsequently requested implementation. The integration uses `lib/theme-registry.ts` to append the six direction IDs to the main gallery while retaining the original 20 definitions byte-for-byte. The existing editor and device-demo routes dispatch new IDs to the isolated source-derived renderers. Brand, safe colour presets/custom tokens, typography and motion preview controls are connected for platform admins; browser drafts remain local and keyed by the new ID. Original board review URLs remain available.
 
 This implementation also includes the editor foundations from PR #49. The previous additive-only file rule now permits the narrow gallery/editor/route hooks and foundation helpers; theme definitions and normal default rendering are preserved. Registry tests check unchanged source bytes and unique IDs. No production deployment, database migration, payment activation or publication is included. New directions are labelled plan-pending rather than silently assigning a free or paid entitlement. Data-backed product rendering and per-tenant publishing still require their declared catalogue contracts.
+
+## Modern African Marketplace refinement
+
+User requested a stronger marketplace experience after the source-board integration. Only `modern-marketplace` now uses the responsive `ZdxMarketplacePreview` renderer; the supplied source files and generated reference ports are preserved, and the other five directions and original twenty themes are unchanged.
+
+- Added textile photography from the existing credited demo-photo collection, original product-specific sample SVG illustrations, department discovery, seller directory, saved finds and mobile navigation.
+- Search matches product, department, seller and description; department and seller filters combine, with explicit empty states and market-specific price sorting.
+- Bag starts empty, combines quantities, groups sample sellers, supports removal, and recalculates explicit GB/NG sample prices. Bag and saved finds last only for the mounted demo session.
+- Brand, palette and font controls still feed the renderer. Motion-off and system reduced-motion settings suppress transitions.
+- Preview content remains fictional/sample. No catalogue writes, orders, delivery calculations, payment execution or publish/entitlement changes were introduced.
+- Validation: Next production build; marketplace model tests; SSR smoke tests for four initial screens and custom appearance; existing registry/contract/colour tests and reference-port smoke tests. Live browser visual review remains pending.
