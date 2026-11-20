@@ -58,6 +58,11 @@ test("no name or path clashes with existing code", async () => {
     "lib/storefront-theme-directions.ts",
     "tests/storefront-theme-directions.test.ts",
     "docs/storefront/additional-theme-directions.md",
+    "lib/theme-registry.ts", "lib/theme-colours.ts", "tests/theme-colours.test.mjs", "tests/theme-registry.test.ts",
+    "app/admin/themes/[themeId]/page.tsx", "app/admin/themes/[themeId]/demo/page.tsx", "app/admin/themes/[themeId]/preview/page.tsx",
+    "components/themes/ThemeGallery.tsx", "components/themes/ThemeStudio.tsx", "components/themes/ThemeDemo.tsx", "components/themes/ThemedShop.tsx",
+    "components/themes/studio.module.css", "components/themes/shop.module.css", "docs/storefront/theme-system-and-merchant-customisation.md",
+
   ];
   for (const f of added) {
     assert.ok(

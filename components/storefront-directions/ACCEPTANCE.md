@@ -38,3 +38,9 @@ The supplied ZIP's patch exactly matches the separately attached patch. The patc
 - `node --import tsx --test tests/storefront-theme-directions.test.ts` where tsx is available (not added as a project dependency).
 
 All additions are for owner review. Tenant persistence, entitlements, real product assets and production commerce integration require separate work.
+
+## Owner-requested implementation into Preview
+
+The owner subsequently requested implementation. The integration uses `lib/theme-registry.ts` to append the six direction IDs to the main gallery while retaining the original 20 definitions byte-for-byte. The existing editor and device-demo routes dispatch new IDs to the isolated source-derived renderers. Brand, safe colour presets/custom tokens, typography and motion preview controls are connected for platform admins; browser drafts remain local and keyed by the new ID. Original board review URLs remain available.
+
+This implementation also includes the editor foundations from PR #49. The previous additive-only file rule now permits the narrow gallery/editor/route hooks and foundation helpers; theme definitions and normal default rendering are preserved. Registry tests check unchanged source bytes and unique IDs. No production deployment, database migration, payment activation or publication is included. New directions are labelled plan-pending rather than silently assigning a free or paid entitlement. Data-backed product rendering and per-tenant publishing still require their declared catalogue contracts.
