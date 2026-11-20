@@ -1,0 +1,12 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),swc=require('next/dist/build/swc');
+for(const ext of ['.tsx','.ts','.jsx'])require.extensions[ext]=(m,file)=>{const result=swc.transformSync(fs.readFileSync(file,'utf8'),{filename:file,jsc:{parser:{syntax:ext==='.jsx'?'ecmascript':'typescript',tsx:ext==='.tsx',jsx:ext==='.jsx'},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});m._compile(result.code,file);};
+require.extensions['.css']=(m)=>{m.exports={__esModule:true,default:new Proxy({}, {get:(_,key)=>String(key)})};};
+const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),C=require('../themes/AfricanShopExperience.tsx').default,{designDemoProducts}=require('../../lib/theme-studio.ts');
+const attire=designDemoProducts({id:'adire',family:'editorial'}),city=designDemoProducts({id:'accra',family:'general-commerce'});
+assert.equal(attire.length,6);assert.equal(city.length,6);assert(attire.every(p=>p.image.startsWith('/demo-attire/')));assert(city.every(p=>!p.image.includes('textiles')));
+const render=(id,products,demo=true)=>renderToStaticMarkup(React.createElement(C,{id,products,headline:'',demo,onOpen:()=>{},onAdd:()=>{},onBrowse:()=>{}}));
+const a=render('adire',attire),b=render('accra',city);
+assert(a.includes('THE ATTIRE HOUSE'));assert(a.includes('Agbada'));assert(a.includes('Iro &amp; Buba'));assert(a.includes('Gele'));assert(!b.includes('Agbada'));assert(b.includes('THE CITY EDIT'));assert(b.includes('Pick a corner.'));
+assert(render('adire',[],false).includes('Your campaign image belongs here.'));
+for(const p of attire)assert(fs.existsSync('public'+p.image));
+console.log('PASS: Adire and Accra have distinct SSR layouts, six relevant demo products each, valid local attire assets and an empty real-catalogue state.');

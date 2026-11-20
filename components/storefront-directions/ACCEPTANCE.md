@@ -82,3 +82,14 @@ The six added display names are now Runway (fashion-showroom), Ilé (african-edi
 Oja now uses aubergine, coral and cream, with its registry/editor primary matching the renderer. Custom palette controls still take priority. The basket dock has a larger open basket illustration. Produce is rendered at 176 px on phones / 208 px on larger viewports, lifted before travelling, held at near-full size, and dropped vertically with clipping into the basket mouth instead of shrinking to a tiny dot. Basket quantity state remains independent of decorative motion.
 
 Validation: production build; 22 model, motion, registry, contract and colour tests including stable naming, palette defaults and readable pick/drop geometry; refined-theme SSR checks. Live browser visual review remains pending.
+
+## Forma, Adire, Accra and gallery curation
+
+The owner explicitly requested reworking the previously protected Adire and Accra themes. The regression guard now excludes only those two definition lines and continues to compare the other eighteen original definitions byte for byte. Adire and Accra remain free, with stable IDs.
+
+- **Forma:** glacier blue and deep petrol, a single-piece showcase with previous/next and keyboard arrows, a horizontal six-piece wardrobe, material concepts and size-specific bags. The default palette matches gallery/editor settings and continues to support custom colours/fonts/motion. Source boards and generated reference ports remain intact.
+- **Adire:** charcoal and marigold, a portrait-led attire-house layout, occasion/attire navigation and six original SVG garment concepts (agbada, iro-and-buba, boubou, kaftan, wrap and gele). These are labelled sample illustrations, not product photos or provenance claims.
+- **Accra:** cobalt and tangerine, a city poster and staggered product blocks, department matrix and six everyday-retail demo products. It no longer shares Adire’s textile demo catalogue or homepage layout. Store-source mode still uses the actual public catalogue through the existing loader.
+- **Gallery:** five curated groups cover all 26 themes once: African signatures; fashion/considered spaces; immersive/premium; everyday retail/home; equipment/trade. Existing search, industry, style and access filters apply before grouping. Live thumbnail iframes now show Adire and Accra’s actual designs.
+
+Validation: production build/typecheck, 24 model/motion/registry/contract/colour tests, sixteen refined-theme screen renders/custom appearances, distinct African-shop SSR checks and six parsed local SVG assets. Native browser visual review remains pending. No tenant publication, live checkout, payment, database or infrastructure changes.
