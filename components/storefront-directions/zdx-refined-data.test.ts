@@ -42,10 +42,10 @@ test('Forma keeps a six-piece wardrobe with valid size-specific footwear lines',
 });
 
 test('London wardrobes retain size choices and explicit prices in both markets',()=>{
- for(const family of ['mayfair','camden'] as const){
+ for(const family of ['mayfair','camden','soho','canvas'] as const){
   const items=REFINED_PRODUCTS[family];assert.equal(items.length,6);
-  assert(items.every(p=>p.gb>0&&p.ng>0&&p.sizes?.length));
-  const p=items[0],size=p.sizes![1];
+  assert(items.every(p=>p.gb>0&&p.ng>0));
+  const p=items[0],size=p.sizes?.[1]||'';
   const bag=refinedChange(items,[],p.id,size,2);
   assert.equal(bag[0].variant,size);
   assert.equal(refinedTotals(items,bag,'GB').total,p.gb*2);

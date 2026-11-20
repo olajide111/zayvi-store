@@ -103,3 +103,17 @@ Added two free London-inspired signature previews as peers to the African signat
 - Both default to GBP but have explicit GBP and NGN sample prices. Market switching retains selected basket items/variants. Search, categories, sort, sizes, bag quantities, removals and empty states use the existing demo engine. Neither theme implies British product origin or an actual London retail address.
 - The editor exposes brand, palette, font and motion controls, with local drafts. Unsupported live catalogue/headline controls are hidden. These previews create no orders or payments and are not tenant publishing integrations.
 - Validation: production build/typecheck; 26 model/motion/registry/contract/colour tests; 24 initial-screen/custom-appearance SSR renders, plus existing African-shop checks. Native browser visual review remains pending because Preview is protected; no share link or authentication change was requested for this update.
+
+## Canvas, balanced rows, Mayfair redesign and Soho
+
+The owner requested a plain white storefront and complete/even gallery rows, then asked to preserve Camden, substantially redesign Mayfair using established London stores as references, and add a third London identity.
+
+- **Canvas:** a free plain white, black-type, product-first theme, with simple collections, quick add for single-format items and size selection for the shirt. No Shopify brand assets or service integrations are used or implied.
+- **Mayfair:** redesigned as an ink-teal/parchment/copper department store across fashion, accessories, beauty and home. Full-width discovery window, a department hall, in-page department selector and beauty/home edits replace the prior wardrobe-house campaign. Inspired by the department/category discovery patterns on Selfridges and Liberty's official sites, not their brand identity or product assets.
+- **Soho:** a free third London signature focused on original design-object concepts, lighting, ceramics and workspace pieces. Switchable display scenes, sculptural plinths, collection rails and an object index distinguish it from Camden and Mayfair. Product-type homeware discovery on The Conran Shop's official site was a reference.
+- **Camden:** its campaign function and palette are unchanged, protected by a targeted regression check.
+- **Gallery:** 30 themes in six groups. Balanced row sizing fills every row at desktop/tablet widths, including filtered groups. Cards stretch to equal row height with buttons aligned. Real preview thumbnails scale a desktop viewport to the full card width rather than using a tiny mobile thumbnail.
+
+References reviewed: https://www.selfridges.com/GB/en/cat/newin/ ; https://www.libertylondon.com/uk/department/new-in/ ; https://theconranshop.com/collections/home-accessories . No product images, logos, shipping offers, promotions or maker claims were copied from these stores.
+
+Validation: production build/typecheck; 29 model, motion, contract, registry, palette and balanced-row tests; 32 initial-screen/custom-appearance SSR renders. Native browser visual review remains pending; protected Preview access was not changed. No tenant publication, checkout, payment, database or infrastructure changes.
