@@ -11,7 +11,7 @@ for(const [C,family,phrase] of [[FreshMarket,'fresh-market','A little fresh.'],[
   if(screen==='bag')assert(html.includes('sample bag is empty')||html.includes('Start with the right details.'));
   if(screen==='product'&&family==='african-editorial')assert(html.includes('Choose your size'));
   if(screen==='product'&&family==='spec-sheet')assert(html.includes('Manufacturer datasheet not supplied'));
-  if(screen==='home'&&family==='fresh-market')assert(html.includes('Your basket'));
+  if(screen==='home'&&family==='fresh-market'){assert(html.includes('Your basket'));assert(html.includes('Motion on'));assert(html.includes('data-fresh-basket-target="dock"'));assert(html.includes('<dialog'));assert(html.includes('aria-haspopup="dialog"'));assert(html.includes('Close basket'));assert(!html.includes('<dialog open'));}
   renders++;
  }
  const custom=renderToStaticMarkup(React.createElement(ZdxAppearanceContext.Provider,{value:{brand:'My custom shop',colours:{canvas:'#121212',ink:'#ffffff',accent:'#cccccc',accentInk:'#000000'},font:'Georgia,serif',replacements:{}}},React.createElement(C)));
