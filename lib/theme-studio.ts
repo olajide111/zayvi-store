@@ -1,13 +1,14 @@
+import type {ThemeDesign} from './theme-designs';
 import type { TemplateFamily } from './storefront-theme';
 export type StudioProduct = { id:string; name:string; image:string; price:number; currency:string; category:string; description:string };
 export const DESIGN_PROFILE_KEY = 'zayvi-design-profile-v1';
 export const DESIGN_DRAFT_KEY = 'zayvi-design-draft-v1';
-export const BUSINESS_TYPES = ['Fashion','Beauty','Home','Electronics','Food','Trade','General retail','Art','Gifts','Lifestyle'] as const;
-export type DesignProfile = { name:string; industry:string; style:'Signature'|'Expressive'|'Either' };
-export const EMPTY_PROFILE:DesignProfile={name:'',industry:'General retail',style:'Either'};
+export const BUSINESS_TYPES = ['Fashion','Beauty','Home','Electronics','Food','Trade','General retail','Art','Gifts','Lifestyle','Jewellery & watches','Footwear','Bags & accessories','Health & wellness','Sports & outdoors','Baby & kids','Toys & games','Books & stationery','Pets','Automotive','Garden & DIY','Equipment','Digital products','Services','Other'] as const;
+export type DesignProfile = { name:string; industry:string; otherIndustry:string; style:'Signature'|'Expressive'|'Either' };
+export const EMPTY_PROFILE:DesignProfile={name:'',industry:'General retail',otherIndustry:'',style:'Either'};
 export function parseDesignProfile(value:unknown):DesignProfile {
   const v=value&&typeof value==='object'?value as Record<string,unknown>:{};
-  return {name:typeof v.name==='string'?v.name.slice(0,80):'', industry:BUSINESS_TYPES.includes(v.industry as typeof BUSINESS_TYPES[number])?String(v.industry):'General retail',style:v.style==='Signature'||v.style==='Expressive'?v.style:'Either'};
+  return {otherIndustry:typeof v.otherIndustry==='string'?v.otherIndustry.trim().slice(0,100):'',name:typeof v.name==='string'?v.name.slice(0,80):'', industry:BUSINESS_TYPES.includes(v.industry as typeof BUSINESS_TYPES[number])?String(v.industry):'General retail',style:v.style==='Signature'||v.style==='Expressive'?v.style:'Either'};
 }
 const photo=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=85`;
 const photos={fashion:photo('photo-1483985988355-763728e1935b'),beauty:photo('photo-1596462502278-27bfdc403348'),home:photo('photo-1616486338812-3dadae4b4ace'),tech:photo('photo-1498049794561-7780e7231661'),food:photo('photo-1542838132-92c53300491e'),art:photo('photo-1579783902614-a3fb3927b6a5'),bag:photo('photo-1553062407-98eeb64c6a62'),chair:photo('photo-1598300042247-d088f8ab3a91'),headphones:photo('photo-1505740420928-5e560c06d30e'),bottle:photo('photo-1602143407151-7111542de6e8')};
@@ -20,3 +21,16 @@ const catalogues:Record<TemplateFamily,Array<[string,string,number,string]>>={
  wholesale:[['Workspace range',photos.tech,240,'Equipment'],['Carry collection',photos.bag,48,'Accessories'],['Audio collection',photos.headphones,120,'Equipment'],['Everyday range',photos.bottle,24,'Essentials'],['Home collection',photos.home,95,'Home'],['The seating range',photos.chair,180,'Home']],
 };
 export function demoProducts(family:TemplateFamily):StudioProduct[]{return catalogues[family].map(([name,image,price,category],i)=>({id:`demo-${i}`,name,image,price,currency:'GBP',category,description:'Demonstration content to help you explore this design. Replace it with your own product description, photography and verified details before publishing.'}));}
+
+// Theme suitability is a design recommendation, not a promise of industry-specific commerce tools.
+const INDUSTRY_FAMILIES:Record<string,string[]>={
+ 'Jewellery & watches':['Fashion','Beauty'],Footwear:['Fashion'],'Bags & accessories':['Fashion','General retail'],
+ 'Health & wellness':['Beauty','Lifestyle'],'Sports & outdoors':['Lifestyle','General retail'],
+ 'Baby & kids':['Gifts','General retail'],'Toys & games':['Gifts','General retail'],
+ 'Books & stationery':['Art','General retail'],Pets:['General retail'],Automotive:['Equipment','Trade'],
+ 'Garden & DIY':['Home','Equipment'],'Digital products':['Art','Electronics'],Services:['Lifestyle','Trade'],
+};
+export function themeFitsIndustry(theme:Pick<ThemeDesign,'industries'>,industry:string):boolean {
+ if(industry==='All'||industry==='Other')return true;
+ return theme.industries.includes(industry)||(INDUSTRY_FAMILIES[industry]||[]).some(i=>theme.industries.includes(i));
+}

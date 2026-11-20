@@ -4,11 +4,19 @@
 
 Admin → Design your store opens a three-step design questionnaire for an existing admin account: store name, business category and preferred visual direction. Answers are remembered on that browser and used to filter the theme gallery. This is not seller registration, tenant provisioning, cross-device onboarding, identity verification or launch readiness. Do not redirect all existing accounts into it automatically.
 
-The gallery contains twelve design concepts across six layout structures. Each opens a full-window editor without the admin sidebar. It uses an independently scrolling storefront iframe with genuine desktop, tablet and mobile viewport widths rather than shrinking a card. Sellers can also open the preview in a full tab. The editor provides brand name, headline, safe colour styles, typography and Off/Subtle/Expressive motion. Changes can be saved on that browser with an explicit local-only label.
+The gallery contains eighteen design concepts: twelve standard concepts and six locked premium previews, across six layout structures. Each opens a full-window editor without the admin sidebar. It uses an independently scrolling storefront iframe with genuine desktop, tablet and mobile viewport widths rather than shrinking a card. Sellers can also open the preview in a full tab. The editor provides brand name, headline, safe colour styles, typography and Off/Subtle/Expressive motion. Changes can be saved on that browser with an explicit local-only label.
 
 Each concept has interactive Home, Collection, Product, Bag and Story previews. The demo catalogue varies by industry. Search, category filters, product detail, bag quantities, removal, empty states and currency-separated preview subtotals work without creating orders or executing payments. Theme changes remain design previews, not published storefronts. Current store catalogue mode loads only the public storefront API in the configured default market; errors and empty results are explicit and never silently replaced with demo products. Public catalogue mode does not yet load saved store content or brand assets.
 
 Onboarding recommendations do not limit catalogue eligibility or alter selling markets. Browser storage is validated and failures are non-fatal. No product, market, payment or tenant record is changed. All preview pages identify demonstration mode, and checkout is unavailable. The actual storefront and commerce services remain unchanged.
+
+### Industry coverage and premium collection
+
+The business selector contains 25 categories including jewellery, footwear, bags, wellness, sport, baby/kids, toys, books/stationery, pets, automotive, garden/DIY, equipment, digital products, services and Other. Other accepts a bounded free-text description saved only with the browser profile; it never becomes executable markup or an authority for catalogue eligibility. Broad design recommendations map related industries to existing template families. Services, digital products and other categories do not imply that bookings, digital fulfilment, regulated goods or subscriptions are supported.
+
+Six additional premium previews have distinct interactive modules: Cinema (campaign chapter navigation), Maison (room/category discovery), Prism (side-by-side product selection), Muse (editorial product markers), Terra (expandable story chapters) and District (department exploration). Product facts come only from the available catalogue. Demo markers/story copy are explicitly examples, never merchant-authored claims.
+
+Premium cards have a locked badge and a preview action; their studio disables customisation and local draft saving. This is a preview-stage UX lock, **not a paid entitlement implementation**. Demo previews remain accessible by direct URL, including query options. No payment, price, trial, checkout or unlock is offered. Before monetisation, implement store-scoped server entitlement checks on every draft write, publishing operation, asset use and actual storefront rendering; implement an audited billing/provider lifecycle, refunds, revocations and downgrade policy. Browser flags and local storage must never grant premium access. Decide subscriptions versus one-time theme licences and prices separately before launch.
 
 ### Reference patterns and next delivery
 
@@ -16,7 +24,7 @@ WordPress separates theme discovery, demo/own-content previews and activation: h
 Shopify distinguishes editable draft themes from the single published theme: https://help.shopify.com/en/manual/online-store/themes/adding-themes
 Zayvi adopts those workflow principles with original theme designs.
 
-Still required: server-backed seller registration and tenant/store creation; authenticated store-scoped setup persistence; recommended defaults from the actual catalogue and markets; asset ownership; editable sections; immutable theme drafts with store previews; safe publishing and rollback; applying the approved renderer to actual customer routes. Twelve studio concepts must not be marketed as twelve released themes.
+Still required: server-backed seller registration and tenant/store creation; authenticated store-scoped setup persistence; recommended defaults from the actual catalogue and markets; asset ownership; editable sections; immutable theme drafts with store previews; safe publishing and rollback; applying the approved renderer to actual customer routes. Studio concepts must not be marketed as released, purchasable themes.
 
 Themes are intended as a principal selling point, with both conventional premium shops and expressive motion-led designs. Every released theme must cover homepage, collection/search, product, bag, content and responsive navigation. No autoplay audio, flashing effects, infinite animations or scroll hijacking. Motion respects reduced-motion settings, and the final commerce journey remains server-authoritative.
 
