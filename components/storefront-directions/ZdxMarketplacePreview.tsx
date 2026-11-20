@@ -1,179 +1,55 @@
-"use client";
-
-import { useMemo, useState } from "react";
-import {
-  ZDX_SAMPLE_DEPARTMENTS,
-  ZDX_SAMPLE_PRODUCTS,
-  zdxFormatPrice,
-  type ZdxMarket,
-  type ZdxSampleProduct,
-} from "./zdx-sample-data";
-
-type ZdxScreen = "home" | "collection" | "product" | "bag";
-type ZdxBagLine = { id: string; quantity: number };
-
-const art = (p: ZdxSampleProduct) => ({
-  background: `radial-gradient(circle at 50% 46%, ${p.tint[1]} 0 26%, transparent 27%), linear-gradient(160deg, ${p.tint[0]}, #fff 130%)`,
-});
-
-/**
- * Modern African marketplace direction, preview only.
- * Uses sample data, Tailwind utilities and local state. It reads nothing from
- * the catalogue, writes nothing, and adds no global CSS or fonts.
- */
-export default function ZdxMarketplacePreview() {
-  const [screen, setScreen] = useState<ZdxScreen>("home");
-  const [market, setMarket] = useState<ZdxMarket>("GB");
-  const [department, setDepartment] = useState<string>("All");
-  const [focusId, setFocusId] = useState(ZDX_SAMPLE_PRODUCTS[0].id);
-  const [bag, setBag] = useState<ZdxBagLine[]>([{ id: "s1", quantity: 1 }, { id: "s5", quantity: 1 }]);
-
-  const byId = (id: string) => ZDX_SAMPLE_PRODUCTS.find((p) => p.id === id)!;
-  const focus = byId(focusId);
-  const count = bag.reduce((n, l) => n + l.quantity, 0);
-  const total = bag.reduce((n, l) => n + (market === "NG" ? byId(l.id).priceNgn : byId(l.id).priceGbp) * l.quantity, 0);
-  const money = (v: number) => (market === "NG" ? "₦" + v.toLocaleString("en-GB") : "£" + v.toLocaleString("en-GB"));
-  const shown = useMemo(
-    () => ZDX_SAMPLE_PRODUCTS.filter((p) => department === "All" || p.department === department),
-    [department]
-  );
-  const groups = useMemo(() => {
-    const m = new Map<string, ZdxBagLine[]>();
-    for (const l of bag) {
-      const seller = ZDX_SAMPLE_PRODUCTS.find((p) => p.id === l.id)!.seller;
-      m.set(seller, [...(m.get(seller) ?? []), l]);
-    }
-    return [...m.entries()];
-  }, [bag]);
-
-  const add = (id: string) =>
-    setBag((b) => (b.some((l) => l.id === id) ? b.map((l) => (l.id === id ? { ...l, quantity: l.quantity + 1 } : l)) : [...b, { id, quantity: 1 }]));
-  const change = (id: string, d: number) =>
-    setBag((b) => b.map((l) => (l.id === id ? { ...l, quantity: l.quantity + d } : l)).filter((l) => l.quantity > 0));
-  const open = (id: string) => { setFocusId(id); setScreen("product"); };
-
-  const card = (p: ZdxSampleProduct) => (
-    <div key={p.id} className="flex flex-col overflow-hidden rounded-xl border border-[#e4e7e2] bg-white transition hover:-translate-y-1 hover:shadow-lg">
-      <button type="button" onClick={() => open(p.id)} className="block h-40 w-full" style={art(p)} aria-label={p.name} />
-      <div className="flex flex-1 flex-col gap-0.5 p-3">
-        <div className="min-h-9 text-sm font-semibold leading-snug">{p.name}</div>
-        <div className="text-lg font-extrabold">{zdxFormatPrice(p, market)}</div>
-        <div className="text-xs text-[#55605a]">{p.seller}</div>
-        <button type="button" onClick={() => add(p.id)} className="mt-2 min-h-11 rounded-lg border-2 border-[#0b5d3b] text-sm font-extrabold text-[#0b5d3b]">Quick add</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="bg-[#fafbf8] text-[#1a1a1a]" data-zdx-direction="modern-marketplace">
-      <div className="flex items-center justify-between bg-[#0b5d3b] px-4 py-2 text-xs font-semibold text-white md:px-10">
-        <span>Sample content. Delivery and returns are shown at checkout.</span>
-        <span className="flex overflow-hidden rounded-full border border-white/70">
-          {(["GB", "NG"] as const).map((m) => (
-            <button key={m} type="button" onClick={() => setMarket(m)} aria-pressed={market === m}
-              className={`min-h-9 px-3 font-bold ${market === m ? "bg-white text-[#0b5d3b]" : ""}`}>{m === "GB" ? "UK £" : "Nigeria ₦"}</button>
-          ))}
-        </span>
-      </div>
-
-      <header className="flex flex-wrap items-center gap-3 border-b border-[#e4e7e2] bg-white px-4 py-3 md:px-10">
-        <button type="button" onClick={() => setScreen("home")} className="text-3xl font-extrabold tracking-tight text-[#0b5d3b]">soko<span className="text-[#f2a900]">.</span></button>
-        <div className="flex h-12 min-w-[200px] flex-1 overflow-hidden rounded-lg border-2 border-[#0b5d3b]">
-          <input aria-label="Search" placeholder="Search products, brands and sellers" className="flex-1 px-4 text-sm outline-none" />
-          <button type="button" onClick={() => setScreen("collection")} className="bg-[#0b5d3b] px-5 text-sm font-extrabold text-white">Search</button>
-        </div>
-        <button type="button" onClick={() => setScreen("bag")} className="min-h-12 rounded-lg bg-[#0b5d3b] px-5 text-sm font-extrabold text-white">Bag · {count}</button>
-      </header>
-      <nav aria-label="Departments" className="flex gap-1 overflow-x-auto border-b border-[#e4e7e2] bg-white px-3 text-sm font-bold md:px-9">
-        {ZDX_SAMPLE_DEPARTMENTS.map((d) => (
-          <button key={d} type="button" onClick={() => { setDepartment(d); setScreen("collection"); }} className="min-h-11 whitespace-nowrap px-3">{d}</button>
-        ))}
-      </nav>
-
-      {screen === "home" && (
-        <div className="space-y-8 px-4 py-6 md:px-10">
-          <section className="relative flex min-h-[220px] flex-col justify-end gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-[#0b5d3b] to-[#1f8f5f] p-8 text-white">
-            <div className="absolute -right-12 -top-12 h-64 w-64 rounded-full bg-[#f2a900]" />
-            <div className="relative text-xs font-extrabold tracking-widest">SAMPLE PROMOTION</div>
-            <div className="relative max-w-lg text-4xl font-extrabold leading-tight">Everyday home, handpicked from our sellers</div>
-            <button type="button" onClick={() => { setDepartment("Home"); setScreen("collection"); }} className="relative min-h-11 self-start rounded-lg bg-[#f2a900] px-6 text-sm font-extrabold text-[#1a1a1a]">Shop home</button>
-          </section>
-          <section>
-            <h2 className="mb-3 text-2xl font-extrabold">Picked for you</h2>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">{ZDX_SAMPLE_PRODUCTS.map(card)}</div>
-          </section>
-        </div>
-      )}
-
-      {screen === "collection" && (
-        <div className="grid gap-6 px-4 py-6 md:grid-cols-[240px_1fr] md:px-10">
-          <aside aria-label="Filters" className="h-fit rounded-xl border border-[#e4e7e2] bg-white p-5">
-            <div className="mb-2 text-sm font-extrabold">Department</div>
-            {ZDX_SAMPLE_DEPARTMENTS.map((d) => (
-              <button key={d} type="button" onClick={() => setDepartment(d)} aria-pressed={department === d}
-                className={`block min-h-11 w-full rounded-lg px-2 text-left text-sm ${department === d ? "bg-[#e6f2eb] font-extrabold" : "font-semibold"}`}>{d}</button>
-            ))}
-          </aside>
-          <div>
-            <h1 className="mb-4 text-3xl font-extrabold">{department === "All" ? "All departments" : department} <span className="text-sm font-semibold text-[#55605a]">· {shown.length} sample items</span></h1>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{shown.map(card)}</div>
-          </div>
-        </div>
-      )}
-
-      {screen === "product" && (
-        <div className="grid gap-8 px-4 py-6 md:grid-cols-[1fr_1fr_320px] md:px-10">
-          <div className="h-[420px] rounded-xl" style={art(focus)} />
-          <div className="space-y-3">
-            <div className="text-xs font-bold text-[#0b5d3b]">{focus.seller}</div>
-            <h1 className="text-3xl font-extrabold leading-tight">{focus.name}</h1>
-            <div className="text-3xl font-extrabold">{zdxFormatPrice(focus, market)}</div>
-            <p className="text-base leading-relaxed text-[#2b332d]">{focus.description}</p>
-            <dl className="grid grid-cols-[110px_1fr] gap-y-2 border-t border-[#e4e7e2] pt-3 text-sm"><dt className="font-bold">Department</dt><dd>{focus.department}</dd><dt className="font-bold">Seller</dt><dd>{focus.seller}</dd><dt className="font-bold">Details</dt><dd>{focus.detail}</dd></dl>
-          </div>
-          <aside aria-label="Buy" className="h-fit space-y-3 rounded-xl border-2 border-[#e4e7e2] bg-white p-5">
-            <div className="text-2xl font-extrabold">{zdxFormatPrice(focus, market)}</div>
-            <p className="text-xs text-[#55605a]">Delivery and returns for this seller are shown at checkout for your market.</p>
-            <button type="button" onClick={() => { add(focus.id); setScreen("bag"); }} className="min-h-12 w-full rounded-lg bg-[#f2a900] text-base font-extrabold">Add to bag</button>
-          </aside>
-        </div>
-      )}
-
-      {screen === "bag" && (
-        <div className="grid gap-6 px-4 py-6 md:grid-cols-[1fr_360px] md:px-10">
-          <div className="space-y-4">
-            <h1 className="text-3xl font-extrabold">Your bag · {count} items</h1>
-            {groups.map(([seller, lines]) => (
-              <section key={seller} className="overflow-hidden rounded-xl border border-[#e4e7e2] bg-white">
-                <div className="bg-[#f2f4ef] px-5 py-3 text-sm font-extrabold">Sold by {seller}</div>
-                {lines.map((l) => {
-                  const p = byId(l.id);
-                  return (
-                    <div key={l.id} className="grid grid-cols-[72px_1fr_auto] items-center gap-4 border-t border-[#e4e7e2] px-5 py-3">
-                      <div className="h-[72px] rounded-lg" style={art(p)} />
-                      <div>
-                        <div className="text-sm font-bold">{p.name}</div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <button type="button" aria-label="Remove one" onClick={() => change(l.id, -1)} className="h-11 w-11 rounded-lg border-2 border-[#0b5d3b]">−</button>
-                          <span className="w-5 text-center font-extrabold">{l.quantity}</span>
-                          <button type="button" aria-label="Add one" onClick={() => change(l.id, 1)} className="h-11 w-11 rounded-lg border-2 border-[#0b5d3b]">+</button>
-                        </div>
-                      </div>
-                      <div className="text-lg font-extrabold">{zdxFormatPrice(p, market, l.quantity)}</div>
-                    </div>
-                  );
-                })}
-              </section>
-            ))}
-          </div>
-          <aside aria-label="Order summary" className="h-fit space-y-3 rounded-xl border-2 border-[#e4e7e2] bg-white p-6">
-            <div className="text-xl font-extrabold">Order summary</div>
-            <div className="flex justify-between text-sm"><span>Items</span><span>{money(total)}</span></div>
-            <div className="flex justify-between text-sm text-[#55605a]"><span>Delivery</span><span>At checkout</span></div>
-            <div className="text-xs text-[#55605a]">Each seller ships their own items, so delivery is worked out per seller at checkout. Preview only: nothing can be bought here.</div>
-          </aside>
-        </div>
-      )}
-    </div>
-  );
+'use client';
+import {useContext,useRef,useState,type CSSProperties} from 'react';
+import {ArrowRight,ArrowLeft,Search,ShoppingBag,Heart,SlidersHorizontal,Plus,Minus,X,Store,Grid2X2} from 'lucide-react';
+import {ZdxAppearanceContext} from './zdx-runtime';
+import {ZDX_SAMPLE_PRODUCTS as products,ZDX_SAMPLE_DEPARTMENTS as departments,zdxFormatPrice,type ZdxMarket,type ZdxSampleProduct} from './zdx-sample-data';
+import {marketProducts,changeMarketBag,marketBagSummary,type MarketBagLine} from './zdx-marketplace-model';
+import Art from './ZdxMarketArt';
+import s from './zdx-marketplace.module.css';
+type Screen='home'|'collection'|'product'|'bag'|'saved'|'sellers';
+const sellers=[...new Set(products.map(p=>p.seller))];
+const moods=['Prints with personality','A little everyday ritual','Sound, wherever you go','Made for the table','Room for good things','Softness, considered'];
+export default function ZdxMarketplacePreview({initialScreen='home'}:{initialScreen?:string}) {
+ const appearance=useContext(ZdxAppearanceContext);
+ const [screen,setScreen]=useState<Screen>(['collection','product','bag'].includes(initialScreen)?initialScreen as Screen:'home');
+ const [market,setMarket]=useState<ZdxMarket>('NG'),[query,setQuery]=useState(''),[department,setDepartment]=useState('All'),[seller,setSeller]=useState('All'),[sort,setSort]=useState('featured');
+ const [bag,setBag]=useState<MarketBagLine[]>([]),[saved,setSaved]=useState<string[]>([]),[focusId,setFocusId]=useState('s1'),[filters,setFilters]=useState(false),[notice,setNotice]=useState('');
+ const heading=useRef<HTMLHeadingElement>(null);
+ const focus=products.find(p=>p.id===focusId)!;
+ const summary=marketBagSummary(bag,market);
+ const shown=marketProducts({query,department,seller,sort},market);
+ const chosen=appearance.colours||{canvas:'#faf9f3',ink:'#20271f',accent:'#155b3c',accentInk:'#fff'};
+ const vars={'--market-bg':chosen.canvas,'--market-ink':chosen.ink,'--market-green':chosen.accent,'--market-on-green':chosen.accentInk,fontFamily:appearance.font||'"Plus Jakarta Sans", sans-serif'} as CSSProperties;
+ const navigate=(next:Screen)=>{setScreen(next);setNotice('');requestAnimationFrame(()=>{heading.current?.focus({preventScroll:true});heading.current?.scrollIntoView({block:'start',behavior:'instant'});});};
+ const browse=(d='All',vendor='All')=>{setDepartment(d);setSeller(vendor);setQuery('');setFilters(false);navigate('collection');};
+ const open=(id:string)=>{setFocusId(id);navigate('product');};
+ const add=(p:ZdxSampleProduct)=>{setBag(b=>changeMarketBag(b,p.id,1));setNotice(`${p.name} added to your sample bag.`);};
+ const save=(p:ZdxSampleProduct)=>{setSaved(ids=>ids.includes(p.id)?ids.filter(id=>id!==p.id):[...ids,p.id]);};
+ const money=(n:number)=>new Intl.NumberFormat('en-GB',{style:'currency',currency:market==='NG'?'NGN':'GBP',maximumFractionDigits:0}).format(n);
+ const title=(text:string,kicker?:string)=><div className={s.sectionTitle}><div>{kicker&&<span className={s.eyebrow}>{kicker}</span>}<h1 ref={heading} tabIndex={-1}>{text}</h1></div></div>;
+ const card=(p:ZdxSampleProduct)=><article key={p.id} className={s.card}>
+  <div className={s.art} style={{'--art-bg':p.tint[0]} as CSSProperties}><button className={s.artButton} onClick={()=>open(p.id)} aria-label={`View ${p.name}`}><Art product={p}/></button><button className={s.save} onClick={()=>save(p)} aria-pressed={saved.includes(p.id)} aria-label={`${saved.includes(p.id)?'Unsave':'Save'} ${p.name}`}><Heart size={18} fill={saved.includes(p.id)?'currentColor':'none'}/></button><span className={s.artLabel}>Illustrated sample</span></div>
+  <div className={s.cardBody}><button className={s.vendor} onClick={()=>browse('All',p.seller)}>{p.seller} <ArrowRight size={12}/></button><button className={s.productName} onClick={()=>open(p.id)}>{p.name}</button><p>{p.detail}</p><div className={s.cardBottom}><strong>{zdxFormatPrice(p,market)}</strong><button className={s.add} onClick={()=>add(p)} aria-label={`Add ${p.name} to bag`}><Plus size={18}/><span>Add</span></button></div></div>
+ </article>;
+ return <div className={s.market} style={vars} data-zdx-direction="modern-marketplace">
+  <div className={s.top}><span>A modern market. A world of character.</span><label>Browse in <select aria-label="Shopping market" value={market} onChange={e=>setMarket(e.target.value as ZdxMarket)}><option value="NG">Nigeria · NGN</option><option value="GB">United Kingdom · GBP</option></select></label></div>
+  <header className={s.header}><button className={s.brand} onClick={()=>navigate('home')} aria-label="Market home">{appearance.brand||'soko'}<i>.</i><small>THE EVERYDAY MARKET</small></button><form className={s.search} onSubmit={e=>{e.preventDefault();setDepartment('All');setSeller('All');navigate('collection');}}><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find your next good thing" aria-label="Search products and sellers"/><button type="submit">Search</button></form><div className={s.headerActions}><button onClick={()=>navigate('saved')} aria-label={`Saved items, ${saved.length}`}><Heart size={20}/><span>Saved</span><b>{saved.length}</b></button><button onClick={()=>navigate('bag')} aria-label={`Shopping bag, ${summary.count} items`}><ShoppingBag size={20}/><span>Bag</span><b>{summary.count}</b></button></div></header>
+  <nav className={s.departments} aria-label="Departments">{departments.map((d,i)=><button key={d} onClick={()=>browse(d)} aria-current={screen==='collection'&&department===d?'page':undefined}>{i===0&&<Grid2X2 size={16}/>} {d==='All'?'All departments':d}</button>)}<button className={s.sellerLink} onClick={()=>navigate('sellers')}>Meet the sellers <ArrowRight size={15}/></button></nav>
+  {notice&&<div role="status" className={s.notice}><ShoppingBag size={18}/><span>{notice}</span><button onClick={()=>navigate('bag')}>View bag</button><button onClick={()=>setNotice('')} aria-label="Dismiss message"><X size={18}/></button></div>}
+  <main className={s.main}>
+  {screen==='home'&&<>
+   <section className={s.hero}><div className={s.heroCopy}><span className={s.eyebrow}>ROOTED IN CULTURE. MADE FOR TODAY.</span><h1 ref={heading} tabIndex={-1}>Good finds.<br/>Great stories.<br/><em>Your kind of market.</em></h1><p>Expressive pieces for your wardrobe, your home and the everyday in between. Come in. Find something that feels like you.</p><button className={s.primary} onClick={()=>browse()}>Explore the market <ArrowRight size={18}/></button><span className={s.heroFoot}>FASHION / HOME / BEAUTY / EVERYDAY</span></div><div className={s.heroPhoto}><img src="/demo-photos/textiles-display.webp" alt="Colourful African textiles displayed at a market" fetchPriority="high"/><div className={s.photoTag}><span>COLOUR. CRAFT. CHARACTER.</span><strong>More than ordinary.</strong></div><span className={s.photoCredit}>Market inspiration · sample photography</span></div><div className={s.heroSide}><span className={s.eyebrow}>THE HOME EDIT</span><div className={s.heroArt}><Art product={products[4]}/></div><h2>Make room<br/>for texture.</h2><p>Natural shapes. Everyday spaces.</p><button onClick={()=>browse('Home')}>Find your home favourites <ArrowRight size={17}/></button></div></section>
+   <section className={s.categorySection}><div className={s.rowTitle}><h2>Start with what you love</h2><button onClick={()=>browse()}>Browse everything <ArrowRight size={16}/></button></div><div className={s.categoryGrid}>{departments.slice(1).map((d,i)=><button key={d} onClick={()=>browse(d)}><span className={s.categoryArt}><Art product={products[[0,1,2,4,3][i]]}/></span><strong>{d}</strong><ArrowRight size={17}/></button>)}</div></section>
+   <section><div className={s.rowTitle}><div><span className={s.eyebrow}>THE MARKET EDIT</span><h2>Little discoveries. Lasting favourites.</h2></div><button onClick={()=>browse()}>View all <ArrowRight size={16}/></button></div><div className={s.grid}>{products.map(card)}</div></section>
+   <section className={s.story}><div><span className={s.eyebrow}>BEHIND EVERY FIND, A SELLER</span><h2>People make<br/>the market.</h2><p>Explore the sample shops behind the collection, from textiles and beauty to pantry favourites.</p><button className={s.primary} onClick={()=>navigate('sellers')}>Meet the sellers <ArrowRight size={18}/></button></div><div className={s.sellerTiles}>{sellers.map((name,i)=><button key={name} onClick={()=>browse('All',name)}><span>{String(i+1).padStart(2,'0')}</span><strong>{name}</strong><small>{products.filter(p=>p.seller===name).map(p=>p.department).filter((v,i,a)=>a.indexOf(v)===i).join(' / ')}</small><ArrowRight size={20}/></button>)}</div></section>
+  </>}
+  {screen==='collection'&&<>{title(query?`Results for “${query}”`:department==='All'?'Explore the market':department,'FIND YOUR GOOD THING')}<div className={s.collectionBar}><span>{shown.length} sample {shown.length===1?'item':'items'}</span><button aria-expanded={filters} onClick={()=>setFilters(!filters)}><SlidersHorizontal size={17}/> Filters{seller!=='All'?' · 1':''}</button><label>Sort <select value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Market edit</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="name">Name: A–Z</option></select></label></div>{filters&&<div className={s.filters}><label>Department<select value={department} onChange={e=>setDepartment(e.target.value)}>{departments.map(d=><option key={d}>{d}</option>)}</select></label><label>Seller<select value={seller} onChange={e=>setSeller(e.target.value)}><option>All</option>{sellers.map(d=><option key={d}>{d}</option>)}</select></label><button onClick={()=>{setDepartment('All');setSeller('All');setQuery('');setSort('featured');}}>Clear filters</button></div>}{seller!=='All'&&<p className={s.filterTag}>From {seller}<button aria-label="Clear seller filter" onClick={()=>setSeller('All')}><X size={14}/></button></p>}{shown.length?<div className={s.grid}>{shown.map(card)}</div>:<div className={s.empty}><Search size={32}/><h2>No finds just yet</h2><p>Try a different search or explore all sample departments.</p><button className={s.primary} onClick={()=>browse()}>Reset search and filters</button></div>}</>}
+  {screen==='product'&&<><button className={s.back} onClick={()=>browse(focus.department)}><ArrowLeft size={16}/> {focus.department}</button><div className={s.productLayout}><div className={s.productArt} style={{background:`color-mix(in srgb, ${focus.tint[0]} 36%, var(--market-bg))`}}><Art product={focus}/><span>Sample illustration · not a product photograph</span></div><section className={s.productInfo}><button className={s.vendor} onClick={()=>browse('All',focus.seller)}><Store size={16}/>{focus.seller}<ArrowRight size={15}/></button>{title(focus.name,moods[products.indexOf(focus)])}<strong className={s.bigPrice}>{zdxFormatPrice(focus,market)}</strong><p>{focus.description}</p><dl><dt>Details</dt><dd>{focus.detail}</dd><dt>Department</dt><dd>{focus.department}</dd><dt>Seller</dt><dd>{focus.seller}</dd></dl><div className={s.buyActions}><button className={s.primary} onClick={()=>add(focus)}><ShoppingBag size={18}/> Add to sample bag</button><button className={s.secondary} onClick={()=>save(focus)} aria-pressed={saved.includes(focus.id)}><Heart size={18}/>{saved.includes(focus.id)?'Saved':'Save'}</button></div><p className={s.sampleNote}>Explore the experience using sample items and explicit sample prices for each market. No stock, delivery or payment is connected.</p></section></div><section><div className={s.rowTitle}><h2>Keep exploring</h2></div><div className={s.grid}>{products.filter(p=>p.id!==focus.id).slice(0,4).map(card)}</div></section></>}
+  {screen==='bag'&&<>{title(`Your bag${summary.count?` (${summary.count})`:''}`,'GOOD FINDS, ALL TOGETHER')}{!summary.count?<div className={s.empty}><ShoppingBag size={36}/><h2>Your next discovery is waiting.</h2><p>Your bag is empty. Add something from the sample market.</p><button className={s.primary} onClick={()=>browse()}>Explore the market <ArrowRight size={18}/></button></div>:<div className={s.bagLayout}><div>{summary.groups.map(([name,lines])=><section className={s.bagGroup} key={name}><h2><Store size={18}/> {name}<small>Sample seller</small></h2>{lines.map(({product:p,quantity})=><div className={s.bagLine} key={p.id}><button className={s.bagArt} onClick={()=>open(p.id)} aria-label={`View ${p.name}`}><Art product={p}/></button><div><button className={s.productName} onClick={()=>open(p.id)}>{p.name}</button><p>{p.detail}</p><div className={s.quantity}><button aria-label={`Remove one ${p.name}`} onClick={()=>setBag(b=>changeMarketBag(b,p.id,-1))}><Minus size={15}/></button><span aria-label={`Quantity ${quantity}`}>{quantity}</span><button aria-label={`Add one ${p.name}`} onClick={()=>setBag(b=>changeMarketBag(b,p.id,1))}><Plus size={15}/></button></div></div><div className={s.lineTotal}><strong>{zdxFormatPrice(p,market,quantity)}</strong><button onClick={()=>setBag(b=>b.filter(line=>line.id!==p.id))} aria-label={`Remove ${p.name} from bag`}>Remove</button></div></div>)}</section>)}<button className={s.back} onClick={()=>browse()}><ArrowLeft size={16}/> Keep exploring</button></div><aside className={s.summary}><span className={s.eyebrow}>THE DETAILS</span><h2>Your sample bag</h2><p><span>{summary.count} items</span><strong>{money(summary.total)}</strong></p><p><span>Market</span><span>{market==='NG'?'Nigeria · NGN':'United Kingdom · GBP'}</span></p><div className={s.summaryTotal}><span>Items subtotal</span><strong>{money(summary.total)}</strong></div><p className={s.sampleNote}>This is a design demo. Delivery, taxes and checkout are not calculated. No order will be placed.</p><button className={s.secondary} onClick={()=>setNotice('You have reached the end of the sample shopping journey. No order or payment was created.')}>Explore demo summary <ArrowRight size={17}/></button></aside></div>}</>}
+  {screen==='saved'&&<>{title('Your saved finds','COME BACK TO WHAT YOU LOVE')}{saved.length?<div className={s.grid}>{products.filter(p=>saved.includes(p.id)).map(card)}</div>:<div className={s.empty}><Heart size={36}/><h2>A little space for your favourites.</h2><p>Tap a heart on any sample product to save it here for this visit.</p><button className={s.primary} onClick={()=>browse()}>Find your favourites</button></div>}</>}
+  {screen==='sellers'&&<>{title('Meet the market','INDEPENDENT SPIRIT. EVERYDAY FINDS.')}<p className={s.intro}>Discover each sample seller’s collection. These are fictional shops for exploring the theme.</p><div className={s.sellerDirectory}>{sellers.map((name,i)=><button key={name} onClick={()=>browse('All',name)}><div className={s.directoryArt}><Art product={products.find(p=>p.seller===name)!}/></div><span className={s.eyebrow}>SAMPLE SHOP / 0{i+1}</span><h2>{name}</h2><p>{products.filter(p=>p.seller===name).length} sample items</p><span>Explore the shop <ArrowRight size={17}/></span></button>)}</div></>}
+  </main>
+  <footer className={s.footer}><div><strong>{appearance.brand||'soko'}.</strong><p>A market full of character.<br/>A place for your everyday.</p></div><div><h2>Find your way</h2><button onClick={()=>browse()}>All departments</button><button onClick={()=>navigate('sellers')}>Meet the sellers</button><button onClick={()=>navigate('saved')}>Saved finds</button></div><div><h2>Made to explore</h2><p>Modern African Marketplace<br/>Zayvi theme demonstration<br/>Sample content. No real purchases.</p></div><div className={s.footerBottom}>Different stories. One good market.<span>Preview · {market==='NG'?'Nigeria / NGN':'United Kingdom / GBP'}</span></div></footer>
+  <nav className={s.mobileDock} aria-label="Mobile navigation"><button aria-current={screen==='home'?'page':undefined} onClick={()=>navigate('home')}><Store size={20}/>Discover</button><button aria-current={screen==='collection'?'page':undefined} onClick={()=>browse()}><Grid2X2 size={20}/>Departments</button><button aria-current={screen==='saved'?'page':undefined} onClick={()=>navigate('saved')}><Heart size={20}/>Saved ({saved.length})</button><button aria-current={screen==='bag'?'page':undefined} onClick={()=>navigate('bag')}><ShoppingBag size={20}/>Bag ({summary.count})</button></nav>
+ </div>;
 }
