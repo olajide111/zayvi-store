@@ -1,5 +1,19 @@
 # Zayvi storefront themes and business configuration
 
+## Theme collection studio — current implementation
+
+Admin → Themes now contains twelve private design concepts. Six Signature concepts (Atelier, Horizon, Circuit, Pantry, Habitat and Trade) cover the six existing industry families. Six Expressive concepts (Pulse, Orbit, Studio, Bazaar, Monolith and Playroom) explore poster, circular, gallery and colour-block shopping compositions. These are twelve concepts across six layout structures, not twelve complete storefront implementations.
+
+The gallery supports name/description search, industry and collection filters, desktop/mobile preview widths, finite entrance animation with Off/Subtle/Expressive controls, replay and a demonstration bag. The operating system reduced-motion preference disables animations and transitions. Preview products are labelled as samples; no price, stock, review or delivery promises are invented. No preview action writes to the commerce API or creates an order.
+
+Theme choices are session-local. This replaces the earlier template/palette sample page; the live storefront is unchanged. The next implementation must connect approved designs to tenant-scoped draft, preview, publish and rollback, restore brand-level colour/type controls within that editor, and render matching collection, product, cart and content pages. Do not market these concepts as publishable themes until that work and the quality gates below pass.
+
+### Product direction
+
+Theme variety should be a primary reason sellers choose Zayvi: premium conventional shops alongside distinctive visual identities. Offer reusable sections and optional motion packs (product reveals, gallery transitions, staggered collections and bag feedback), with no forced animation, autoplay audio, flashing effects or scroll hijacking. Product images and commerce facts remain seller-owned and server-authoritative. Theme changes retain products, customers, orders, markets and provider connections.
+
+Before release, each approved design needs real-catalogue previews, accessible palette and font controls, section editing, keyboard and touch QA, responsive imagery, measured performance, and a complete purchase journey. Grocery and trade styling must not imply that recurring orders, tier pricing or trade-account rules exist before those services are implemented and verified.
+
 ## Decision
 
 Zayvi is one multi-tenant commerce platform with multiple storefront experiences. It is not one fixed design copied for every merchant, and it is not a collection of separately maintained website codebases.
