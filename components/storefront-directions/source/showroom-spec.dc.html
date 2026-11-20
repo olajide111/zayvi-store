@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Showroom spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1200px;height:1300px;box-sizing:border-box;padding:48px 56px;background:#F6F4EF;color:#151515;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;flex-direction:column;gap:26px;overflow:hidden">
+  <div>
+    <div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#B8330F">1 · FASHION SHOWROOM · SPEC</div>
+    <h1 style="margin:8px 0 0;font-size:38px;line-height:1.1;font-weight:800">Assets, motion and how it fits the theme system</h1>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+    <section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6">
+      <h2 style="margin:0;font-size:20px;font-weight:800">Required assets</h2>
+      <div style="font-size:14px;line-height:1.55"><b>Cut-out garment images (the key asset).</b> One image per product, the garment alone on a transparent background, front view, shot on a hanger or ghost mannequin. PNG or WebP with alpha, 1600 px tall, same crop and hanger position for every piece so the rail lines up. Add one extra image per colour.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Detail shots.</b> Two close-ups per product (fabric, fastening) shown in the product panel.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Rail and floor.</b> The rail bar, hanger and floor shadow are drawn in SVG and CSS, so no image is needed. A merchant can pick the floor colour and rail finish.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Fonts.</b> Bricolage Grotesque 400, 600, 800 (open licence), self-hosted at launch.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Fallback.</b> If a product has no cut-out, it shows a plain card on the rail rather than a broken image.</div>
+    </section>
+    <section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6">
+      <h2 style="margin:0;font-size:20px;font-weight:800">Motion behaviour</h2>
+      <div style="font-size:14px;line-height:1.55"><b>Rail glide.</b> Arrows, swipe or keys move the focus. Garments slide 190 px (mobile) or 340 px (desktop) over 0.8 s, easing cubic-bezier(.22,.8,.2,1).</div>
+      <div style="font-size:14px;line-height:1.55"><b>Pull-forward.</b> Opening a product scales the garment up and moves it left while the others fade out. Same 0.8 s curve, so it reads as one movement.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Collection.</b> Garments settle onto two or three rails in a grid; filtered-out pieces fade to 12%.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Panels.</b> Info card, product sheet and bag rise 40 px with a fade over 0.5 s.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Reduced motion.</b> With "reduce motion" on, all transitions drop to an instant 0.01 s cross-fade. Nothing autoplays.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Performance.</b> Only transform and opacity animate; images lazy-load beyond the two nearest neighbours.</div>
+    </section>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+    <section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6">
+      <h2 style="margin:0;font-size:20px;font-weight:800">Navigation and page composition</h2>
+      <div style="font-size:14px;line-height:1.55"><b>Home</b> is the stage itself: a focused garment, neighbours either side, a compact shopping panel. No menu bar.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Collection</b> is the same stage with garments laid out on rails, filtered by room (category).</div>
+      <div style="font-size:14px;line-height:1.55"><b>Product</b> pulls one garment forward with colour, size and Add to bag.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Bag</b> slides over the stage (a side panel on desktop, a bottom sheet on mobile) with quantity controls, subtotal, PayPal and Checkout.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Market.</b> The £ / ₦ switch changes every price. Sample prices only.</div>
+    </section>
+    <section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6">
+      <h2 style="margin:0;font-size:20px;font-weight:800">Fit with the existing theme system</h2>
+      <div style="font-size:14px;line-height:1.55"><b>Template family.</b> A new family, "showroom", beside editorial, general-commerce, product-specification, grocery, home-furniture and wholesale. The existing six are untouched.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Tokens.</b> Floor colour, rail finish, accent, text colour and corner radius are tokens a merchant can edit.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Sections.</b> Typed sections only: rail stage, room index, shopping panel, bag panel. No arbitrary HTML.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Best for.</b> Clothing and accessories with clean cut-out photography. Not suited to large catalogues or items that need many specifications.</div>
+      <div style="font-size:14px;line-height:1.55"><b>Rules kept.</b> No invented reviews, stock or delivery claims; WCAG 2.2 AA (all controls are buttons, 44 px targets, visible focus, text labels on every garment).</div>
+    </section>
+  </div>
+
+  <div style="background:#151515;color:#fff;border-radius:14px;padding:20px 26px;font-size:14px;line-height:1.55">
+    <b>Open points for the review.</b> (1) The garments in these boards are drawn placeholders; the look depends on real cut-out photography. (2) A full-screen rail suits about 6 to 40 pieces per room; larger ranges should switch to the collection grid. (3) Nothing here is built or applied. It needs sign-off from the named owner first.
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

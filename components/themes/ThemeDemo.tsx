@@ -1,13 +1,13 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import type {ThemeDesign} from '@/lib/theme-designs';
+import type {StudioTheme as ThemeDesign} from '@/lib/theme-registry';
 import s from './demo.module.css';
 const sizes={phone:[390,844],tablet:[820,1180],laptop:[1366,900]} as const;
 export default function ThemeDemo({theme,query}:{theme:ThemeDesign;query:string}){
  const [device,setDevice]=useState<keyof typeof sizes>('laptop'),[landscape,setLandscape]=useState(false),[fit,setFit]=useState(true),[area,setArea]=useState([1400,900]);
  const stage=useRef<HTMLDivElement>(null);useEffect(()=>{const el=stage.current;if(!el)return;const observer=new ResizeObserver(([e])=>setArea([e.contentRect.width,e.contentRect.height]));observer.observe(el);return()=>observer.disconnect();},[]);
- const native=sizes[device],w=landscape?native[1]:native[0],h=landscape?native[0]:native[1],scale=fit?Math.min(1,Math.max(.1,(area[0]-40)/(w+24)),Math.max(.1,(area[1]-40)/(h+24))):1;
+ const native=theme.directionFamily&&device==='laptop'?[1440,900]:sizes[device],w=landscape?native[1]:native[0],h=landscape?native[0]:native[1],scale=fit?Math.min(1,Math.max(.1,(area[0]-40)/(w+24)),Math.max(.1,(area[1]-40)/(h+24))):1;
  const [showroom,setShowroom]=useState(new URLSearchParams(query).get('showroom')==='3d'?'3d':'photo');
  const previewQuery=new URLSearchParams(query);if(theme.id==='cinema')previewQuery.set('showroom',showroom);
  const src=`/admin/themes/${theme.id}/preview?${previewQuery.toString()}`;

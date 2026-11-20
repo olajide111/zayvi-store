@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Editorial prototype, mobile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes edReveal{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0)}}
+@keyframes edDrift{from{transform:scale(1.06) translateY(0)}to{transform:scale(1.12) translateY(-10px)}}
+.ed-btn{cursor:pointer;font-family:inherit;color:inherit}
+.ed-btn:focus-visible{outline:2px solid #1F2A5A;outline-offset:2px}
+.ed-sm{font-family:'Instrument Sans',system-ui,sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+
+  <header style="height:112px;flex-shrink:0;box-sizing:border-box;padding:10px 18px 0;border-bottom:1px solid #1F2A5A;display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;justify-content:space-between;align-items:center" class="ed-sm">
+      <button class="ed-btn" onClick="{{goCollection}}" style="background:none;border:0;padding:0;min-height:44px;font:inherit;letter-spacing:inherit;text-transform:inherit">Menu</button>
+      <div style="display:flex;align-items:center">
+        <button class="ed-btn" onClick="{{setGB}}" style="{{gbStyle}}">£</button>
+        <button class="ed-btn" onClick="{{setNG}}" style="{{ngStyle}}">₦</button>
+      </div>
+      <button class="ed-btn" onClick="{{goBag}}" style="background:none;border:0;padding:0;min-height:44px;font:inherit;letter-spacing:inherit;text-transform:inherit">Bag · {{count}}</button>
+    </div>
+    <button class="ed-btn" onClick="{{goHome}}" style="background:none;border:0;padding:0 0 14px;font-family:'Fraunces',serif;font-size:30px;font-weight:800;letter-spacing:.12em">ADIRE HOUSE</button>
+  </header>
+
+  <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+    <section style="height:520px;flex-shrink:0;position:relative;overflow:hidden;animation:edReveal 1.4s cubic-bezier(.22,.8,.2,1) both">
+      <div style="{{heroArt}}"></div>
+      <div class="ed-sm" style="position:absolute;left:18px;bottom:16px;color:#fff;font-size:10px">Placeholder photograph</div>
+    </section>
+    <section style="height:360px;flex-shrink:0;box-sizing:border-box;padding:28px 22px;display:flex;flex-direction:column;gap:14px;background:#F3EBDD">
+      <div class="ed-sm" style="color:#B04A22">Issue 07 · The edit</div>
+      <h1 style="margin:0;font-family:'Fraunces',serif;font-weight:600;font-size:60px;line-height:.98;letter-spacing:-.02em">The indigo issue</h1>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:#3A332B">Six pieces cut from deep blue cloth, with resist-dyed patterns inspired by Yorùbá adire.</p>
+      <button class="ed-btn ed-sm" onClick="{{goCollection}}" style="margin-top:auto;background:#1F2A5A;color:#fff;border:0;min-height:52px;font-size:12px">Read the edit →</button>
+    </section>
+    <div style="height:36px;flex-shrink:0;overflow:hidden"><svg width="100%" height="36" aria-hidden="true"><defs><pattern id="edtm" width="36" height="36" patternUnits="userSpaceOnUse"><rect width="36" height="36" fill="#1F2A5A"></rect><path d="M0 18 L9 4 L18 18 L27 32 L36 18" fill="none" stroke="#E7B43C" stroke-width="2.5"></path><circle cx="9" cy="18" r="2.4" fill="#B04A22"></circle><circle cx="27" cy="18" r="2.4" fill="#B04A22"></circle></pattern></defs><rect width="100%" height="36" fill="url(#edtm)"></rect></svg></div>
+    <section style="flex-grow:1;box-sizing:border-box;padding:30px 18px 0;display:flex;flex-direction:column;gap:28px">
+      <h2 style="margin:0;font-family:'Fraunces',serif;font-weight:600;font-size:28px">In this issue</h2>
+      <sc-for list="{{featured}}" as="f" hint-placeholder-count="3">
+        <button class="ed-btn" onClick="{{f.pick}}" style="display:block;text-align:left;background:none;border:0;padding:0;width:100%">
+          <div style="{{f.img}}"></div>
+          <div class="ed-sm" style="margin-top:12px;color:#B04A22;font-size:10px">No. {{f.no}} · {{f.kind}}</div>
+          <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:600;margin-top:3px">{{f.name}}</div>
+          <div style="font-size:14px;margin-top:3px;color:#3A332B">{{f.price}} · {{f.cloth}}</div>
+        </button>
+      </sc-for>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{isCollection}}" hint-placeholder-val="{{ false }}">
+    <section style="height:200px;flex-shrink:0;box-sizing:border-box;padding:28px 18px 0;display:flex;flex-direction:column;gap:12px">
+      <div class="ed-sm" style="color:#B04A22">The edit · 01</div>
+      <h1 style="margin:0;font-family:'Fraunces',serif;font-weight:600;font-size:48px;line-height:1;letter-spacing:-.02em">All pieces</h1>
+      <div class="ed-sm" style="display:flex;gap:8px;overflow-x:auto;margin-top:auto;padding-bottom:12px">
+        <sc-for list="{{filters}}" as="fl" hint-placeholder-count="5"><button class="ed-btn" onClick="{{fl.pick}}" style="{{fl.style}}">{{fl.name}}</button></sc-for>
+      </div>
+    </section>
+    <div style="height:36px;flex-shrink:0;overflow:hidden"><svg width="100%" height="36" aria-hidden="true"><rect width="100%" height="36" fill="url(#edtm)"></rect></svg></div>
+    <section style="flex-grow:1;box-sizing:border-box;padding:28px 18px 0">
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;row-gap:26px;align-items:start">
+        <sc-for list="{{shown}}" as="p" hint-placeholder-count="6">
+          <button class="ed-btn" onClick="{{p.pick}}" style="{{p.wrap}}">
+            <div style="{{p.img}}"></div>
+            <div class="ed-sm" style="margin-top:10px;color:#B04A22;font-size:10px">No. {{p.no}}</div>
+            <div style="font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin-top:2px;line-height:1.15">{{p.name}}</div>
+            <div style="font-size:13px;margin-top:3px;color:#3A332B">{{p.price}}</div>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{isProduct}}" hint-placeholder-val="{{ false }}">
+    <section style="height:560px;flex-shrink:0;position:relative;overflow:hidden;animation:edReveal 1.2s cubic-bezier(.22,.8,.2,1) both">
+      <div style="{{curArt}}"></div>
+      <button class="ed-btn ed-sm" onClick="{{goCollection}}" style="position:absolute;left:12px;top:8px;background:rgba(250,245,236,.9);border:0;padding:0 14px;min-height:44px">← All pieces</button>
+      <div class="ed-sm" style="position:absolute;left:18px;bottom:16px;color:#fff;font-size:10px">Placeholder photograph</div>
+    </section>
+    <section style="height:560px;flex-shrink:0;box-sizing:border-box;padding:24px 22px;display:flex;flex-direction:column;gap:14px;background:#F3EBDD">
+      <div class="ed-sm" style="color:#B04A22">No. {{cur.no}} · {{cur.kind}}</div>
+      <h1 style="margin:0;font-family:'Fraunces',serif;font-weight:600;font-size:40px;line-height:1;letter-spacing:-.02em">{{cur.name}}</h1>
+      <div style="font-family:'Fraunces',serif;font-size:24px">{{cur.price}}</div>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:#3A332B">{{cur.desc}}</p>
+      <div>
+        <div class="ed-sm" style="margin-bottom:8px">Size · {{size}}</div>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{sizes}}" as="z" hint-placeholder-count="5"><button class="ed-btn" onClick="{{z.pick}}" style="{{z.style}}">{{z.label}}</button></sc-for>
+        </div>
+      </div>
+      <button class="ed-btn ed-sm" onClick="{{addToBag}}" style="margin-top:auto;background:#1F2A5A;color:#fff;border:0;min-height:56px;font-size:12px">Add to bag · {{cur.price}}</button>
+      <div style="font-size:12px;color:#6B5B4A">Delivery and returns are shown at checkout for your market.</div>
+    </section>
+    <section style="height:300px;flex-shrink:0;box-sizing:border-box;padding:0;display:grid;grid-template-rows:110px 1fr;border-top:1px solid #1F2A5A">
+      <div style="{{clothSwatch}}"></div>
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:8px">
+        <div class="ed-sm" style="color:#B04A22">Notes on the cloth</div>
+        <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:600;line-height:1.1">{{cur.cloth}}</div>
+        <p style="margin:0;font-size:14px;line-height:1.5;color:#3A332B">{{cur.care}}</p>
+      </div>
+    </section>
+    <section style="flex-grow:1;box-sizing:border-box;padding:20px 18px 0;border-top:1px solid #1F2A5A">
+      <h2 style="margin:0 0 14px;font-family:'Fraunces',serif;font-weight:600;font-size:22px">Also in this issue</h2>
+      <div style="display:flex;gap:12px;overflow-x:auto">
+        <sc-for list="{{pairs}}" as="q" hint-placeholder-count="3">
+          <button class="ed-btn" onClick="{{q.pick}}" style="flex-shrink:0;width:120px;text-align:left;background:none;border:0;padding:0">
+            <div style="{{q.img}}"></div>
+            <div style="font-family:'Fraunces',serif;font-size:15px;font-weight:600;margin-top:6px;line-height:1.15">{{q.name}}</div>
+            <div style="font-size:12px;margin-top:2px">{{q.price}}</div>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{isBag}}" hint-placeholder-val="{{ false }}">
+    <section style="height:110px;flex-shrink:0;box-sizing:border-box;padding:0 18px 14px;display:flex;align-items:flex-end;justify-content:space-between">
+      <h1 style="margin:0;font-family:'Fraunces',serif;font-weight:600;font-size:38px;line-height:1">Your bag · {{count}}</h1>
+    </section>
+    <section style="box-sizing:border-box;padding:0 18px;border-top:1px solid #1F2A5A">
+      <sc-for list="{{bagItems}}" as="b" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:84px 1fr auto;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(31,42,90,.25)">
+          <div style="{{b.img}}"></div>
+          <div>
+            <div class="ed-sm" style="color:#B04A22;font-size:10px">No. {{b.no}} · Size {{b.size}}</div>
+            <div style="font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin-top:3px;line-height:1.1">{{b.name}}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <button class="ed-btn" onClick="{{b.dec}}" aria-label="Remove one" style="width:44px;height:44px;border:1.5px solid #1F2A5A;background:none;font-size:18px">−</button>
+              <span style="font-size:15px;font-weight:600;width:20px;text-align:center">{{b.qty}}</span>
+              <button class="ed-btn" onClick="{{b.inc}}" aria-label="Add one" style="width:44px;height:44px;border:1.5px solid #1F2A5A;background:none;font-size:18px">+</button>
+            </div>
+          </div>
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:600">{{b.line}}</div>
+        </div>
+      </sc-for>
+    </section>
+    <aside aria-label="Summary" style="margin:20px 18px 0;background:#F3EBDD;padding:22px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;font-family:'Fraunces',serif;font-size:24px;font-weight:600"><span>Subtotal</span><span>{{subtotal}}</span></div>
+      <div style="font-size:13px;color:#3A332B;line-height:1.5">Delivery and returns are calculated at checkout for your market.</div>
+      <button class="ed-btn ed-sm" style="background:#fff;color:#1F2A5A;border:1.5px solid #1F2A5A;min-height:52px">Pay with PayPal</button>
+      <button class="ed-btn ed-sm" style="background:#1F2A5A;color:#fff;border:0;min-height:52px">Checkout</button>
+    </aside>
+    <div style="flex-grow:1"></div>
+    <div style="height:36px;flex-shrink:0;overflow:hidden"><svg width="100%" height="36" aria-hidden="true"><rect width="100%" height="36" fill="url(#edtm)"></rect></svg></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","options":["home","collection","product","bag"],"default":"home"},"$preview":{"width":390,"height":2200}}'>
+const P = [
+  { name: 'Adire Wrap Dress', kind: 'Dresses', gb: 148, ng: 248000, cloth: 'Hand-dyed cotton', c: ['#1F2A5A', '#3E5FA8', '#E7B43C'], desc: 'A wrap dress in indigo cotton with a resist-dyed pattern inspired by adire. Ties at the waist, falls below the knee.', care: 'Cotton dyed in small batches. Indigo can transfer on first washes, so wash it alone in cold water.' },
+  { name: 'Woven Stripe Jacket', kind: 'Tailoring', gb: 186, ng: 312000, cloth: 'Strip-woven cotton', c: ['#6B3A22', '#B04A22', '#E7B43C'], desc: 'A boxy unlined jacket cut from narrow woven strips in rust and ochre. Two patch pockets.', care: 'Woven in narrow bands and joined by hand. Dry clean or spot clean.' },
+  { name: 'Strip-woven Scarf', kind: 'Cloth', gb: 58, ng: 98000, cloth: 'Cotton and silk', c: ['#0B5D3B', '#3FA46C', '#E7B43C'], desc: 'A long scarf in green and gold bands with a fringed edge.', care: 'Cotton and silk blend. Hand wash cool and dry flat.' },
+  { name: 'Ankara Print Shirt', kind: 'Tailoring', gb: 92, ng: 155000, cloth: 'Printed cotton', c: ['#B04A22', '#E7B43C', '#1F2A5A'], desc: 'A camp-collar shirt in a bold wax-print cotton with a relaxed straight hem.', care: 'Machine wash at 30 degrees, inside out.' },
+  { name: 'Linen Wide Trousers', kind: 'Tailoring', gb: 88, ng: 148000, cloth: 'Washed linen', c: ['#8A7A5C', '#D9C9A3', '#1F2A5A'], desc: 'High-waisted wide trousers in washed linen with deep pleats.', care: 'Machine wash at 30 degrees and line dry.' },
+  { name: 'Indigo Throw', kind: 'Home', gb: 120, ng: 202000, cloth: 'Hand-dyed cotton', c: ['#14204A', '#3E5FA8', '#F3EBDD'], desc: 'A large cotton throw in layered indigo with a resist-dyed border. Sample content.', care: 'Hand wash cold. Dry in the shade.' }
+];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
+const FIL = ['All', 'Dresses', 'Tailoring', 'Cloth', 'Home'];
+const art = (p, v) => {
+  const c = p.c;
+  if (v === 1) return 'background:radial-gradient(circle at 72% 28%,' + c[2] + ' 0 11%,transparent 11.5%),linear-gradient(0deg,rgba(0,0,0,.28),transparent 50%),linear-gradient(155deg,' + c[1] + ',' + c[0] + ')';
+  return 'background:linear-gradient(120deg,' + c[0] + ' 0 33%,' + c[1] + ' 33% 66%,' + c[2] + ' 66%)';
+};
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { screen: null, focus: 0, market: 'GB', size: 'M', filter: 'All', bag: [{ i: 0, size: 'M', qty: 1 }, { i: 2, size: 'M', qty: 1 }] };
+  }
+  renderVals() {
+    const s = this.state;
+    const screen = s.screen || this.props.screen || 'home';
+    const m = s.market;
+    const money = (p, q) => m === 'NG' ? '₦' + (p.ng * q).toLocaleString('en-US') : '£' + (p.gb * q);
+    const set = (o) => () => this.setState(o);
+    const no = (i) => String(i + 1).padStart(2, '0');
+    const open = (i) => () => this.setState({ focus: i, screen: 'product', size: 'M' });
+    const item = (i, h, off) => {
+      const p = P[i];
+      return {
+        no: no(i), name: p.name, kind: p.kind, price: money(p, 1), cloth: p.cloth,
+        wrap: 'display:block;text-align:left;background:none;border:0;padding:0;width:100%;margin-top:' + off + 'px',
+        img: 'width:100%;height:' + h + 'px;' + art(p, 1),
+        pick: open(i)
+      };
+    };
+    const featured = [0, 1, 2].map((i) => item(i, 300, 0));
+    const list = P.map((p, i) => ({ p, i })).filter((x) => s.filter === 'All' || x.p.kind === s.filter);
+    const shown = list.map((x, k) => item(x.i, k % 2 === 1 ? 250 : 220, k % 2 === 1 ? 0 : 0));
+    const cur = P[s.focus];
+    const pairs = [1, 2, 3].map((o) => {
+      const i = (s.focus + o) % P.length; const p = P[i];
+      return { name: p.name, price: money(p, 1), img: 'width:120px;height:150px;' + art(p, 1), pick: open(i) };
+    });
+    const bagItems = s.bag.map((b, k) => {
+      const p = P[b.i];
+      return {
+        no: no(b.i), name: p.name, size: b.size, qty: b.qty, line: money(p, b.qty),
+        img: 'width:84px;height:112px;' + art(p, 1),
+        inc: () => this.setState({ bag: s.bag.map((x, j) => j === k ? { ...x, qty: x.qty + 1 } : x) }),
+        dec: () => this.setState({ bag: s.bag.map((x, j) => j === k ? { ...x, qty: x.qty - 1 } : x).filter((x) => x.qty > 0) })
+      };
+    });
+    const count = s.bag.reduce((a, b) => a + b.qty, 0);
+    const total = s.bag.reduce((a, b) => a + (m === 'NG' ? P[b.i].ng : P[b.i].gb) * b.qty, 0);
+    const sm = (on) => 'border:0;background:' + (on ? '#1F2A5A' : 'transparent') + ';color:' + (on ? '#fff' : '#1F2A5A') + ';padding:0 14px;min-height:44px;font:600 12px Instrument Sans,sans-serif';
+    const H = { home: 2200, collection: 1700, product: 1800, bag: 1200 }[screen];
+    return {
+      rootStyle: 'width:390px;height:' + H + 'px;overflow:hidden;display:flex;flex-direction:column;background:#FAF5EC;color:#1B1812;font-family:\'Instrument Sans\',system-ui,sans-serif',
+      isHome: screen === 'home', isCollection: screen === 'collection', isProduct: screen === 'product', isBag: screen === 'bag',
+      heroArt: 'position:absolute;inset:0;animation:edDrift 24s ease-in-out infinite alternate;' + art(P[0], 1),
+      featured, shown,
+      filters: FIL.map((f) => ({ name: f, pick: set({ filter: f }), style: 'flex-shrink:0;min-height:44px;padding:0 16px;background:' + (s.filter === f ? '#1F2A5A' : 'transparent') + ';color:' + (s.filter === f ? '#fff' : '#1F2A5A') + ';border:1.5px solid #1F2A5A;font:inherit;letter-spacing:inherit;text-transform:inherit' })),
+      cur: { no: no(s.focus), name: cur.name, kind: cur.kind, price: money(cur, 1), desc: cur.desc, cloth: cur.cloth, care: cur.care },
+      curArt: 'position:absolute;inset:0;' + art(cur, 1), clothSwatch: art(cur, 2),
+      sizes: SIZES.map((z) => ({ label: z, pick: set({ size: z }), style: 'flex:1;min-height:48px;border:1.5px solid #1F2A5A;font:600 14px Instrument Sans,sans-serif;background:' + (s.size === z ? '#1F2A5A' : 'transparent') + ';color:' + (s.size === z ? '#fff' : '#1F2A5A') })),
+      size: s.size, pairs, bagItems, count,
+      subtotal: m === 'NG' ? '₦' + total.toLocaleString('en-US') : '£' + total,
+      gbStyle: sm(m === 'GB'), ngStyle: sm(m === 'NG'),
+      setGB: set({ market: 'GB' }), setNG: set({ market: 'NG' }),
+      goHome: set({ screen: 'home' }), goCollection: set({ screen: 'collection' }), goBag: set({ screen: 'bag' }),
+      addToBag: () => {
+        const idx = s.bag.findIndex((b) => b.i === s.focus && b.size === s.size);
+        const bag = idx >= 0 ? s.bag.map((b, j) => j === idx ? { ...b, qty: b.qty + 1 } : b) : s.bag.concat([{ i: s.focus, size: s.size, qty: 1 }]);
+        this.setState({ bag, screen: 'bag' });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

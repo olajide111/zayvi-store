@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Showroom spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1200px;height:1300px;box-sizing:border-box;padding:48px 56px;background:#F6F4EF;color:#151515;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;flex-direction:column;gap:26px;overflow:hidden">
+  <div><div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#3DA5FF">6 · SPEC SHEET · SPEC</div><h1 style="margin:8px 0 0;font-size:38px;line-height:1.1;font-weight:800">Assets, motion and how it fits the theme system</h1></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Required assets</h2><div style="font-size:14px;line-height:1.55"><b>Product images.</b> A clean product photo per model (3:2), with a plain or transparent background.</div><div style="font-size:14px;line-height:1.55"><b>Datasheets.</b> A PDF per model from the manufacturer. The page only links to what exists.</div><div style="font-size:14px;line-height:1.55"><b>Spec data (essential).</b> Every model needs rated values in the same fields, so the table and compare view line up. Missing values show 'see datasheet', never a guess.</div><div style="font-size:14px;line-height:1.55"><b>Fonts.</b> IBM Plex Sans and Plex Mono, open licence.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Motion behaviour</h2><div style="font-size:14px;line-height:1.55"><b>Compare tray.</b> Slides up 24 px when two or more items are ticked.</div><div style="font-size:14px;line-height:1.55"><b>Rows.</b> Background highlight on hover, no movement.</div><div style="font-size:14px;line-height:1.55"><b>Everything else.</b> Instant. The feel is tool-like and quick.</div><div style="font-size:14px;line-height:1.55"><b>Reduced motion.</b> The tray appears without sliding.</div></section></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Navigation and page composition</h2><div style="font-size:14px;line-height:1.55"><b>Header.</b> Category tabs and a model or spec search, plus a quote list instead of a bag.</div><div style="font-size:14px;line-height:1.55"><b>Home.</b> A hero, a sizing helper and category tiles.</div><div style="font-size:14px;line-height:1.55"><b>Collection.</b> A spec filter sidebar and a sortable table with tick-to-compare.</div><div style="font-size:14px;line-height:1.55"><b>Product.</b> Key specs as chips, a full specification table and a datasheet link.</div><div style="font-size:14px;line-height:1.55"><b>Quote list.</b> Quantities, unit prices and a Request a quote option beside Checkout.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Fit with the existing theme system</h2><div style="font-size:14px;line-height:1.55"><b>Template family.</b> Extends product-specification with the table view, compare view and quote list. Existing theme untouched.</div><div style="font-size:14px;line-height:1.55"><b>Tokens.</b> Dark surface, accent blue, mono font, table density.</div><div style="font-size:14px;line-height:1.55"><b>Best for.</b> Electronics, solar, tools and parts bought by specification, and wholesale or trade buyers.</div><div style="font-size:14px;line-height:1.55"><b>Rules kept.</b> Specs shown only where the seller supplies them; no invented ratings, certifications or stock. WCAG 2.2 AA, with ticks announced to screen readers.</div></section></div>
+  <div style="background:#151515;color:#fff;border-radius:14px;padding:20px 26px;font-size:14px;line-height:1.55"><b>Open points for the review.</b> (1) The quote list needs a quote-request flow that does not exist yet. (2) Compare and filtering need structured spec fields per product. (3) Nothing is built or applied; it needs sign-off from the named owner first.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

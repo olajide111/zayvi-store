@@ -202,3 +202,11 @@ Photographic demo assets are bundled as WebP files under `public/demo-photos`, n
 The source pages identify these as free under the Unsplash licence. Demo names/prices do not establish seller stock, product specifications, textile origin or photographer endorsement. Photo credits appear in demo product descriptions.
 
 Cinema's normal demo now offers photographic clothing only. The unrelated bottle is no longer promoted as a second clothing mode. Existing `showroom=3d` experimental URLs remain explicit bottle tests; they do not represent a finished photographic or 3D clothing showroom. Real clothing photographs are flat image assets, not reconstructed garment models.
+
+## Editor foundation integration (separate from visual redesign)
+
+The editor now supports a Custom colours preset: background (`canvas`), body text (`ink`) and primary accent (`accent`). `lib/theme-colours.ts` accepts complete six-digit hex only; missing or invalid values fall back individually to the theme signature. Button foreground is computed from the higher contrast of white and near-black. Contrast feedback measures the selected body text/background pair only, not a full accessibility audit. Layout-specific decorative colours may retain their signature; the shared renderer overrides primary hero/story/category surfaces in custom mode. Other renderers should consume the same normalised tokens.
+
+These tokens are saved with browser-local draft fields and passed through both preview and standalone device-demo URLs. Existing drafts remain readable. Reset colours restores the theme signature without deleting the saved draft. Restore saved draft reloads validated fields from the current browser. The studio shows an unsaved indicator and requests the browser's normal unload warning when there are unsaved edits; this does not guarantee protection against every client-side navigation or browser crash. Store-account draft storage, publishing and billing remain disconnected. Premium controls retain the verified platform-admin exception.
+
+Changes are on `codex/theme-editor-foundations` for review alongside the separate visual team's work. No visual concepts or pricing allowances are redefined. Colour regression tests: `node --experimental-strip-types --test tests/theme-colours.test.mjs`.

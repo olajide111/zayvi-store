@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Marketplace prototype, desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes mkDown{from{transform:translateY(-12px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mkIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.mk-btn{cursor:pointer;font-family:inherit;color:inherit}
+.mk-btn:focus-visible{outline:2px solid #0B5D3B;outline-offset:2px}
+.mk-card{transition:transform .15s ease,box-shadow .15s ease}
+.mk-card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.12)}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+
+  <div style="height:36px;flex-shrink:0;background:#0B5D3B;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 40px;font-size:13px;font-weight:600">
+    <div>Shopping in <b>{{marketName}}</b> · Delivery and returns are shown at checkout</div>
+    <div style="display:flex;border:1.5px solid rgba(255,255,255,.7);border-radius:999px;overflow:hidden">
+      <button class="mk-btn" onClick="{{setGB}}" style="{{gbStyle}}">UK £</button>
+      <button class="mk-btn" onClick="{{setNG}}" style="{{ngStyle}}">Nigeria ₦</button>
+    </div>
+  </div>
+  <header style="height:84px;flex-shrink:0;display:flex;align-items:center;gap:24px;padding:0 40px;background:#fff;border-bottom:1px solid #E4E7E2">
+    <button class="mk-btn" onClick="{{goHome}}" style="background:none;border:0;padding:0;font-size:32px;font-weight:800;letter-spacing:-.02em;color:#0B5D3B">soko<span style="color:#F2A900">.</span></button>
+    <button class="mk-btn" onClick="{{toggleMenu}}" aria-expanded="{{menuOpen}}" style="min-height:48px;padding:0 20px;background:#F2A900;border:0;border-radius:10px;font-size:15px;font-weight:800">☰ Departments</button>
+    <div style="flex-grow:1;display:flex;height:48px;border:2px solid #0B5D3B;border-radius:10px;overflow:hidden">
+      <input aria-label="Search" placeholder="Search products, brands and sellers" style="flex-grow:1;border:0;padding:0 18px;font:inherit;font-size:15px;outline:none">
+      <button class="mk-btn" onClick="{{goCollection}}" style="background:#0B5D3B;color:#fff;border:0;padding:0 26px;font-size:15px;font-weight:800">Search</button>
+    </div>
+    <button class="mk-btn" style="background:none;border:0;font-size:15px;font-weight:700;min-height:48px">Sign in</button>
+    <button class="mk-btn" onClick="{{goBag}}" style="min-height:48px;padding:0 20px;background:#0B5D3B;color:#fff;border:0;border-radius:10px;font-size:15px;font-weight:800">Bag · {{count}}</button>
+  </header>
+  <nav aria-label="Departments" style="height:48px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 34px;background:#fff;border-bottom:1px solid #E4E7E2;font-size:14px;font-weight:700">
+    <sc-for list="{{navDepts}}" as="d" hint-placeholder-count="8"><button class="mk-btn" onClick="{{d.pick}}" style="background:none;border:0;padding:0 14px;min-height:44px;font:inherit">{{d.name}}</button></sc-for>
+    <div style="margin-left:auto;color:#B3541E;font-weight:800">Sample promotions only</div>
+  </nav>
+
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;top:168px;height:340px;z-index:50;background:#fff;box-shadow:0 20px 40px rgba(0,0,0,.18);padding:32px 40px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,1fr);gap:28px;animation:mkDown .2s both">
+      <sc-for list="{{menuCols}}" as="c" hint-placeholder-count="4">
+        <div>
+          <button class="mk-btn" onClick="{{c.pick}}" style="background:none;border:0;padding:0;font-size:18px;font-weight:800;color:#0B5D3B;min-height:44px">{{c.name}}</button>
+          <div style="font-size:14px;line-height:2;color:#2B332D">{{c.subs}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+    <section style="height:440px;flex-shrink:0;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:16px;padding:24px 40px;box-sizing:border-box;background:#F2F4EF">
+      <div style="grid-row:1/3;border-radius:16px;background:linear-gradient(135deg,#0B5D3B,#1F8F5F);color:#fff;padding:40px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-60px;top:-60px;width:340px;height:340px;border-radius:50%;background:#F2A900;opacity:.9"></div>
+        <div style="position:absolute;right:120px;bottom:40px;width:150px;height:150px;border-radius:24px;background:#fff;opacity:.18;transform:rotate(14deg)"></div>
+        <div style="font-size:13px;font-weight:800;letter-spacing:.12em">SAMPLE PROMOTION</div>
+        <div style="font-size:52px;line-height:1.02;font-weight:800;max-width:520px">Everyday home, handpicked from our sellers</div>
+        <button class="mk-btn" onClick="{{goCollection}}" style="align-self:flex-start;background:#F2A900;color:#1A1A1A;border:0;border-radius:10px;min-height:48px;padding:0 24px;font-size:15px;font-weight:800;position:relative">Shop home</button>
+      </div>
+      <div style="border-radius:16px;background:#FCE8C4;padding:24px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px"><div style="font-size:24px;font-weight:800">Beauty and care</div><div style="font-size:14px">Shea, oils and hair care</div></div>
+      <div style="border-radius:16px;background:#DCEBFF;padding:24px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px"><div style="font-size:24px;font-weight:800">Phones and audio</div><div style="font-size:14px">Earbuds, stands and cases</div></div>
+    </section>
+    <section style="height:340px;flex-shrink:0;padding:28px 40px 0;box-sizing:border-box">
+      <h2 style="margin:0 0 16px;font-size:24px;font-weight:800">Shop by department</h2>
+      <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:14px">
+        <sc-for list="{{deptTiles}}" as="d" hint-placeholder-count="8">
+          <button class="mk-btn mk-card" onClick="{{d.pick}}" style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;padding:0;overflow:hidden;text-align:left"><div style="{{d.art}}"></div><div style="padding:12px 14px;font-size:14px;font-weight:800">{{d.name}}</div></button>
+        </sc-for>
+      </div>
+    </section>
+    <section style="height:500px;flex-shrink:0;padding:20px 40px 0;box-sizing:border-box">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px"><h2 style="margin:0;font-size:24px;font-weight:800">Picked for you</h2><button class="mk-btn" onClick="{{goCollection}}" style="background:none;border:0;font-size:14px;font-weight:800;color:#0B5D3B;min-height:44px">See all →</button></div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+        <sc-for list="{{rowA}}" as="p" hint-placeholder-count="6">
+          <div class="mk-card" style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+            <button class="mk-btn" onClick="{{p.pick}}" style="background:none;border:0;padding:0;text-align:left"><div style="{{p.art}}"></div></button>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:3px;flex-grow:1">
+              <div style="font-size:14px;font-weight:600;line-height:1.3;min-height:36px">{{p.name}}</div>
+              <div style="font-size:19px;font-weight:800">{{p.price}}</div>
+              <div style="font-size:12px;color:#55605A">{{p.seller}}</div>
+              <button class="mk-btn" onClick="{{p.add}}" style="margin-top:8px;min-height:44px;background:#fff;color:#0B5D3B;border:2px solid #0B5D3B;border-radius:10px;font-size:14px;font-weight:800">Quick add</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <section style="height:230px;flex-shrink:0;background:#F2F4EF;padding:28px 40px;box-sizing:border-box">
+      <h2 style="margin:0 0 16px;font-size:24px;font-weight:800">Our sellers</h2>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+        <sc-for list="{{sellers}}" as="s" hint-placeholder-count="4">
+          <div style="background:#fff;border-radius:14px;padding:18px;display:flex;gap:14px;align-items:center;border:1px solid #E4E7E2">
+            <div style="{{s.mark}}">{{s.ini}}</div>
+            <div><div style="font-size:16px;font-weight:800">{{s.name}}</div><div style="font-size:13px;color:#55605A">{{s.dept}}</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <section style="height:500px;flex-shrink:0;padding:28px 40px 0;box-sizing:border-box">
+      <h2 style="margin:0 0 14px;font-size:24px;font-weight:800">New this week</h2>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+        <sc-for list="{{rowB}}" as="p" hint-placeholder-count="6">
+          <div class="mk-card" style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+            <button class="mk-btn" onClick="{{p.pick}}" style="background:none;border:0;padding:0;text-align:left"><div style="{{p.art}}"></div></button>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+              <div style="font-size:14px;font-weight:600;line-height:1.3;min-height:36px">{{p.name}}</div>
+              <div style="font-size:19px;font-weight:800">{{p.price}}</div>
+              <div style="font-size:12px;color:#55605A">{{p.seller}}</div>
+              <button class="mk-btn" onClick="{{p.add}}" style="margin-top:8px;min-height:44px;background:#fff;color:#0B5D3B;border:2px solid #0B5D3B;border-radius:10px;font-size:14px;font-weight:800">Quick add</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <footer style="flex-grow:1;background:#0B2E20;color:#CFE5D8;padding:32px 40px;font-size:14px;display:flex;justify-content:space-between">
+      <div style="font-size:28px;font-weight:800;color:#fff">soko<span style="color:#F2A900">.</span></div>
+      <div>Help · Sell with us · Delivery and returns · Terms · Privacy</div>
+    </footer>
+  </sc-if>
+
+  <sc-if value="{{isCollection}}" hint-placeholder-val="{{ false }}">
+    <div style="height:56px;flex-shrink:0;display:flex;align-items:center;padding:0 40px;font-size:13px;color:#55605A;gap:8px"><button class="mk-btn" onClick="{{goHome}}" style="background:none;border:0;padding:0;min-height:44px;font:inherit">Home</button> / <b style="color:#1A1A1A">{{deptTitle}}</b></div>
+    <section style="height:90px;flex-shrink:0;padding:0 40px;display:flex;align-items:flex-start;justify-content:space-between;box-sizing:border-box">
+      <h1 style="margin:0;font-size:38px;font-weight:800">{{deptTitle}} <span style="font-size:16px;font-weight:600;color:#55605A">· {{shownCount}} sample items</span></h1>
+      <div style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700">Sort
+        <sc-for list="{{sorts}}" as="so" hint-placeholder-count="3"><button class="mk-btn" onClick="{{so.pick}}" style="{{so.style}}">{{so.name}}</button></sc-for>
+      </div>
+    </section>
+    <section style="flex-grow:1;display:grid;grid-template-columns:260px 1fr;gap:32px;padding:0 40px;box-sizing:border-box">
+      <aside aria-label="Filters" style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;padding:22px;align-self:start;display:flex;flex-direction:column;gap:20px">
+        <div><div style="font-size:15px;font-weight:800;margin-bottom:10px">Department</div>
+          <sc-for list="{{deptFilters}}" as="f" hint-placeholder-count="5"><button class="mk-btn" onClick="{{f.pick}}" style="{{f.style}}">{{f.name}}</button></sc-for>
+        </div>
+        <div><div style="font-size:15px;font-weight:800;margin-bottom:10px">Price</div><div style="display:flex;gap:8px;font-size:14px"><div style="flex:1;border:1.5px solid #C9D1CB;border-radius:8px;padding:12px">{{priceMin}}</div><div style="flex:1;border:1.5px solid #C9D1CB;border-radius:8px;padding:12px">{{priceMax}}</div></div></div>
+        <div><div style="font-size:15px;font-weight:800;margin-bottom:10px">Seller</div><div style="font-size:14px;line-height:2">Eko Textiles<br>Brixton Beauty<br>Abuja Audio<br>Mama Nkechi Foods</div></div>
+        <div><div style="font-size:15px;font-weight:800;margin-bottom:6px">Delivery to</div><div style="font-size:13px;color:#55605A;line-height:1.5">Choose your address at checkout. Delivery options depend on the seller and your market.</div></div>
+      </aside>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-content:start">
+        <sc-for list="{{grid}}" as="p" hint-placeholder-count="8">
+          <div class="mk-card" style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+            <button class="mk-btn" onClick="{{p.pick}}" style="background:none;border:0;padding:0;text-align:left"><div style="{{p.art}}"></div></button>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:3px">
+              <div style="font-size:14px;font-weight:600;line-height:1.3;min-height:36px">{{p.name}}</div>
+              <div style="font-size:19px;font-weight:800">{{p.price}}</div>
+              <div style="font-size:12px;color:#55605A">{{p.seller}}</div>
+              <button class="mk-btn" onClick="{{p.add}}" style="margin-top:8px;min-height:44px;background:#fff;color:#0B5D3B;border:2px solid #0B5D3B;border-radius:10px;font-size:14px;font-weight:800">Quick add</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <footer style="height:150px;flex-shrink:0;margin-top:28px;background:#0B2E20;color:#CFE5D8;padding:32px 40px;box-sizing:border-box;font-size:14px;display:flex;justify-content:space-between"><div style="font-size:28px;font-weight:800;color:#fff">soko<span style="color:#F2A900">.</span></div><div>Help · Sell with us · Delivery and returns · Terms · Privacy</div></footer>
+  </sc-if>
+
+  <sc-if value="{{isProduct}}" hint-placeholder-val="{{ false }}">
+    <div style="height:56px;flex-shrink:0;display:flex;align-items:center;padding:0 40px;font-size:13px;color:#55605A;gap:8px"><button class="mk-btn" onClick="{{goHome}}" style="background:none;border:0;padding:0;min-height:44px;font:inherit">Home</button> / <button class="mk-btn" onClick="{{goCollection}}" style="background:none;border:0;padding:0;min-height:44px;font:inherit">{{cur.dept}}</button> / <b style="color:#1A1A1A">{{cur.name}}</b></div>
+    <section style="height:720px;flex-shrink:0;display:grid;grid-template-columns:96px 640px 1fr 340px;gap:24px;padding:0 40px;box-sizing:border-box">
+      <div style="display:flex;flex-direction:column;gap:12px"><sc-for list="{{thumbs}}" as="t" hint-placeholder-count="4"><div style="{{t}}"></div></sc-for></div>
+      <div style="{{curArt}}"></div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:13px;font-weight:700;color:#0B5D3B">{{cur.seller}}</div>
+        <h1 style="margin:0;font-size:38px;line-height:1.1;font-weight:800">{{cur.name}}</h1>
+        <div style="font-size:34px;font-weight:800">{{cur.price}}</div>
+        <p style="margin:0;font-size:16px;line-height:1.6;color:#2B332D">{{cur.desc}}</p>
+        <div style="border-top:1px solid #E4E7E2;padding-top:14px;display:grid;grid-template-columns:120px 1fr;row-gap:8px;font-size:14px"><b>Department</b><span>{{cur.dept}}</span><b>Seller</b><span>{{cur.seller}}</span><b>Details</b><span>{{cur.fact}}</span></div>
+      </div>
+      <aside aria-label="Buy" style="align-self:start;background:#fff;border:1.5px solid #E4E7E2;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:30px;font-weight:800">{{cur.price}}</div>
+        <div style="font-size:13px;color:#55605A;line-height:1.5">Delivery and returns for this seller are shown at checkout for your market.</div>
+        <button class="mk-btn" onClick="{{addCur}}" style="min-height:54px;background:#F2A900;border:0;border-radius:10px;font-size:16px;font-weight:800">Add to bag</button>
+        <button class="mk-btn" onClick="{{addCur}}" style="min-height:54px;background:#0B5D3B;color:#fff;border:0;border-radius:10px;font-size:16px;font-weight:800">Buy now</button>
+      </aside>
+    </section>
+    <section style="height:260px;flex-shrink:0;margin:24px 40px 0;background:#F2F4EF;border-radius:16px;padding:28px;display:grid;grid-template-columns:80px 1fr 1fr;gap:24px;align-items:center;box-sizing:border-box">
+      <div style="{{curSellerMark}}">{{curIni}}</div>
+      <div><div style="font-size:12px;font-weight:800;letter-spacing:.1em;color:#0B5D3B">SOLD BY</div><div style="font-size:26px;font-weight:800;margin-top:4px">{{cur.seller}}</div><div style="font-size:14px;color:#2B332D;margin-top:6px;line-height:1.55">Sample seller profile. Shows who the seller is, where they ship from and their policies, taken from their own seller account.</div></div>
+      <div style="font-size:14px;line-height:1.9;color:#2B332D"><b>Ships from:</b> set by seller<br><b>Returns:</b> set by seller, shown at checkout<br><b>Contact:</b> through the seller page</div>
+    </section>
+    <section style="flex-grow:1;padding:28px 40px 0;box-sizing:border-box">
+      <h2 style="margin:0 0 14px;font-size:24px;font-weight:800">More from {{cur.seller}} and similar items</h2>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+        <sc-for list="{{related}}" as="p" hint-placeholder-count="6">
+          <div class="mk-card" style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;overflow:hidden">
+            <button class="mk-btn" onClick="{{p.pick}}" style="background:none;border:0;padding:0;text-align:left"><div style="{{p.art}}"></div></button>
+            <div style="padding:12px 14px"><div style="font-size:14px;font-weight:600;line-height:1.3;min-height:36px">{{p.name}}</div><div style="font-size:18px;font-weight:800;margin-top:3px">{{p.price}}</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{isBag}}" hint-placeholder-val="{{ false }}">
+    <section style="height:110px;flex-shrink:0;padding:0 40px;display:flex;align-items:center;justify-content:space-between">
+      <h1 style="margin:0;font-size:38px;font-weight:800">Your bag · {{count}} items</h1>
+      <button class="mk-btn" onClick="{{goCollection}}" style="background:none;border:0;font-size:15px;font-weight:800;color:#0B5D3B;min-height:44px">← Keep shopping</button>
+    </section>
+    <section style="flex-grow:1;display:grid;grid-template-columns:1fr 380px;gap:32px;padding:0 40px;box-sizing:border-box;align-items:start;animation:mkIn .25s both">
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+          <div style="background:#fff;border:1px solid #E4E7E2;border-radius:14px;overflow:hidden">
+            <div style="background:#F2F4EF;padding:14px 22px;display:flex;justify-content:space-between;font-size:15px;font-weight:800"><span>Sold by {{g.seller}}</span><span>{{g.subtotal}}</span></div>
+            <sc-for list="{{g.items}}" as="b" hint-placeholder-count="2">
+              <div style="display:grid;grid-template-columns:100px 1fr auto;gap:18px;align-items:center;padding:16px 22px;border-top:1px solid #E4E7E2">
+                <div style="{{b.art}}"></div>
+                <div>
+                  <div style="font-size:16px;font-weight:700">{{b.name}}</div>
+                  <div style="font-size:13px;color:#55605A">{{b.price}} each</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                    <button class="mk-btn" onClick="{{b.dec}}" aria-label="Remove one" style="width:44px;height:44px;border-radius:10px;border:1.5px solid #0B5D3B;background:#fff;font-size:18px">−</button>
+                    <span style="width:24px;text-align:center;font-weight:800">{{b.qty}}</span>
+                    <button class="mk-btn" onClick="{{b.inc}}" aria-label="Add one" style="width:44px;height:44px;border-radius:10px;border:1.5px solid #0B5D3B;background:#fff;font-size:18px">+</button>
+                  </div>
+                </div>
+                <div style="font-size:20px;font-weight:800">{{b.line}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      <aside aria-label="Order summary" style="background:#fff;border:1.5px solid #E4E7E2;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:20px;font-weight:800">Order summary</div>
+        <div style="display:flex;justify-content:space-between;font-size:15px"><span>Items</span><span>{{subtotal}}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;color:#55605A"><span>Delivery</span><span>At checkout</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:24px;font-weight:800;border-top:1px solid #E4E7E2;padding-top:14px"><span>Total so far</span><span>{{subtotal}}</span></div>
+        <button class="mk-btn" style="min-height:52px;background:#1A1A1A;color:#fff;border:0;border-radius:10px;font-size:16px;font-weight:800">Pay with PayPal</button>
+        <button class="mk-btn" style="min-height:52px;background:#0B5D3B;color:#fff;border:0;border-radius:10px;font-size:16px;font-weight:800">Checkout</button>
+        <div style="font-size:12px;color:#55605A;line-height:1.5">Each seller ships their own items, so delivery is worked out per seller at checkout.</div>
+      </aside>
+    </section>
+    <footer style="height:150px;flex-shrink:0;margin-top:28px;background:#0B2E20;color:#CFE5D8;padding:32px 40px;box-sizing:border-box;font-size:14px;display:flex;justify-content:space-between"><div style="font-size:28px;font-weight:800;color:#fff">soko<span style="color:#F2A900">.</span></div><div>Help · Sell with us · Delivery and returns · Terms · Privacy</div></footer>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","options":["home","collection","product","bag"],"default":"home"},"$preview":{"width":1440,"height":2600}}'>
+const D = ['Fashion', 'Beauty', 'Phones and audio', 'Home', 'Grocery', 'Kids', 'Sports', 'Books'];
+const DC = { Fashion: ['#E7B43C', '#B04A22'], Beauty: ['#F3C9B0', '#C8693F'], 'Phones and audio': ['#9DB8E8', '#2F4A7D'], Home: ['#BFD9C8', '#0B5D3B'], Grocery: ['#F2D27A', '#B3541E'], Kids: ['#F5B8C8', '#B23A63'], Sports: ['#B7E0D2', '#127A5E'], Books: ['#D9CBB0', '#6B5B4A'] };
+const SUBS = { Fashion: 'Women · Men · Bags · Fabric', Beauty: 'Skin · Hair · Fragrance · Tools', 'Phones and audio': 'Phones · Earbuds · Cases · Stands', Home: 'Kitchen · Baskets · Cushions · Throws' };
+const S = { 'Eko Textiles': ['ET', '#B04A22'], 'Brixton Beauty': ['BB', '#B23A63'], 'Abuja Audio': ['AA', '#2F4A7D'], 'Mama Nkechi Foods': ['MN', '#B3541E'] };
+const P = [
+  { name: 'Ankara Print Tote Bag', dept: 'Fashion', seller: 'Eko Textiles', gb: 34, ng: 57000, c: ['#E7B43C', '#B04A22'], desc: 'A roomy cotton tote in a bold wax-print fabric, with an inside zip pocket and long handles.', fact: 'Cotton, 40 × 36 cm' },
+  { name: 'Shea Body Butter 250 g', dept: 'Beauty', seller: 'Brixton Beauty', gb: 12, ng: 20000, c: ['#F3C9B0', '#C8693F'], desc: 'A rich unrefined shea butter for skin and hair, in a recyclable tin.', fact: '250 g tin' },
+  { name: 'Wireless Earbuds', dept: 'Phones and audio', seller: 'Abuja Audio', gb: 29, ng: 49000, c: ['#9DB8E8', '#2F4A7D'], desc: 'In-ear wireless earbuds with a charging case and three sizes of ear tips.', fact: 'Bluetooth, USB-C case' },
+  { name: 'Jollof Spice Blend, 3 pack', dept: 'Grocery', seller: 'Mama Nkechi Foods', gb: 9, ng: 15000, c: ['#F2D27A', '#B3541E'], desc: 'A blend of ground peppers and spices for jollof rice. Three 80 g pouches.', fact: '3 × 80 g' },
+  { name: 'Woven Basket Set', dept: 'Home', seller: 'Eko Textiles', gb: 42, ng: 71000, c: ['#BFD9C8', '#0B5D3B'], desc: 'A set of three hand-woven baskets in graduated sizes. Good for storage or plants.', fact: 'Set of 3' },
+  { name: 'Linen Cushion Cover', dept: 'Home', seller: 'Eko Textiles', gb: 18, ng: 30000, c: ['#D9CBB0', '#6B5B4A'], desc: 'A washed linen cushion cover with a hidden zip. Fits a 45 cm cushion.', fact: 'Linen, 45 × 45 cm' },
+  { name: 'Hair Oil Duo', dept: 'Beauty', seller: 'Brixton Beauty', gb: 16, ng: 27000, c: ['#F5D2A0', '#A25A1C'], desc: 'Two light oils for scalp and ends in 100 ml bottles.', fact: '2 × 100 ml' },
+  { name: 'Adjustable Phone Stand', dept: 'Phones and audio', seller: 'Abuja Audio', gb: 11, ng: 18500, c: ['#B7C4E0', '#3E4F7D'], desc: 'A folding aluminium stand for phones and small tablets.', fact: 'Aluminium, folds flat' }
+];
+const art = (p, h) => 'width:100%;height:' + h + 'px;background:radial-gradient(circle at 50% 46%,' + p.c[1] + ' 0 26%,transparent 27%),linear-gradient(160deg,' + p.c[0] + ',#fff 130%)';
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { screen: null, focus: 0, market: 'GB', menu: false, dept: 'All', sort: 'Relevance', bag: [{ i: 0, qty: 1 }, { i: 4, qty: 1 }, { i: 1, qty: 2 }] };
+  }
+  renderVals() {
+    const s = this.state;
+    const screen = s.screen || this.props.screen || 'home';
+    const m = s.market;
+    const fmt = (v) => m === 'NG' ? '₦' + v.toLocaleString('en-US') : '£' + v;
+    const price = (p, q) => fmt((m === 'NG' ? p.ng : p.gb) * q);
+    const set = (o) => () => this.setState(o);
+    const addI = (i) => () => {
+      const idx = s.bag.findIndex((b) => b.i === i);
+      this.setState({ bag: idx >= 0 ? s.bag.map((b, j) => j === idx ? { ...b, qty: b.qty + 1 } : b) : s.bag.concat([{ i, qty: 1 }]) });
+    };
+    const card = (i, h) => ({ name: P[i].name, price: price(P[i], 1), seller: P[i].seller, art: art(P[i], h), pick: set({ focus: i, screen: 'product', menu: false }), add: addI(i) });
+    let order = P.map((p, i) => i).filter((i) => s.dept === 'All' || P[i].dept === s.dept);
+    if (s.sort === 'Price: low') order = order.slice().sort((a, b) => P[a].gb - P[b].gb);
+    if (s.sort === 'Price: high') order = order.slice().sort((a, b) => P[b].gb - P[a].gb);
+    const cur = P[s.focus];
+    const sellerOf = cur.seller;
+    const related = P.map((p, i) => i).filter((i) => i !== s.focus).sort((a, b) => (P[b].seller === sellerOf) - (P[a].seller === sellerOf)).slice(0, 6);
+    const groupsMap = {};
+    s.bag.forEach((b, k) => { const sel = P[b.i].seller; (groupsMap[sel] = groupsMap[sel] || []).push({ b, k }); });
+    const groups = Object.keys(groupsMap).map((sel) => ({
+      seller: sel,
+      subtotal: fmt(groupsMap[sel].reduce((a, x) => a + (m === 'NG' ? P[x.b.i].ng : P[x.b.i].gb) * x.b.qty, 0)),
+      items: groupsMap[sel].map((x) => ({
+        name: P[x.b.i].name, price: price(P[x.b.i], 1), qty: x.b.qty, line: price(P[x.b.i], x.b.qty), art: art(P[x.b.i], 100),
+        inc: () => this.setState({ bag: s.bag.map((y, j) => j === x.k ? { ...y, qty: y.qty + 1 } : y) }),
+        dec: () => this.setState({ bag: s.bag.map((y, j) => j === x.k ? { ...y, qty: y.qty - 1 } : y).filter((y) => y.qty > 0) })
+      }))
+    }));
+    const count = s.bag.reduce((a, b) => a + b.qty, 0);
+    const total = s.bag.reduce((a, b) => a + (m === 'NG' ? P[b.i].ng : P[b.i].gb) * b.qty, 0);
+    const pill = (on) => 'border:0;padding:0 14px;min-height:30px;font:700 13px Plus Jakarta Sans,sans-serif;background:' + (on ? '#fff' : 'transparent') + ';color:' + (on ? '#0B5D3B' : '#fff');
+    const H = { home: 2600, collection: 2000, product: 1900, bag: 1100 }[screen];
+    const pick = (d) => set({ dept: d, screen: 'collection', menu: false });
+    return {
+      rootStyle: 'position:relative;width:1440px;height:' + H + 'px;overflow:hidden;display:flex;flex-direction:column;background:#FAFBF8;color:#1A1A1A;font-family:\'Plus Jakarta Sans\',system-ui,sans-serif',
+      isHome: screen === 'home', isCollection: screen === 'collection', isProduct: screen === 'product', isBag: screen === 'bag',
+      menuOpen: s.menu, toggleMenu: set({ menu: !s.menu }),
+      marketName: m === 'NG' ? 'Nigeria (₦)' : 'the UK (£)', gbStyle: pill(m === 'GB'), ngStyle: pill(m === 'NG'),
+      setGB: set({ market: 'GB' }), setNG: set({ market: 'NG' }),
+      navDepts: D.map((d) => ({ name: d, pick: pick(d) })),
+      menuCols: Object.keys(SUBS).map((d) => ({ name: d, subs: SUBS[d], pick: pick(d) })),
+      deptTiles: D.map((d) => ({ name: d, pick: pick(d), art: 'height:140px;background:radial-gradient(circle at 50% 50%,' + DC[d][1] + ' 0 24%,transparent 25%),linear-gradient(150deg,' + DC[d][0] + ',#fff 140%)' })),
+      rowA: [0, 1, 2, 3, 4, 5].map((i) => card(i, 190)), rowB: [6, 7, 5, 4, 2, 1].map((i) => card(i, 190)),
+      sellers: Object.keys(S).map((n) => ({ name: n, ini: S[n][0], dept: P.find((p) => p.seller === n).dept, mark: 'width:56px;height:56px;border-radius:12px;background:' + S[n][1] + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px' })),
+      deptTitle: s.dept === 'All' ? 'All departments' : s.dept, shownCount: order.length,
+      sorts: ['Relevance', 'Price: low', 'Price: high'].map((n) => ({ name: n, pick: set({ sort: n }), style: 'min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid #0B5D3B;font:700 13px Plus Jakarta Sans,sans-serif;background:' + (s.sort === n ? '#0B5D3B' : '#fff') + ';color:' + (s.sort === n ? '#fff' : '#0B5D3B') })),
+      deptFilters: ['All'].concat(D.slice(0, 4)).map((d) => ({ name: d, pick: set({ dept: d }), style: 'display:block;width:100%;text-align:left;min-height:44px;background:' + (s.dept === d ? '#E6F2EB' : 'transparent') + ';border:0;border-radius:8px;padding:0 10px;font:' + (s.dept === d ? '800' : '600') + ' 14px Plus Jakarta Sans,sans-serif' })),
+      priceMin: fmt(m === 'NG' ? 15000 : 9), priceMax: fmt(m === 'NG' ? 71000 : 42),
+      grid: order.map((i) => card(i, 200)),
+      cur: { name: cur.name, dept: cur.dept, seller: cur.seller, price: price(cur, 1), desc: cur.desc, fact: cur.fact },
+      curArt: 'border-radius:14px;' + art(cur, 640), thumbs: [0, 1, 2, 3].map((k) => 'width:96px;height:96px;border-radius:10px;border:' + (k === 0 ? '2px solid #0B5D3B' : '1px solid #E4E7E2') + ';background:radial-gradient(circle at ' + (30 + k * 14) + '% 50%,' + cur.c[1] + ' 0 26%,transparent 27%),linear-gradient(160deg,' + cur.c[0] + ',#fff 130%)'),
+      curIni: S[cur.seller][0], curSellerMark: 'width:80px;height:80px;border-radius:16px;background:' + S[cur.seller][1] + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px',
+      addCur: () => { addI(s.focus)(); this.setState({ screen: 'bag' }); },
+      related: related.map((i) => card(i, 170)),
+      groups, count, subtotal: fmt(total),
+      goHome: set({ screen: 'home', menu: false }), goCollection: set({ screen: 'collection', menu: false }), goBag: set({ screen: 'bag', menu: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

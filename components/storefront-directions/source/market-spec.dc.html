@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Showroom spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1200px;height:1300px;box-sizing:border-box;padding:48px 56px;background:#F6F4EF;color:#151515;font-family:'Plus Jakarta Sans',system-ui,sans-serif;display:flex;flex-direction:column;gap:26px;overflow:hidden">
+  <div><div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#0B5D3B">3 · MODERN AFRICAN MARKETPLACE · SPEC</div><h1 style="margin:8px 0 0;font-size:38px;line-height:1.1;font-weight:800">Assets, motion and how it fits the theme system</h1></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Required assets</h2><div style="font-size:14px;line-height:1.55"><b>Product photography.</b> One clean square image per product (1200 px, light background) plus up to four more. Cards crop to 1:1, so keep the subject central.</div><div style="font-size:14px;line-height:1.55"><b>Department tiles.</b> One image or illustration per department (Fashion, Phones, Home, Beauty, Grocery and so on), 800 by 600 px.</div><div style="font-size:14px;line-height:1.55"><b>Promo tiles.</b> Three to five banners per week at 1200 by 480 px, with the text kept as live HTML (not baked into the image) so it can be translated and read by screen readers.</div><div style="font-size:14px;line-height:1.55"><b>Seller marks.</b> A square logo per seller, 160 px, with initials as a fallback.</div><div style="font-size:14px;line-height:1.55"><b>Icons and fonts.</b> Line icons in SVG; Plus Jakarta Sans 400, 600, 800 (open licence).</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Motion behaviour</h2><div style="font-size:14px;line-height:1.55"><b>Departments menu.</b> Opens as a panel that slides down in 0.2 s, closes on Escape.</div><div style="font-size:14px;line-height:1.55"><b>Cards.</b> Lift 4 px with a soft shadow on hover over 0.15 s. Quick add confirms with a short tick, not a pop-up.</div><div style="font-size:14px;line-height:1.55"><b>Bag.</b> Slides in from the right (desktop) or up from the bottom (mobile) in 0.25 s.</div><div style="font-size:14px;line-height:1.55"><b>Tabs.</b> The bottom tab underline slides in 0.2 s.</div><div style="font-size:14px;line-height:1.55"><b>Principle.</b> Fast and functional. Nothing loops and nothing autoplays; reduced motion turns all of it off.</div></section></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px"><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Navigation and page composition</h2><div style="font-size:14px;line-height:1.55"><b>Header.</b> Search first, then a Departments menu, market switch, account and bag. Mobile adds bottom tabs: Home, Departments, Search, Bag.</div><div style="font-size:14px;line-height:1.55"><b>Home.</b> Promo tiles, a department grid, rows of products and a seller strip.</div><div style="font-size:14px;line-height:1.55"><b>Collection.</b> A filter sidebar (department, price, seller, delivery to) and a dense product grid with sort.</div><div style="font-size:14px;line-height:1.55"><b>Product.</b> Gallery, price, seller block, quick facts, and more from the same seller.</div><div style="font-size:14px;line-height:1.55"><b>Bag.</b> Items grouped by seller, each with its own subtotal, then one order total.</div></section><section style="background:#fff;border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;gap:10px;border:1px solid #E3DFD6"><h2 style="margin:0;font-size:20px;font-weight:800">Fit with the existing theme system</h2><div style="font-size:14px;line-height:1.55"><b>Template family.</b> Extends general-commerce and wholesale with a marketplace section set: search header, department grid, promo tiles, product rail, seller strip, seller-grouped bag.</div><div style="font-size:14px;line-height:1.55"><b>Tokens.</b> Primary green, accent amber, surface and text colours, card radius, density (compact or comfortable).</div><div style="font-size:14px;line-height:1.55"><b>Best for.</b> Large catalogues, several sellers, everyday goods. Pairs with the vendor portal on the build plan.</div><div style="font-size:14px;line-height:1.55"><b>Rules kept.</b> Seller names are shown only where the seller is real and approved. No invented ratings, stock counts, or delivery promises; WCAG 2.2 AA.</div></section></div>
+  <div style="background:#151515;color:#fff;border-radius:14px;padding:20px 26px;font-size:14px;line-height:1.55"><b>Open points for the review.</b> (1) Seller grouping needs the vendor portal (item 16 on the build plan) before it can be real. (2) Delivery-to and price filters need real catalogue and shipping data. (3) Nothing is built or applied; it needs sign-off from the named owner first.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

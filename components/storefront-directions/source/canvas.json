@@ -1,0 +1,609 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-20T21:10:00Z"
+  },
+  "title": "Zayvi storefront directions",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 960,
+      "title": "Overview"
+    },
+    "showroom-home-desktop.dc.html": {
+      "x": 0,
+      "y": 1500,
+      "w": 1440,
+      "h": 900,
+      "title": "Showroom \u00b7 Home \u00b7 Desktop"
+    },
+    "showroom-collection-desktop.dc.html": {
+      "x": 1520,
+      "y": 1500,
+      "w": 1440,
+      "h": 900,
+      "title": "Showroom \u00b7 Collection \u00b7 Desktop"
+    },
+    "showroom-product-desktop.dc.html": {
+      "x": 3040,
+      "y": 1500,
+      "w": 1440,
+      "h": 900,
+      "title": "Showroom \u00b7 Product \u00b7 Desktop"
+    },
+    "showroom-bag-desktop.dc.html": {
+      "x": 4560,
+      "y": 1500,
+      "w": 1440,
+      "h": 900,
+      "title": "Showroom \u00b7 Bag \u00b7 Desktop"
+    },
+    "showroom-home-mobile.dc.html": {
+      "x": 0,
+      "y": 2520,
+      "w": 390,
+      "h": 844,
+      "title": "Showroom \u00b7 Home \u00b7 Mobile"
+    },
+    "showroom-collection-mobile.dc.html": {
+      "x": 470,
+      "y": 2520,
+      "w": 390,
+      "h": 844,
+      "title": "Showroom \u00b7 Collection \u00b7 Mobile"
+    },
+    "showroom-product-mobile.dc.html": {
+      "x": 940,
+      "y": 2520,
+      "w": 390,
+      "h": 844,
+      "title": "Showroom \u00b7 Product \u00b7 Mobile"
+    },
+    "showroom-bag-mobile.dc.html": {
+      "x": 1410,
+      "y": 2520,
+      "w": 390,
+      "h": 844,
+      "title": "Showroom \u00b7 Bag \u00b7 Mobile"
+    },
+    "showroom-desktop.dc.html": {
+      "x": 0,
+      "y": 3484,
+      "w": 1440,
+      "h": 900,
+      "title": "Showroom \u00b7 Prototype \u00b7 Desktop",
+      "is_interactive": true
+    },
+    "showroom-mobile.dc.html": {
+      "x": 1520,
+      "y": 3484,
+      "w": 390,
+      "h": 844,
+      "title": "Showroom \u00b7 Prototype \u00b7 Mobile",
+      "is_interactive": true
+    },
+    "showroom-spec.dc.html": {
+      "x": 2000,
+      "y": 3484,
+      "w": 1200,
+      "h": 1300,
+      "title": "Showroom \u00b7 Assets, motion, theme mapping"
+    },
+    "editorial-home-desktop.dc.html": {
+      "x": 0,
+      "y": 5284,
+      "w": 1440,
+      "h": 2400,
+      "title": "Editorial \u00b7 Home \u00b7 Desktop"
+    },
+    "editorial-collection-desktop.dc.html": {
+      "x": 1520,
+      "y": 5284,
+      "w": 1440,
+      "h": 1900,
+      "title": "Editorial \u00b7 Collection \u00b7 Desktop"
+    },
+    "editorial-product-desktop.dc.html": {
+      "x": 3040,
+      "y": 5284,
+      "w": 1440,
+      "h": 1800,
+      "title": "Editorial \u00b7 Product \u00b7 Desktop"
+    },
+    "editorial-bag-desktop.dc.html": {
+      "x": 4560,
+      "y": 5284,
+      "w": 1440,
+      "h": 1100,
+      "title": "Editorial \u00b7 Bag \u00b7 Desktop"
+    },
+    "editorial-home-mobile.dc.html": {
+      "x": 0,
+      "y": 7804,
+      "w": 390,
+      "h": 2200,
+      "title": "Editorial \u00b7 Home \u00b7 Mobile"
+    },
+    "editorial-collection-mobile.dc.html": {
+      "x": 470,
+      "y": 7804,
+      "w": 390,
+      "h": 1700,
+      "title": "Editorial \u00b7 Collection \u00b7 Mobile"
+    },
+    "editorial-product-mobile.dc.html": {
+      "x": 940,
+      "y": 7804,
+      "w": 390,
+      "h": 1800,
+      "title": "Editorial \u00b7 Product \u00b7 Mobile"
+    },
+    "editorial-bag-mobile.dc.html": {
+      "x": 1410,
+      "y": 7804,
+      "w": 390,
+      "h": 1200,
+      "title": "Editorial \u00b7 Bag \u00b7 Mobile"
+    },
+    "editorial-desktop.dc.html": {
+      "x": 0,
+      "y": 10124,
+      "w": 1440,
+      "h": 2400,
+      "title": "Editorial \u00b7 Prototype \u00b7 Desktop",
+      "is_interactive": true
+    },
+    "editorial-mobile.dc.html": {
+      "x": 1520,
+      "y": 10124,
+      "w": 390,
+      "h": 2200,
+      "title": "Editorial \u00b7 Prototype \u00b7 Mobile",
+      "is_interactive": true
+    },
+    "editorial-spec.dc.html": {
+      "x": 2000,
+      "y": 10124,
+      "w": 1200,
+      "h": 1300,
+      "title": "Editorial \u00b7 Assets, motion, theme mapping"
+    },
+    "market-home-desktop.dc.html": {
+      "x": 0,
+      "y": 13024,
+      "w": 1440,
+      "h": 2600,
+      "title": "Marketplace \u00b7 Home \u00b7 Desktop"
+    },
+    "market-collection-desktop.dc.html": {
+      "x": 1520,
+      "y": 13024,
+      "w": 1440,
+      "h": 2000,
+      "title": "Marketplace \u00b7 Collection \u00b7 Desktop"
+    },
+    "market-product-desktop.dc.html": {
+      "x": 3040,
+      "y": 13024,
+      "w": 1440,
+      "h": 1900,
+      "title": "Marketplace \u00b7 Product \u00b7 Desktop"
+    },
+    "market-bag-desktop.dc.html": {
+      "x": 4560,
+      "y": 13024,
+      "w": 1440,
+      "h": 1100,
+      "title": "Marketplace \u00b7 Bag \u00b7 Desktop"
+    },
+    "market-home-mobile.dc.html": {
+      "x": 0,
+      "y": 15744,
+      "w": 390,
+      "h": 2400,
+      "title": "Marketplace \u00b7 Home \u00b7 Mobile"
+    },
+    "market-collection-mobile.dc.html": {
+      "x": 470,
+      "y": 15744,
+      "w": 390,
+      "h": 1700,
+      "title": "Marketplace \u00b7 Collection \u00b7 Mobile"
+    },
+    "market-product-mobile.dc.html": {
+      "x": 940,
+      "y": 15744,
+      "w": 390,
+      "h": 1900,
+      "title": "Marketplace \u00b7 Product \u00b7 Mobile"
+    },
+    "market-bag-mobile.dc.html": {
+      "x": 1410,
+      "y": 15744,
+      "w": 390,
+      "h": 1300,
+      "title": "Marketplace \u00b7 Bag \u00b7 Mobile"
+    },
+    "market-desktop.dc.html": {
+      "x": 0,
+      "y": 18264,
+      "w": 1440,
+      "h": 2600,
+      "title": "Marketplace \u00b7 Prototype \u00b7 Desktop",
+      "is_interactive": true
+    },
+    "market-mobile.dc.html": {
+      "x": 1520,
+      "y": 18264,
+      "w": 390,
+      "h": 2400,
+      "title": "Marketplace \u00b7 Prototype \u00b7 Mobile",
+      "is_interactive": true
+    },
+    "market-spec.dc.html": {
+      "x": 2000,
+      "y": 18264,
+      "w": 1200,
+      "h": 1300,
+      "title": "Marketplace \u00b7 Assets, motion, theme mapping"
+    },
+    "atelier-home-desktop.dc.html": {
+      "x": 0,
+      "y": 21460,
+      "w": 1440,
+      "h": 1900,
+      "title": "Atelier \u00b7 Home \u00b7 Desktop"
+    },
+    "atelier-home-mobile.dc.html": {
+      "x": 0,
+      "y": 23440,
+      "w": 390,
+      "h": 1800,
+      "title": "Atelier \u00b7 Home \u00b7 Mobile"
+    },
+    "atelier-collection-desktop.dc.html": {
+      "x": 1520,
+      "y": 21460,
+      "w": 1440,
+      "h": 1100,
+      "title": "Atelier \u00b7 Collection \u00b7 Desktop"
+    },
+    "atelier-collection-mobile.dc.html": {
+      "x": 470,
+      "y": 23440,
+      "w": 390,
+      "h": 900,
+      "title": "Atelier \u00b7 Collection \u00b7 Mobile"
+    },
+    "atelier-product-desktop.dc.html": {
+      "x": 3040,
+      "y": 21460,
+      "w": 1440,
+      "h": 1000,
+      "title": "Atelier \u00b7 Product \u00b7 Desktop"
+    },
+    "atelier-product-mobile.dc.html": {
+      "x": 940,
+      "y": 23440,
+      "w": 390,
+      "h": 1300,
+      "title": "Atelier \u00b7 Product \u00b7 Mobile"
+    },
+    "atelier-bag-desktop.dc.html": {
+      "x": 4560,
+      "y": 21460,
+      "w": 1440,
+      "h": 1100,
+      "title": "Atelier \u00b7 Bag \u00b7 Desktop"
+    },
+    "atelier-bag-mobile.dc.html": {
+      "x": 1410,
+      "y": 23440,
+      "w": 390,
+      "h": 844,
+      "title": "Atelier \u00b7 Bag \u00b7 Mobile"
+    },
+    "atelier-desktop.dc.html": {
+      "x": 0,
+      "y": 25320,
+      "w": 1440,
+      "h": 1900,
+      "title": "Atelier \u00b7 Prototype \u00b7 Desktop",
+      "is_interactive": true
+    },
+    "atelier-mobile.dc.html": {
+      "x": 1520,
+      "y": 25320,
+      "w": 390,
+      "h": 1800,
+      "title": "Atelier \u00b7 Prototype \u00b7 Mobile",
+      "is_interactive": true
+    },
+    "atelier-spec.dc.html": {
+      "x": 2000,
+      "y": 25320,
+      "w": 1200,
+      "h": 1300,
+      "title": "Atelier \u00b7 Assets, motion, theme mapping"
+    },
+    "fresh-home-desktop.dc.html": {
+      "x": 0,
+      "y": 27760,
+      "w": 1440,
+      "h": 1700,
+      "title": "Fresh market \u00b7 Home \u00b7 Desktop"
+    },
+    "fresh-home-mobile.dc.html": {
+      "x": 0,
+      "y": 29540,
+      "w": 390,
+      "h": 1700,
+      "title": "Fresh market \u00b7 Home \u00b7 Mobile"
+    },
+    "fresh-collection-desktop.dc.html": {
+      "x": 1520,
+      "y": 27760,
+      "w": 1440,
+      "h": 1500,
+      "title": "Fresh market \u00b7 Collection \u00b7 Desktop"
+    },
+    "fresh-collection-mobile.dc.html": {
+      "x": 470,
+      "y": 29540,
+      "w": 390,
+      "h": 1500,
+      "title": "Fresh market \u00b7 Collection \u00b7 Mobile"
+    },
+    "fresh-product-desktop.dc.html": {
+      "x": 3040,
+      "y": 27760,
+      "w": 1440,
+      "h": 1100,
+      "title": "Fresh market \u00b7 Product \u00b7 Desktop"
+    },
+    "fresh-product-mobile.dc.html": {
+      "x": 940,
+      "y": 29540,
+      "w": 390,
+      "h": 1000,
+      "title": "Fresh market \u00b7 Product \u00b7 Mobile"
+    },
+    "fresh-bag-desktop.dc.html": {
+      "x": 4560,
+      "y": 27760,
+      "w": 1440,
+      "h": 1100,
+      "title": "Fresh market \u00b7 Bag \u00b7 Desktop"
+    },
+    "fresh-bag-mobile.dc.html": {
+      "x": 1410,
+      "y": 29540,
+      "w": 390,
+      "h": 1100,
+      "title": "Fresh market \u00b7 Bag \u00b7 Mobile"
+    },
+    "fresh-desktop.dc.html": {
+      "x": 0,
+      "y": 31320,
+      "w": 1440,
+      "h": 1700,
+      "title": "Fresh market \u00b7 Prototype \u00b7 Desktop",
+      "is_interactive": true
+    },
+    "fresh-mobile.dc.html": {
+      "x": 1520,
+      "y": 31320,
+      "w": 390,
+      "h": 1700,
+      "title": "Fresh market \u00b7 Prototype \u00b7 Mobile",
+      "is_interactive": true
+    },
+    "fresh-spec.dc.html": {
+      "x": 2000,
+      "y": 31320,
+      "w": 1200,
+      "h": 1300,
+      "title": "Fresh market \u00b7 Assets, motion, theme mapping"
+    },
+    "spec-home-desktop.dc.html": {
+      "x": 0,
+      "y": 33560,
+      "w": 1440,
+      "h": 1500,
+      "title": "Spec sheet \u00b7 Home \u00b7 Desktop"
+    },
+    "spec-home-mobile.dc.html": {
+      "x": 0,
+      "y": 35140,
+      "w": 390,
+      "h": 1400,
+      "title": "Spec sheet \u00b7 Home \u00b7 Mobile"
+    },
+    "spec-collection-desktop.dc.html": {
+      "x": 1520,
+      "y": 33560,
+      "w": 1440,
+      "h": 1500,
+      "title": "Spec sheet \u00b7 Collection \u00b7 Desktop"
+    },
+    "spec-collection-mobile.dc.html": {
+      "x": 470,
+      "y": 35140,
+      "w": 390,
+      "h": 1700,
+      "title": "Spec sheet \u00b7 Collection \u00b7 Mobile"
+    },
+    "spec-product-desktop.dc.html": {
+      "x": 3040,
+      "y": 33560,
+      "w": 1440,
+      "h": 1500,
+      "title": "Spec sheet \u00b7 Product \u00b7 Desktop"
+    },
+    "spec-product-mobile.dc.html": {
+      "x": 940,
+      "y": 35140,
+      "w": 390,
+      "h": 1500,
+      "title": "Spec sheet \u00b7 Product \u00b7 Mobile"
+    },
+    "spec-bag-desktop.dc.html": {
+      "x": 4560,
+      "y": 33560,
+      "w": 1440,
+      "h": 1000,
+      "title": "Spec sheet \u00b7 Bag \u00b7 Desktop"
+    },
+    "spec-bag-mobile.dc.html": {
+      "x": 1410,
+      "y": 35140,
+      "w": 390,
+      "h": 1000,
+      "title": "Spec sheet \u00b7 Bag \u00b7 Mobile"
+    },
+    "spec-desktop.dc.html": {
+      "x": 0,
+      "y": 36920,
+      "w": 1440,
+      "h": 1500,
+      "title": "Spec sheet \u00b7 Prototype \u00b7 Desktop",
+      "is_interactive": true
+    },
+    "spec-mobile.dc.html": {
+      "x": 1520,
+      "y": 36920,
+      "w": 390,
+      "h": 1400,
+      "title": "Spec sheet \u00b7 Prototype \u00b7 Mobile",
+      "is_interactive": true
+    },
+    "spec-spec.dc.html": {
+      "x": 2000,
+      "y": 36920,
+      "w": 1200,
+      "h": 1300,
+      "title": "Spec sheet \u00b7 Assets, motion, theme mapping"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "showroom-home-desktop.dc.html",
+    "showroom-collection-desktop.dc.html",
+    "showroom-product-desktop.dc.html",
+    "showroom-bag-desktop.dc.html",
+    "showroom-home-mobile.dc.html",
+    "showroom-collection-mobile.dc.html",
+    "showroom-product-mobile.dc.html",
+    "showroom-bag-mobile.dc.html",
+    "showroom-desktop.dc.html",
+    "showroom-mobile.dc.html",
+    "showroom-spec.dc.html",
+    "editorial-home-desktop.dc.html",
+    "editorial-collection-desktop.dc.html",
+    "editorial-product-desktop.dc.html",
+    "editorial-bag-desktop.dc.html",
+    "editorial-home-mobile.dc.html",
+    "editorial-collection-mobile.dc.html",
+    "editorial-product-mobile.dc.html",
+    "editorial-bag-mobile.dc.html",
+    "editorial-desktop.dc.html",
+    "editorial-mobile.dc.html",
+    "editorial-spec.dc.html",
+    "market-home-desktop.dc.html",
+    "market-collection-desktop.dc.html",
+    "market-product-desktop.dc.html",
+    "market-bag-desktop.dc.html",
+    "market-home-mobile.dc.html",
+    "market-collection-mobile.dc.html",
+    "market-product-mobile.dc.html",
+    "market-bag-mobile.dc.html",
+    "market-desktop.dc.html",
+    "market-mobile.dc.html",
+    "market-spec.dc.html",
+    "atelier-home-desktop.dc.html",
+    "atelier-collection-desktop.dc.html",
+    "atelier-product-desktop.dc.html",
+    "atelier-bag-desktop.dc.html",
+    "atelier-home-mobile.dc.html",
+    "atelier-collection-mobile.dc.html",
+    "atelier-product-mobile.dc.html",
+    "atelier-bag-mobile.dc.html",
+    "atelier-desktop.dc.html",
+    "atelier-mobile.dc.html",
+    "atelier-spec.dc.html",
+    "fresh-home-desktop.dc.html",
+    "fresh-collection-desktop.dc.html",
+    "fresh-product-desktop.dc.html",
+    "fresh-bag-desktop.dc.html",
+    "fresh-home-mobile.dc.html",
+    "fresh-collection-mobile.dc.html",
+    "fresh-product-mobile.dc.html",
+    "fresh-bag-mobile.dc.html",
+    "fresh-desktop.dc.html",
+    "fresh-mobile.dc.html",
+    "fresh-spec.dc.html",
+    "spec-home-desktop.dc.html",
+    "spec-collection-desktop.dc.html",
+    "spec-product-desktop.dc.html",
+    "spec-bag-desktop.dc.html",
+    "spec-home-mobile.dc.html",
+    "spec-collection-mobile.dc.html",
+    "spec-product-mobile.dc.html",
+    "spec-bag-mobile.dc.html",
+    "spec-desktop.dc.html",
+    "spec-mobile.dc.html",
+    "spec-spec.dc.html"
+  ],
+  "notes": {
+    "d1": {
+      "x": 0,
+      "y": 1240,
+      "text": "1 \u00b7 Fashion showroom",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "d2": {
+      "x": 0,
+      "y": 5024,
+      "text": "2 \u00b7 African editorial boutique",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "d3": {
+      "x": 0,
+      "y": 12764,
+      "text": "3 \u00b7 Modern African marketplace",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "d4": {
+      "x": 0,
+      "y": 21200,
+      "text": "4 \u00b7 Atelier minimal",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "d5": {
+      "x": 0,
+      "y": 27500,
+      "text": "5 \u00b7 Fresh market",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "d6": {
+      "x": 0,
+      "y": 33300,
+      "text": "6 \u00b7 Spec sheet",
+      "kind": "title1",
+      "maxW": 6000
+    }
+  },
+  "designSystems": []
+}
