@@ -9,6 +9,9 @@ for(const [C,family,phrase] of [[FreshMarket,'fresh-market','A little fresh.'],[
   assert(html.includes(`data-refined="${family}"`));assert(!html.includes('action="/api/'));
   if(screen==='home')assert(html.includes(phrase));
   if(screen==='bag')assert(html.includes('sample bag is empty')||html.includes('Start with the right details.'));
+  if(screen==='collection'&&family==='mayfair')assert(html.includes('The wardrobe edit'));
+  if(screen==='collection'&&family==='camden')assert(html.includes('The complete line-up'));
+  if(screen==='bag'&&family==='camden')assert(html.includes('Your bag'));
   if(screen==='product'&&family==='african-editorial')assert(html.includes('Choose your size'));
   if(screen==='product'&&family==='spec-sheet')assert(html.includes('Manufacturer datasheet not supplied'));
   if(screen==='home'&&['mayfair','camden'].includes(family)){assert(html.includes('LONDON SIGNATURE'));assert(html.includes('selected="">UK / GBP'));}
