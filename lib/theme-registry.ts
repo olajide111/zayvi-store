@@ -10,7 +10,7 @@ export const ADDITIONAL_STUDIO_THEMES:StudioTheme[]=DIRECTION_CATALOGUE.map(d=>(
  id:d.family,name:d.name,family:d.baseFamily,directionFamily:d.family,reviewOnly:true,
  collection:'Signature',description:d.description,industries:industries[d.family],layout:d.family==='fashion-showroom'?'poster':d.family==='modern-marketplace'?'tiles':d.family==='spec-sheet'?'catalogue':'gallery',
  canvas:d.defaultColours.floor||d.defaultColours.paper||d.defaultColours.surface||d.defaultColours.ivory||d.defaultColours.cream||'#fff9ec',
- ink:d.defaultColours.text||d.defaultColours.ink||'#22251c',accent:d.defaultColours.primary||d.defaultColours.accent||d.defaultColours.ink||'#111111',accentInk:'#ffffff',
+ ink:d.defaultColours.text||d.defaultColours.ink||'#22251c',accent:d.family==='fresh-market'?d.defaultColours.leaf:d.defaultColours.primary||d.defaultColours.accent||d.defaultColours.ink||'#111111',accentInk:'#ffffff',
  serif:['african-editorial','atelier-minimal'].includes(d.family),headline:d.name,
 }));
 export const ALL_STUDIO_THEMES:StudioTheme[]=[...THEME_DESIGNS,...ADDITIONAL_STUDIO_THEMES];

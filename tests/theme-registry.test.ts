@@ -15,3 +15,12 @@ test('all six directions have distinct IDs without changing existing pricing gro
  assert(ADDITIONAL_STUDIO_THEMES.every(t=>t.reviewOnly&&!t.premium));
  assert.equal(THEME_DESIGNS.filter(t=>t.premium).length,6);
 });
+test('added themes have unique display names while keeping their existing route IDs',()=>{
+ assert.deepEqual(Object.fromEntries(ADDITIONAL_STUDIO_THEMES.map(t=>[t.id,t.name])),{
+  'fashion-showroom':'Runway','african-editorial':'Ilé','modern-marketplace':'Soko',
+  'atelier-minimal':'Forma','fresh-market':'Oja','spec-sheet':'Volt',
+ });
+ assert.equal(new Set(ALL_STUDIO_THEMES.map(t=>t.name.toLocaleLowerCase('en-GB'))).size,26);
+ const oja=ADDITIONAL_STUDIO_THEMES.find(t=>t.id==='fresh-market')!;
+ assert.equal(oja.accent,'#542B58');assert.equal(oja.canvas,'#FFF4E8');
+});
