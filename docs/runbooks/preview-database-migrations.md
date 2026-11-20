@@ -27,27 +27,28 @@ The bootstrap runner is checksum-protected and only applies migrations not alrea
 
 ## Preconditions
 
-1. Work from the current `main` branch.
+1. Check out the revision selected for the Preview rollout.
 2. AWS CLI must be authenticated to account `001961766018`.
 3. AWS region must be `eu-west-2`.
-4. Terraform must initialise against the existing remote Preview state.
+4. Use Terraform 1.10 or later for S3 state locking, and initialise against the existing remote Preview state.
 5. `enable_db_bootstrap=true` must remain enabled for this migration apply.
 6. Review the saved Terraform plan before applying it.
 7. Do not change the S3, CloudFront, RDS deletion-protection or production-payment configuration as part of this operation.
 
-## Local repository path
+## Build the Preview Lambda packages
 
 From the Zayvi repository root:
 
 ```bash
-cd "infra/db-bootstrap"
-npm ci
-npm run package
+npm --prefix infra/lambda ci
+npm --prefix infra/lambda run package
+npm --prefix infra/db-bootstrap ci
+npm --prefix infra/db-bootstrap run package
 
-cd ../terraform
+cd infra/terraform
 ```
 
-The packaging command copies all `database/migrations/NNNN_*.sql` files into `zayvi-db-bootstrap.zip`.
+Terraform reads both `zayvi-api-bootstrap.zip` and `zayvi-db-bootstrap.zip` when planning this rollout. The database bootstrap package includes every `database/migrations/NNNN_*.sql` file. The API package includes the Lambda code that serves the new routes after the schema is ready.
 
 ## Verify package contents
 
@@ -104,7 +105,7 @@ Review the plan:
 terraform show -no-color zayvi-preview-migrations.tfplan
 ```
 
-Expected migration-related change: the bootstrap Lambda package/invocation may change because the packaged migration set changed.
+The plan may update the Preview API Lambda code, update the database bootstrap Lambda code and rerun the bootstrap invocation.
 
 Stop if the plan proposes destructive RDS, VPC, S3, CloudFront or unrelated IAM changes.
 
@@ -117,6 +118,8 @@ terraform apply zayvi-preview-migrations.tfplan
 The bootstrap output should report `bootstrap_complete`.
 
 For this activation, `migrationsApplied` should include migrations 0011 through 0024 when they were not already applied.
+
+During rollout, audited writes can return `schema_not_ready` until the bootstrap finishes. Returns list and detail remain available once their original migrations are in place.
 
 ## Post-apply checks
 
