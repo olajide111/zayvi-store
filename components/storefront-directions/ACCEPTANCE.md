@@ -74,3 +74,11 @@ Owner requested a more lifelike shopping simulation. Fresh Market now has gentle
 The local motion toggle, Studio motion-off wrapper and OS reduced-motion preference all suppress decorative effects. Native dialog behaviour provides modal focus containment, Escape handling and focus restoration; background scrolling is locked while open. Basket updates have a polite screen-reader status. No payment or ordering flow is activated.
 
 Validation: production build and typecheck; existing 19 model/registry/contract/colour tests; motion preference gate test; SSR checks include the closed native dialog, basket target and motion control. Live browser interaction/animation and visual review remain pending. Other directions retain their previous layout and behaviour.
+
+## Theme naming and Oja basket drop refinement
+
+The six added display names are now Runway (fashion-showroom), Ilé (african-editorial), Soko (modern-marketplace), Forma (atelier-minimal), Oja (fresh-market), and Volt (spec-sheet). Route IDs and saved-draft keys stay stable. Original twenty theme names/definitions remain intact.
+
+Oja now uses aubergine, coral and cream, with its registry/editor primary matching the renderer. Custom palette controls still take priority. The basket dock has a larger open basket illustration. Produce is rendered at 176 px on phones / 208 px on larger viewports, lifted before travelling, held at near-full size, and dropped vertically with clipping into the basket mouth instead of shrinking to a tiny dot. Basket quantity state remains independent of decorative motion.
+
+Validation: production build; 22 model, motion, registry, contract and colour tests including stable naming, palette defaults and readable pick/drop geometry; refined-theme SSR checks. Live browser visual review remains pending.

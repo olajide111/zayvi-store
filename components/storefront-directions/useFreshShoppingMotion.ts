@@ -2,6 +2,20 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {RefinedProduct} from './zdx-refined-data';
 
+export function freshDropFlight(source:{left:number;top:number;width:number;height:number},basket:{left:number;top:number;width:number;height:number},viewportWidth:number){
+ const width=viewportWidth<600?176:208,height=width*5/6;
+ const startX=source.left+source.width/2-width/2,startY=source.top+source.height/2-height/2;
+ const endX=basket.left+basket.width/2-width/2,mouthY=basket.top+basket.height*.4;
+ const hoverY=mouthY-height*.94,dropY=mouthY-height*.35;
+ const transform=(x:number,y:number,scale:number,rotation:number)=>`translate(${x}px,${y}px) scale(${scale}) rotate(${rotation}deg)`;
+ return {width,height,duration:1050,frames:[
+  {transform:transform(startX,startY,.96,-3),opacity:1,clipPath:'inset(0 0 0 0)',offset:0},
+  {transform:transform(startX,startY-36,1.08,-10),opacity:1,clipPath:'inset(0 0 0 0)',offset:.16},
+  {transform:transform(startX+(endX-startX)*.55,Math.min(startY,hoverY)-70,1.04,7),opacity:1,clipPath:'inset(0 0 0 0)',offset:.55},
+  {transform:transform(endX,hoverY,.98,0),opacity:1,clipPath:'inset(0 0 0 0)',offset:.8},
+  {transform:transform(endX,dropY,.94,0),opacity:1,clipPath:'inset(0 0 100% 0)',offset:1},
+ ]};
+}
 /** Motion is decorative: basket state never depends on animation completion. */
 export function freshMotionAllowed(root:HTMLElement|null,localEnabled=true){
  return Boolean(root&&localEnabled&&!root.closest('.zdx-motion-off')&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -36,20 +50,16 @@ export function useFreshShoppingMotion(active:boolean){
   const sample=nearby?.dataset.freshItem===product.id?nearby:container.querySelector(`[data-fresh-item="${product.id}"]`);
   const illustration=sample?.querySelector<SVGElement>('svg[role="img"]');
   const source=illustration&&visible(illustration)?illustration:from;
-  const a=source.getBoundingClientRect(),b=target.getBoundingClientRect();
-  const startX=a.left+a.width/2-48,startY=a.top+a.height/2-40,endX=b.left+b.width/2-48,endY=b.top+b.height/2-40;
+  const mouth=target.querySelector<HTMLElement>('[data-fresh-basket-mouth]')||target;
+  const flight=freshDropFlight(source.getBoundingClientRect(),mouth.getBoundingClientRect(),window.innerWidth);
   const ghost=document.createElement('div');
   ghost.setAttribute('aria-hidden','true');ghost.dataset.freshFlying='true';
-  Object.assign(ghost.style,{position:'fixed',left:'0',top:'0',width:'96px',height:'80px',zIndex:'2147483000',pointerEvents:'none',willChange:'transform,opacity',filter:'drop-shadow(0 10px 10px #0002)'});
+  Object.assign(ghost.style,{position:'fixed',left:'0',top:'0',width:`${flight.width}px`,height:`${flight.height}px`,zIndex:'2147483000',pointerEvents:'none',willChange:'transform,opacity',filter:'drop-shadow(0 10px 10px #0002)'});
   if(illustration){const clone=illustration.cloneNode(true) as SVGElement;clone.setAttribute('aria-hidden','true');clone.removeAttribute('role');clone.style.width='100%';clone.style.height='100%';ghost.append(clone);}else return;
   container.append(ghost);ghosts.current.add(ghost);
-  const animation=ghost.animate([
-   {transform:`translate(${startX}px,${startY}px) scale(1) rotate(-8deg)`,opacity:1},
-   {transform:`translate(${startX+(endX-startX)*.48}px,${Math.min(startY,endY)-75}px) scale(.82) rotate(8deg)`,opacity:1,offset:.48},
-   {transform:`translate(${endX}px,${endY}px) scale(.22) rotate(0deg)`,opacity:.1},
-  ],{duration:650,easing:'cubic-bezier(.25,.6,.35,1)',fill:'forwards'});
+  const animation=ghost.animate(flight.frames,{duration:flight.duration,easing:'linear',fill:'forwards'});
   track(animation);
-  animation.finished.then(()=>{if(freshMotionAllowed(container,enabled)&&target.isConnected)track(target.animate([{transform:'scale(1)'},{transform:'scale(1.07)'},{transform:'scale(1)'}],{duration:250,easing:'ease-out'}));}).catch(()=>{}).finally(()=>{ghost.remove();ghosts.current.delete(ghost);});
+  animation.finished.then(()=>{if(freshMotionAllowed(container,enabled)&&target.isConnected)track(mouth.animate([{transform:'translateY(0) scale(1)'},{transform:'translateY(5px) scale(1.12,.9)',offset:.35},{transform:'translateY(-3px) scale(.98,1.06)',offset:.7},{transform:'translateY(0) scale(1)'}],{duration:350,easing:'ease-out'}));}).catch(()=>{}).finally(()=>{ghost.remove();ghosts.current.delete(ghost);});
  };
  return {root,enabled,setEnabled,fly};
 }

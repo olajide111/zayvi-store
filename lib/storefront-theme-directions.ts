@@ -107,7 +107,7 @@ type DirectionDefinition = {
 export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
   {
     family: "fashion-showroom",
-    name: "Fashion showroom",
+    name: "Runway",
     description: "A full-screen clothing rail with isolated garments, smooth focus transitions and a compact shopping panel.",
     recommendedFor: ["Clothing", "Accessories", "Small curated ranges"],
     baseFamily: "editorial",
@@ -124,7 +124,7 @@ export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
   },
   {
     family: "african-editorial",
-    name: "African editorial boutique",
+    name: "Ilé",
     description: "A magazine-style layout with textile-inspired detail, large photography and numbered captions.",
     recommendedFor: ["Fashion", "Textiles", "Homeware", "Craft"],
     baseFamily: "editorial",
@@ -141,7 +141,7 @@ export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
   },
   {
     family: "modern-marketplace",
-    name: "Modern African marketplace",
+    name: "Soko",
     description: "A search-first, department-led storefront with a rich catalogue and a bag grouped by seller.",
     recommendedFor: ["Large catalogues", "Multi-seller stores", "Everyday goods"],
     baseFamily: "general-commerce",
@@ -158,7 +158,7 @@ export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
   },
   {
     family: "atelier-minimal",
-    name: "Atelier minimal",
+    name: "Forma",
     description: "Quiet and spacious. One piece at a time, a sliding collection strip and a bag drawer.",
     recommendedFor: ["Premium fashion", "Accessories", "Small ranges under about 30 pieces"],
     baseFamily: "editorial",
@@ -175,7 +175,7 @@ export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
   },
   {
     family: "fresh-market",
-    name: "Fresh market",
+    name: "Oja",
     description: "Built for repeat shopping: an aisle rail, inline quantity steppers and an always-visible basket.",
     recommendedFor: ["Food", "Household goods", "Repeat orders with many small items"],
     baseFamily: "grocery",
@@ -185,14 +185,14 @@ export const DIRECTION_CATALOGUE: DirectionDefinition[] = [
     allowedSections: ["aisle-rail", "stepper-list", "basket-panel", "slot-picker", "footer-policies"],
     defaultSections: ["aisle-rail", "stepper-list", "basket-panel"],
     colourTokens: ["leaf", "accent", "cream", "text"],
-    defaultColours: { leaf: "#2E7D32", accent: "#E4572E", cream: "#FFF9EC", text: "#22251C" },
+    defaultColours: { leaf: "#542B58", accent: "#E9A18C", cream: "#FFF4E8", text: "#39223F" },
     headingFont: "Nunito",
     bodyFont: "Nunito",
     requires: ["Pack size and unit price per product", "Origin and storage notes", "Delivery slots from the shipping engine (build plan item 13)"],
   },
   {
     family: "spec-sheet",
-    name: "Spec sheet",
+    name: "Volt",
     description: "Built for buying by specification: a sortable table, a compare view and a quote list.",
     recommendedFor: ["Electronics", "Solar and power", "Tools and parts", "Trade buyers"],
     baseFamily: "product-specification",
