@@ -67,3 +67,11 @@ From a clean checkout of the reviewed commit, run `bash infra/scripts/preview-pl
 Review the complete saved plan. Resolve unrelated changes first. Apply only that reviewed saved plan in your authenticated terminal. Then confirm System Readiness reports the required migrations, select Original in setup, save colours/font, reopen the studio, save a version and reload it. Keep guarded release flags disabled until the separate Preview release acceptance checks above pass. A successful frontend build alone does not prove backend saves or database access.
 
 The setup checklist now bounds its initial API read to 15 seconds and offers retry, business setup and System Readiness recovery links. Saving remains explicit. Unknown-theme rejections explain the matching API dependency; a retry does not automatically repeat a write.
+
+## Deployment checkpoint — 21 November 2026
+
+The operator's Terraform apply output confirms the matching Preview API code update and successful application of migrations 0029, 0030 and 0031. Bootstrap reported `bootstrap_complete`, application role `zayvi_app`, and `privilegedApplicationRole=false`. Operational monitoring still reports notifications configured. This verifies deployment/migration output, not browser saves or PostgreSQL acceptance of every flow.
+
+Setup now offers **Save and open design studio**. It waits for appearance persistence before a fresh server navigation with `from=setup`. That explicit handoff loads the selected theme's validated setup brand, colours and font, retaining a prior studio campaign's headline and motion. Existing immutable design versions are not written or replaced by opening the studio. Ordinary gallery/editor entry still restores the latest valid studio draft first. The setup panel identifies unsaved appearance changes and offers a reset to its last saved appearance. Saving a version remains a separate action.
+
+This handoff follow-up changes frontend application behavior only; no additional migration, Terraform apply, release flag or payment setting is required. Eleven local setup/initialisation/theme tests cover source precedence, preservation of prior versions and campaign content, Original scoping, and invalid stored colours. Browser end-to-end acceptance remains pending.
