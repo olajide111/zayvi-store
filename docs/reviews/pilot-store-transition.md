@@ -85,3 +85,19 @@ Nine focused tests pass for basket variant identity, quantity limits, storage va
 - Added individually removable active-filter chips. Clear-all retains the selected sort order. New department links start a fresh collection.
 - URL inputs are bounded and validated against Hammy's sample catalogue, with consistent handling of repeated parameters on server and client. No arbitrary redirect URL or external catalogue is accepted.
 - Verification: 18 focused tests cover URL round trips, malformed inputs, server-rendered filtered results and preserved product return links, alongside prior basket/gallery coverage. Interactive browser history checks remain outstanding under the existing browser restriction.
+
+### Catalogue gallery foundation (requires Preview API deployment)
+
+The backend audit found that `withTenant` selects a server-configured tenant (default `zayvi`), while multiple operations explicitly select that tenant's `main` store. The Hammy pilot remains isolated demo data; this work does not create or rename a store, introduce an owner identity or enable real inventory/checkout.
+
+The real catalogue now has a prepared gallery contract:
+
+- Product create/update validates an ordered set of up to 20 images including the primary image, stores it in the existing product attributes JSON and returns the gallery through catalogue reads. No SQL migration is required. Existing single-image products still work.
+- Supplier-feed gallery reads only expose the exact primary image already approved for the requested market. Additional images cannot inherit that approval.
+- The admin product form accepts additional URLs, one per line, only when the commerce API advertises `productGalleryVersion: 1`. An older deployed API leaves gallery editing disabled rather than silently discarding it.
+- Storefront product details and quick view use a shared thumbnail/previous/next gallery. Hammy's sample gallery remains separate.
+- Verification: 22 focused tests cover existing Hammy flows plus gallery validation, maximum image count, clearing/partial update behaviour, supplier rights and legacy rendering. Frontend production and Lambda builds are required before deployment.
+
+Activation is a separate Preview operation: package the reviewed commerce Lambda, create/review a fresh Preview Terraform plan while retaining private webhook/SNS inputs, and apply only the expected API change after resolving any other proposed changes. Verify the advertised gallery version, save one owned test product with two photos, reload it and check both storefront views. Do not point Hammy at the old store to perform this check. No AWS resources were changed by this code update.
+
+Remaining pilot prerequisites: independent tenant/store provisioning, owner-scoped authentication, product/variant SKU inventory, explicit market pricing and policies, and Hammy's own test payment connection. These are not verified by the design preview.

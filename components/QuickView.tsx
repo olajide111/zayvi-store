@@ -4,6 +4,7 @@ import {useModalDialog} from "@/hooks/useModalDialog";
 import { useState, useEffect,useId } from "react";
 import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
+import ProductGallery from "./ProductGallery";
 import { productPath } from "@/lib/storefront-market";
 
 const STORE_COLOR = "#215241";
@@ -17,7 +18,6 @@ type Props = {
 
 export default function QuickView({ product, open, onClose, onAdd }: Props) {
   const dialog=useModalDialog(open && !!product,onClose),titleId=useId();
-  const [imageFailed,setImageFailed]=useState(false);
   const [qty, setQty] = useState(1);
   const [col, setCol] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(0);
@@ -25,7 +25,6 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
 
   useEffect(() => {
     if (open) {
-      setImageFailed(false);
       setQty(1);
       setCol(0);
       setSizeIdx(0);
@@ -85,11 +84,8 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
           }}
         >
           <div style={{ background: "#f7f7f5", minHeight: 360 }}>
-            {!imageFailed&&product.image?<img onError={()=>setImageFailed(true)}
-              src={product.image}
-              alt={product.name}
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
-            />:<p className="p-6 text-sm">Image unavailable · {product.name}</p>}
+            <ProductGallery key={product.id} image={product.image} images={product.images} name={product.name}/>
+
           </div>
 
           <div style={{ padding: 28, display: "flex", flexDirection: "column" }}>

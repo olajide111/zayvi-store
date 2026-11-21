@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       slug: product.slug,
       name: product.name,
       image: product.image,
+      images: Array.isArray(product.images) ? product.images : [],
       price: Number(product.price),
       currency: product.currency || (market === "NG" ? "NGN" : "GBP"),
       marketCode: product.marketCode || market,

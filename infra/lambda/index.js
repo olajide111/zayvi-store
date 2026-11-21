@@ -14,6 +14,8 @@ const { socialLinksMigration, querySocialLinks } = require("./storefront-social-
 const { reviewSupplierImage, storefrontImage } = require("./supplier-image-rights");
 const { mapKredalPaymentState } = require("./kredal-payment-state");
 
+const { galleryFields, storefrontGallery } = require('./product-gallery');
+
 let pool;
 
 function getPool() {
@@ -113,6 +115,7 @@ function normalizeProduct(row) {
     name: row.name,
     category: attributes.category || row.product_type || "Uncategorised",
     image: storefrontImage(attributes, row.market_code),
+    images: storefrontGallery(attributes, row.market_code),
     emoji: attributes.emoji || "",
     desc: attributes.desc || "",
     longDesc: attributes.longDesc || "",
@@ -303,7 +306,8 @@ async function listProducts(marketCode = "GB") {
 async function createProduct(input) {
   const name = String(input?.name || "").trim();
   const category = String(input?.category || "").trim();
-  const image = String(input?.image || "").trim();
+  const gallery = galleryFields(input || {});
+  const image = gallery.image;
   const desc = String(input?.desc || "").trim();
   const longDesc = String(input?.longDesc || desc).trim();
   const emoji = String(input?.emoji || "").trim();
@@ -349,6 +353,7 @@ async function createProduct(input) {
       const attributes = {
         category,
         image,
+        images: gallery.images,
         emoji,
         desc,
         longDesc,
@@ -530,10 +535,8 @@ async function updateProduct(productId, input) {
         input?.category === undefined
           ? currentAttributes.category || row.product_type || "Uncategorised"
           : String(input.category || "").trim();
-      const image =
-        input?.image === undefined
-          ? currentAttributes.image || ""
-          : String(input.image || "").trim();
+      const gallery = galleryFields(input || {}, currentAttributes);
+      const image = gallery.image;
       const desc =
         input?.desc === undefined
           ? currentAttributes.desc || ""
@@ -579,6 +582,7 @@ async function updateProduct(productId, input) {
         ...currentAttributes,
         category,
         image,
+        images: gallery.images,
         desc,
         longDesc
       };
@@ -12696,6 +12700,7 @@ exports.handler = async (event, context) => {
       return response(200, {
         source: "postgresql",
         total: products.length,
+        productGalleryVersion: 1,
         products
       });
     } catch (error) {
