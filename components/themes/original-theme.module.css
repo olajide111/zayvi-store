@@ -1,0 +1,21 @@
+.original{background:var(--canvas);color:var(--ink)}
+.original :is(h1,h2){font-family:var(--heading);color:var(--ink)}
+.original :is(p,span,small){color:inherit}
+.original button{font-family:inherit;cursor:pointer}
+.original button:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+.original section>div>button,.original article>button{border:0}
+.original article{background:var(--canvas);color:var(--ink);border-color:color-mix(in srgb,var(--ink) 18%,transparent)}
+.original article>button{width:100%;padding:0}
+.original article>div>button{background:transparent;border:0;padding:0;text-align:left}
+.original [aria-label="A first look at the collection"]{background:color-mix(in srgb,var(--accent) 12%,var(--canvas))}
+.original [aria-label="A first look at the collection"] button{border:0;background:var(--canvas)!important;color:var(--ink);text-align:left}
+.original section>div>div>button{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.original section>div>div>button+button{background:transparent;color:var(--ink);border-color:var(--ink)}
+.original section>div>button{background:var(--canvas);color:var(--ink)}
+.original article button{color:var(--ink)}
+.original article>div>div>button{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.original article>button{background:color-mix(in srgb,var(--ink) 4%,var(--canvas))}
+.original img{mix-blend-mode:normal}
+:global([data-motion="subtle"]) .original>section:first-child,:global([data-motion="expressive"]) .original>section:first-child{animation:arrive .6s ease-out both}
+@keyframes arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.original>section{animation:none!important}.original img{transition:none!important}}

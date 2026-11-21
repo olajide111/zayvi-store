@@ -3,7 +3,7 @@ import type { TemplateFamily } from './storefront-theme';
 export type StudioProduct = { id:string; name:string; image:string; price:number; currency:string; category:string; description:string };
 export const DESIGN_PROFILE_KEY = 'zayvi-design-profile-v1';
 export const DESIGN_DRAFT_KEY = 'zayvi-design-draft-v1';
-export const BUSINESS_TYPES = ['Fashion','Beauty','Home','Electronics','Food','Trade','General retail','Art','Gifts','Lifestyle','Jewellery & watches','Footwear','Bags & accessories','Health & wellness','Sports & outdoors','Baby & kids','Toys & games','Books & stationery','Pets','Automotive','Garden & DIY','Equipment','Digital products','Services','Other'] as const;
+export const BUSINESS_TYPES = ['Fashion','Beauty','Home','Electronics','Food','Trade','General retail','Art','Gifts','Lifestyle','Jewellery & watches','Footwear','Bags & accessories','Health & wellness','Sports & outdoors','Baby & kids','Toys & games','Books & stationery','Pets','Automotive','Garden & DIY','Equipment','Digital products','Handmade & own production','Manufacturing & own brand','Services','Other'] as const;
 export type DesignProfile = { name:string; industry:string; otherIndustry:string; style:'Signature'|'Expressive'|'Either' };
 export const EMPTY_PROFILE:DesignProfile={name:'',industry:'General retail',otherIndustry:'',style:'Either'};
 export function parseDesignProfile(value:unknown):DesignProfile {
@@ -24,6 +24,8 @@ export function demoProducts(family:TemplateFamily):StudioProduct[]{return catal
 
 // Theme suitability is a design recommendation, not a promise of industry-specific commerce tools.
 const INDUSTRY_FAMILIES:Record<string,string[]>={
+ 'Handmade & own production':['Art','Fashion','Home','Food','General retail'],
+ 'Manufacturing & own brand':['Trade','Equipment','General retail'],
  'Jewellery & watches':['Fashion','Beauty'],Footwear:['Fashion'],'Bags & accessories':['Fashion','General retail'],
  'Health & wellness':['Beauty','Lifestyle'],'Sports & outdoors':['Lifestyle','General retail'],
  'Baby & kids':['Gifts','General retail'],'Toys & games':['Gifts','General retail'],

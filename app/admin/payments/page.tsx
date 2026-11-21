@@ -86,14 +86,15 @@ export default function AdminPaymentsPage() {
 function PaymentsReturn() {
   const params = useSearchParams();
   const returnedOrder = params.get("kredal_return") === "1" ? returnedKredalOrderId(params.get("order_id")) : "";
-  return <PaymentsWorkspace key={returnedOrder} returnedOrder={returnedOrder} />;
+  const selectedOrder=returnedKredalOrderId(params.get("order_id"));
+  return <PaymentsWorkspace key={returnedOrder||selectedOrder} returnedOrder={returnedOrder} initialOrder={selectedOrder} />;
 }
 
-function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
+function PaymentsWorkspace({ returnedOrder,initialOrder }: { returnedOrder: string;initialOrder:string }) {
   const [connection, setConnection] = useState<ConnectionResponse | null>(null);
   const [events, setEvents] = useState<KredalEvent[]>([]);
   const [nigeriaOrders, setNigeriaOrders] = useState<OrderSummary[]>([]);
-  const [orderId, setOrderId] = useState(returnedOrder);
+  const [orderId, setOrderId] = useState(returnedOrder||initialOrder);
   const [orderSearch, setOrderSearch] = useState("");
   const verifiedOnReturn = useRef(false);
   const [loading, setLoading] = useState(true);
@@ -128,7 +129,7 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
         ordersResponse.status === 401
       ) {
         const params = new URLSearchParams({ next: "payments" });
-        if (returnedOrder) params.set("order_id", returnedOrder);
+        if (returnedOrder||initialOrder) params.set("order_id", returnedOrder||initialOrder);
         window.location.replace("/admin?" + params);
         return;
       }
@@ -169,7 +170,7 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
     } finally {
       setLoading(false);
     }
-  }, [returnedOrder]);
+  }, [returnedOrder,initialOrder]);
 
   useEffect(() => {
     void load();
@@ -427,7 +428,7 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 xl:grid-cols-3">
+        <details className="mt-5 rounded-xl border border-[#dfe6e1] bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Payment providers & connection settings · {connectionStatus}</summary><div className="mt-4 grid gap-4 xl:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
               Kredal Pay
@@ -506,10 +507,10 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
               is completed.
             </p>
           </div>
-        </div>
+        </div></details>
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
-          <h2 className="text-sm font-semibold">Nigeria test payments</h2>
+          <h2 className="text-sm font-semibold">Order payments · Nigeria test mode</h2>
           <p className="mt-1 text-sm text-[#52635b]">
             Payment and refund updates arrive automatically through signed webhooks.
             Use Refresh to load the latest orders. Verify payment is available if an update is missing.
@@ -578,7 +579,7 @@ function PaymentsWorkspace({ returnedOrder }: { returnedOrder: string }) {
             </div>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-5 grid gap-3 border-t border-[#dfe6e1] pt-5 sm:grid-cols-2 xl:grid-cols-4">
             <button
               type="button"
               disabled={Boolean(working) || connectionStatus !== "active" || !isUnpaidOrder}

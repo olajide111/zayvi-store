@@ -16,6 +16,7 @@ export const adminGroups = [
   {
     label: "Operations",
     items: [
+      { title: "Fulfilment & automation", href: "/admin/automation", icon: Truck },
       { title: "Operations Inbox", href: "/admin/operations-inbox", icon: Inbox },
       { title: "Returns", href: "/admin/returns", icon: RotateCcw },
       { title: "Purchase Orders", href: "/admin/purchase-orders", icon: ClipboardList },

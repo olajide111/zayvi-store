@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {orderQueue,orderNextAction,type OrderQueue} from "@/lib/order-work-queue";
 import { ArrowUpRight, Package, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
@@ -54,6 +55,7 @@ function StatusPill({ value, category }: { value: string; category: string }) {
 
 export default function AdminOrdersPage() {
   const [data, setData] = useState<OrdersResponse | null>(null);
+  const [queue,setQueue]=useState<OrderQueue>("all");
   const [query, setQuery] = useState("");
   const [payment, setPayment] = useState("all");
   const [fulfilment, setFulfilment] = useState("all");
@@ -71,6 +73,7 @@ export default function AdminOrdersPage() {
   }
 
   function clearFilters() {
+    setQueue("all");
     setQuery("");
     setPayment("all");
     setFulfilment("all");
@@ -125,11 +128,11 @@ export default function AdminOrdersPage() {
   const visibleOrders = currencyOrders.filter((order) => {
     const matchesSearch = !normalized || [order.orderNumber, order.customerName, order.customerEmail]
       .some((value) => value?.toLowerCase().includes(normalized));
-    return matchesSearch && (payment === "all" || order.paymentStatus === payment) &&
+    return (queue === "all" || orderQueue(order) === queue) && matchesSearch && (payment === "all" || order.paymentStatus === payment) &&
       (fulfilment === "all" || order.fulfilmentStatus === fulfilment) &&
       (orderState === "all" || order.orderStatus === orderState);
   });
-  const hasFilters = Boolean(normalized || payment !== "all" || fulfilment !== "all" || orderState !== "all" || currency !== "all");
+  const hasFilters = Boolean(queue !== "all" || normalized || payment !== "all" || fulfilment !== "all" || orderState !== "all" || currency !== "all");
   const paid = currencyOrders.filter((order) => order.paymentStatus === "paid").length;
   const unfulfilled = currencyOrders.filter((order) => order.fulfilmentStatus === "unfulfilled").length;
   const totals = new Map<string, number>();
@@ -174,6 +177,8 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
+        <nav aria-label="Order work queues" className="flex flex-wrap gap-2">{([{id:'all',label:'All orders'},{id:'review',label:'Paid · review fulfilment'},{id:'payment',label:'Payment needs review'},{id:'closed',label:'Refunded / closed'}] as const).map(item=><button key={item.id} type="button" disabled={loading} aria-pressed={queue===item.id} onClick={()=>setQueue(item.id)} className={`min-h-11 rounded-lg border px-4 text-sm font-semibold ${queue===item.id?'bg-[#215241] text-white':'bg-white text-[#215241]'}`}>{item.label} <span className="ml-2">{loading||error?'—':currencyOrders.filter(o=>item.id==='all'||orderQueue(o)===item.id).length}</span></button>)}</nav>
+        <p className="text-sm text-[#52635b]">Actions open the order for review. Paid Preview orders remain blocked from real dispatch. <Link href="/admin/automation" className="font-semibold underline">How fulfilment works</Link></p>
         <fieldset disabled={loading} className="grid gap-3 rounded-xl border border-[#dfe6e1] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
           <legend className="sr-only">Filter orders</legend>
           <label className="text-xs font-semibold text-[#52635b] sm:col-span-2 xl:col-span-4">Search orders
@@ -205,26 +210,13 @@ export default function AdminOrdersPage() {
           <ul className="divide-y divide-[#e4eae5] rounded-xl border border-[#dfe6e1] bg-white" aria-label="Orders">
             {visibleOrders.map((order) => (
               <li key={order.id} className="min-w-0">
-                <Link href={`/admin/orders/${encodeURIComponent(order.id)}`} prefetch={false} className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)] items-start gap-x-3 gap-y-2 rounded-lg px-3 py-3.5 hover:bg-[#f5f8f5] sm:px-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold break-words text-[#215241]">{order.orderNumber}</p>
-                    <p className="mt-0.5 truncate text-xs text-[#52635b]">{order.customerName || order.customerEmail || "Guest"}</p>
-                  </div>
-                  <div className="col-start-2 row-start-1 text-right xl:col-start-3">
-                    <p className="flex items-start justify-end gap-1.5 text-sm font-semibold break-words tabular-nums">
-                      <span className="min-w-0">{money(order.total, order.currency)}</span>
-                      <ArrowUpRight size={15} className="shrink-0 text-[#52635b]" aria-hidden="true" />
-                    </p>
-                    <time dateTime={order.createdAt} className="text-xs text-[#52635b]">
-                      {new Date(order.createdAt).toLocaleDateString("en-GB")}
-                    </time>
-                  </div>
-                  <div className="col-span-2 flex flex-wrap gap-1.5 xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:pt-1">
-                    <StatusPill value={order.paymentStatus} category="Payment" />
-                    <StatusPill value={order.fulfilmentStatus} category="Fulfilment" />
-                    {order.orderStatus && <StatusPill value={order.orderStatus} category="Order" />}
-                  </div>
-                </Link>
+                <article className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_minmax(160px,1fr)] xl:items-center">
+                  <div className="min-w-0"><Link href={`/admin/orders/${encodeURIComponent(order.id)}`} className="font-semibold text-[#215241] underline">{order.orderNumber}</Link><p className="mt-1 truncate text-sm text-[#52635b]">{order.customerName||order.customerEmail||'Guest'}</p><p className="mt-1 text-xs text-[#52635b]">{order.orderStatus?label(order.orderStatus):'Order'} · {new Date(order.createdAt).toLocaleDateString('en-GB')}</p></div>
+                  <div><p className="mb-1 text-xs font-semibold text-[#52635b]">Payment</p><StatusPill value={order.paymentStatus} category="Payment"/></div>
+                  <div><p className="mb-1 text-xs font-semibold text-[#52635b]">Fulfilment</p><StatusPill value={order.fulfilmentStatus} category="Fulfilment"/></div>
+                  <p className="text-base font-semibold tabular-nums">{money(order.total,order.currency)}</p>
+                  <div><Link href={`/admin/orders/${encodeURIComponent(order.id)}`} prefetch={false} aria-label={`${orderNextAction(order).title} for ${order.orderNumber}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#215241] px-4 text-sm font-semibold text-white">{orderNextAction(order).title}<ArrowUpRight size={15}/></Link><p className="mt-2 text-xs leading-5 text-[#52635b]">{orderNextAction(order).detail}</p></div>
+                </article>
               </li>
             ))}
           </ul>

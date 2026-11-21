@@ -1,38 +1,6 @@
-"use client";
-
-import type { StorefrontProduct } from "@/lib/storefront-products";
-import ProductCard from "./ProductCard";
-
-type Props = {
-  products: StorefrontProduct[];
-  onView: (p: StorefrontProduct) => void;
-  onAdd: (p: StorefrontProduct, qty?: number, color?: string, size?: string) => void;
-};
-
-export default function BestSellers({ products, onView, onAdd }: Props) {
-  const bestsellers = products.filter((p) => p.badge === "Best Seller").slice(0, 4);
-
-  if (bestsellers.length === 0) return null;
-
-  return (
-    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 24px 40px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 4 }}>A first look</h2>
-          <p style={{ fontSize: 14, color: "#666" }}>A preview of the product categories and presentation style</p>
-        </div>
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-          gap: 20,
-        }}
-      >
-        {bestsellers.map((p) => (
-          <ProductCard key={p.id} product={p} onView={onView} onAdd={onAdd} />
-        ))}
-      </div>
-    </section>
-  );
-}
+'use client';
+import type {StorefrontProduct} from '@/lib/storefront-products';
+import ProductCard from './ProductCard';
+import s from './original.module.css';
+type Props={products:StorefrontProduct[];onView:(p:StorefrontProduct)=>void;onAdd:(p:StorefrontProduct,qty?:number,color?:string,size?:string)=>void};
+export default function BestSellers({products,onView,onAdd}:Props){if(!products.length)return null;return <section className={s.section}><div className={s.sectionHead}><div><p className={s.eyebrow}>MEET THE COLLECTION</p><h2>The current edit.</h2><p className={s.muted}>A first look at what’s available to explore in your market.</p></div></div><div className={s.productGrid}>{products.slice(0,4).map(p=><ProductCard key={p.id} product={p} onView={onView} onAdd={onAdd}/>)}</div></section>;}

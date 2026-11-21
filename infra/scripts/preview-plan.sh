@@ -13,6 +13,7 @@ if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
   exit 1
 fi
 export AWS_REGION=eu-west-2 AWS_DEFAULT_REGION=eu-west-2 AWS_PAGER=
+printf '[1/8] Checking AWS Preview account…\n'
 account_id="$(aws sts get-caller-identity --query Account --output text)"
 [ "$account_id" = 001961766018 ] || { echo 'Expected Preview AWS account 001961766018.' >&2; exit 1; }
 export TMPDIR=/tmp
@@ -23,8 +24,10 @@ for override_file in override.tf override.tf.json *_override.tf *_override.tf.js
     exit 1
   fi
 done
+printf '[2/8] Initialising existing Preview state…\n'
 terraform init -reconfigure -input=false -lockfile=readonly
 [ "$(terraform workspace show)" = default ] || { echo 'Use the existing default Preview workspace; do not create or migrate state.' >&2; exit 1; }
+printf '[3/8] Reading existing resources…\n'
 state_resources="$(terraform state list)"
 for expected_resource in aws_lambda_function.api aws_db_instance.postgres aws_apigatewayv2_stage.default; do
   if ! printf '%s\n' "$state_resources" | grep -Fxq "$expected_resource"; then
@@ -37,6 +40,7 @@ if printf '%s\n' "$state_resources" | grep -Fxq 'aws_lambda_function.db_bootstra
 else
   export TF_VAR_enable_db_bootstrap=false
 fi
+printf '[4/8] Checking webhook secret metadata…\n'
 # Preserve the active webhook even when the caller forgot to export its ARN.
 if [ -z "${TF_VAR_kredal_preview_webhook_secret_arn:-}" ]; then
   TF_VAR_kredal_preview_webhook_secret_arn="$(aws lambda get-function-configuration \
@@ -50,16 +54,20 @@ case "$TF_VAR_kredal_preview_webhook_secret_arn" in
 esac
 # Read metadata only; never retrieve or print the secret value.
 aws secretsmanager describe-secret --secret-id "$TF_VAR_kredal_preview_webhook_secret_arn" --query ARN --output text >/dev/null
+printf '[5/8] Installing and packaging commerce API (npm may take time)…\n'
 npm --prefix ../lambda ci
 npm --prefix ../lambda run package
 # Build both real archives: validation evaluates file hashes even for disabled bootstrap.
+printf '[6/8] Installing and packaging database runner…\n'
 npm --prefix ../db-bootstrap ci
 npm --prefix ../db-bootstrap run package
+printf '[7/8] Validating Terraform configuration…\n'
 terraform fmt -check -recursive
 terraform validate -no-color
 plan_directory="$(mktemp -d /tmp/zayvi-preview-plan.XXXXXX)"
 plan_path="$plan_directory/preview.tfplan"
 git rev-parse HEAD > "$plan_directory/commit.txt"
+printf '[8/8] Creating review plan; Terraform may wait for a state lock or provider startup…\n'
 if terraform plan -input=false -detailed-exitcode \
   -var="enable_db_bootstrap=$TF_VAR_enable_db_bootstrap" \
   -var="kredal_preview_webhook_secret_arn=$TF_VAR_kredal_preview_webhook_secret_arn" \
