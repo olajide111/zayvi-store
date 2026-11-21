@@ -1,3 +1,5 @@
+const { queryThemeDrafts } = require("./theme-drafts");
+const { queryStoreSetup } = require("./store-setup");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -7678,6 +7680,9 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if (routePath.endsWith("/theme-drafts")) return ["0002_storefront_theme_versions.sql", "0030_theme_draft_access.sql"];
+  if (routePath.endsWith("/store-setup")) return ["0029_store_setup.sql"];
+
   if (routePath.endsWith("/storefront-social-links")) {
     return [socialLinksMigration];
   }
@@ -12329,6 +12334,19 @@ exports.handler = async (event, context) => {
       return response(500, {
         error: "kredal_events_unavailable"
       });
+    }
+  }
+
+  if (routePath.endsWith("/theme-drafts") && ["GET", "POST"].includes(method)) {
+    try { return response(200, await queryThemeDrafts({getPool,withTenant},method === "POST" ? parseBody(event) : null,method === "POST")); }
+    catch(error) { return response(error.statusCode || 503,{error:error.statusCode ? error.message : "Theme drafts unavailable. Check migration 0030 and the matching API."}); }
+  }
+
+  if (routePath.endsWith("/store-setup") && ["GET", "PUT"].includes(method)) {
+    try {
+      return response(200, await queryStoreSetup({ getPool, withTenant }, method === "PUT" ? parseBody(event) : null, method === "PUT"));
+    } catch (error) {
+      return response(error.statusCode || 503, { error: error.statusCode ? error.message : "Store setup unavailable. Check Preview API and migration 0029." });
     }
   }
 

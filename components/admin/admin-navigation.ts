@@ -46,6 +46,7 @@ export const adminGroups = [
   {
     label: "Setup",
     items: [
+      { title: "Setup & launch", href: "/admin/launch", icon: ShieldCheck },
       { title: "Design your store", href: "/admin/get-started", icon: Palette },
       { title: "Markets", href: "/admin/markets", icon: Globe2 },
       { title: "Shipping", href: "/admin/shipping", icon: Truck },
