@@ -106,3 +106,16 @@ Remaining pilot prerequisites: independent tenant/store provisioning, owner-scop
 ### Hammy cooler palette
 
 Replaced the yellow editorial accents with pale blue and shifted the canvas, borders, image placeholders and basket summary to cooler neutrals. The sportswear CTA uses white against cobalt; its hover state stays within the same blue family. The overview palette and copy match the storefront. This is a visual-only update; the earlier yellow direction is superseded.
+
+
+### Default Store v1 and customised Hammy
+
+The user requested that the current starter be called Default Store in the dashboard, with future improvements scoped to their customised Hammy Store. The dashboard entry now opens `/admin/pilots/default`, with a separate link to Hammy.
+
+Default Store v1 has an independent copy of the current responsive design, CSS, sample catalogue, shopping helpers and navigation helpers. It does not import Hammy's implementation or configuration. Its preview URLs, product IDs and session basket key are separate. Version 1 adds shopping shortcuts for everyday, occasion, sports and children’s edits before being retained as the baseline.
+
+Hammy retains its own files and existing preview basket. Its overview explains the separation. `AGENTS.md` records that future unqualified storefront improvements apply to Hammy; changing Default Store requires an explicit baseline request. Shared framework/accessibility utilities remain shared, but there is no Hammy design dependency in the saved starter.
+
+This names and versions the design baseline; it does not rename database store records, activate a default for every tenant, provision a new tenant or enable checkout. The independent-store and gallery-API activation prerequisites above remain outstanding.
+
+Baseline verification: production build and 23 focused baseline/Hammy/dashboard checks passed. Visual browser acceptance remains outstanding under the previously documented browser restriction.
