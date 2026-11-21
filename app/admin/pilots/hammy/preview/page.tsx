@@ -1,3 +1,8 @@
-import ThemedShop from '@/components/themes/ThemedShop';
-import {HAMMY_PILOT,HAMMY_THEME,HAMMY_SAMPLE_PRODUCTS} from '@/lib/hammy-pilot';
-export default async function HammyPreview({searchParams}:{searchParams:Promise<{department?:string}>}){const query=await searchParams;const department=HAMMY_PILOT.departments.find(name=>name===query.department);return <><aside className="bg-[#181a20] px-4 py-3 text-center text-xs text-white">HAMMY STORE · PILOT DESIGN PREVIEW · Sample collection · No live selling store or checkout connected</aside><ThemedShop key={department||'home'} initialCategory={department} theme={HAMMY_THEME} brand={HAMMY_PILOT.name} headline={HAMMY_PILOT.headline} font="serif" palette="custom" colourInput={HAMMY_PILOT.colours} motion="subtle" view={department?'collection':'home'} source="demo" sampleProducts={HAMMY_SAMPLE_PRODUCTS}/></>;}
+import HammyShop,{type HammyRoute} from '@/components/pilots/HammyShop';
+import {HAMMY_PILOT} from '@/lib/hammy-pilot';
+export default async function HammyPreview({searchParams}:{searchParams:Promise<{department?:string;view?:string;product?:string}>}){
+ const query=await searchParams;
+ const department=HAMMY_PILOT.departments.find(name=>name===query.department);
+ const view=(['home','collection','product','bag'].includes(query.view||'')?query.view:department?'collection':'home') as HammyRoute['view'];
+ return <HammyShop route={{view,department,product:query.product}}/>;
+}

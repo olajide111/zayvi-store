@@ -10,7 +10,7 @@ const props={theme:HAMMY_THEME,brand:HAMMY_PILOT.name,headline:HAMMY_PILOT.headl
 test('Hammy has its own general-fashion brief and a category-appropriate optional theme',()=>{
  assert.equal(HAMMY_PILOT.name,'Hammy Store');assert.equal(HAMMY_PILOT.industry,'General fashion');
  assert.equal(HAMMY_THEME.id,'atelier');assert.equal(HAMMY_THEME.premium,undefined);
- assert.deepEqual([...new Set(HAMMY_SAMPLE_PRODUCTS.map(product=>product.category))],['Women','Men','Kids','Baby']);
+ assert.deepEqual([...new Set(HAMMY_SAMPLE_PRODUCTS.map(product=>product.category))],HAMMY_PILOT.departments);
  assert(HAMMY_SAMPLE_PRODUCTS.every(product=>product.id.startsWith('hammy-demo-')&&product.currency==='GBP'));
 });
 test('sample catalogue is isolated from store mode, which still loads authoritative products',()=>{
@@ -23,9 +23,9 @@ test('department navigation filters only the pilot sample collection and rejects
  const page=await Preview({searchParams:Promise.resolve({department:'Kids'})});
  const html=renderToStaticMarkup(page);
  assert.match(html,/Kids’ summer edit/);assert.doesNotMatch(html,/Everyday denim edit/);
- assert.match(html,/PILOT DESIGN PREVIEW/);
+ assert.match(html,/DESIGN PREVIEW/);
  const unknown=renderToStaticMarkup(await Preview({searchParams:Promise.resolve({department:'invalid'})}));
- assert.match(unknown,/Style for every generation/);
+ assert.match(unknown,/Your style/);
 });
 test('pilot device frames use pilot routes and do not offer a save into the current store',()=>{
  const html=renderToStaticMarkup(<ThemeDemo theme={HAMMY_THEME} query="" title="Hammy Store · Atelier" previewPath="/admin/pilots/hammy/preview" backHref="/admin/pilots/hammy" backLabel="Hammy Store" studioHref={null}/>);
