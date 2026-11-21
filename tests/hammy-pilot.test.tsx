@@ -25,7 +25,7 @@ test('department navigation filters only the pilot sample collection and rejects
  assert.match(html,/Kids’ summer edit/);assert.doesNotMatch(html,/Everyday denim edit/);
  assert.match(html,/DESIGN PREVIEW/);
  const unknown=renderToStaticMarkup(await Preview({searchParams:Promise.resolve({department:'invalid'})}));
- assert.match(unknown,/Your style/);
+ assert.match(unknown,/Every kind/);
 });
 test('pilot device frames use pilot routes and do not offer a save into the current store',()=>{
  const html=renderToStaticMarkup(<ThemeDemo theme={HAMMY_THEME} query="" title="Hammy Store · Atelier" previewPath="/admin/pilots/hammy/preview" backHref="/admin/pilots/hammy" backLabel="Hammy Store" studioHref={null}/>);

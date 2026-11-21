@@ -5,7 +5,7 @@ import type {StudioProduct} from './theme-studio';
 export const HAMMY_PILOT={
  name:'Hammy Store',industry:'General fashion',themeId:'atelier',
  headline:'Style for every generation.',
- colours:{canvas:'#FAFAFA',ink:'#181A20',accent:'#2846C8'},
+ colours:{canvas:'#F8F7F3',ink:'#171B29',accent:'#2846C8'},
  departments:['Women','Men','Kids','Baby','Sportswear','Footwear','Accessories','Traditional'],
  status:'design-preview' as const,
 };

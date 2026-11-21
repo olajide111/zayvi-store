@@ -59,3 +59,11 @@ Nine focused tests pass for basket variant identity, quantity limits, storage va
 - Added previous/next gallery controls, arrow-key thumbnail navigation and an enlarged gallery with arrow keys. Mobile purchase actions retain the chosen options beside the add button.
 - Home collection cards remain independent of a previous collection search. Hammy continues to use only its sample catalogue; this does not provision a tenant or enable checkout.
 - Verification: TypeScript and production build plus 11 focused tests. Real browser interaction/visual acceptance still requires the protected Preview session.
+
+### Hammy responsive editorial identity
+
+- Replaced the generic two-panel hero with oversized typography, overlapping editorial photos and a Hammy monogram stamp. Added numbered department tiles, a static typographic strip, a cobalt sportswear/footwear feature and a structured footer.
+- Updated Hammy's private design palette to warm white/ink/cobalt, with soft yellow used for editorial accents. These choices remain specific to Hammy.
+- Responsive layouts cover narrow phones (including a 320px rule), phones, tablets, laptops and wide desktops. Department navigation becomes four columns across two rows on phones; product detail stacks, controls wrap, the basket uses the full viewport and gallery height accounts for dynamic browser chrome. Touch controls use at least 44px targets and reduced-motion preferences disable hover transitions.
+- Kept product galleries, required options, filtering and variant-aware basket behaviour. Hero/product lead images load eagerly; lower-page imagery remains lazy loaded. Illustrative photos and checkout restrictions remain explicit.
+- Verification: 12 focused tests, TypeScript check and production build. Attempted local Playwright checks at 320, 390, 768, 1024 and 1440 pixels; Chromium could not launch because the execution environment denied its socket operation. No visual viewport acceptance or screenshot evidence is claimed.

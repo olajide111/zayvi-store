@@ -56,3 +56,11 @@ test('related styles prioritise the same department, exclude the current product
  const collection=renderToStaticMarkup(<HammyShop route={{view:'collection',department:'Baby'}}/>);
  assert.match(collection,/Refine your selection/);assert.match(collection,/All sizes/);assert.match(collection,/0–3 months/);assert.doesNotMatch(collection,/UK 9/);
 });
+
+test('Hammy home has distinct editorial departments and sports/footwear routes without enabling checkout',()=>{
+ const home=renderToStaticMarkup(<HammyShop route={{view:'home'}}/>);
+ assert.match(home,/Every kind/);assert.match(home,/The active edit|THE ACTIVE EDIT/);
+ assert.match(home,/Shop sportswear/);assert.match(home,/Find your footwear/);
+ assert.match(home,/Footer departments/);assert.match(home,/NO CHECKOUT/);
+ assert.match(home,/loading="eager"/);
+});
