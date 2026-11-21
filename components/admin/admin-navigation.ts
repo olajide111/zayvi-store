@@ -41,6 +41,7 @@ export const adminGroups = [
       { title: "Content publishing", href: "/admin/content", icon: FileText },
       { title: "Social links", href: "/admin/settings/social-links", icon: Link2 },
       { title: "Themes", href: "/admin/themes", icon: Palette },
+      { title: "Hammy Store pilot", href: "/admin/pilots/hammy", icon: Palette },
       { title: "Product Images", href: "/admin/product-images", icon: ImagePlus },
     ],
   },

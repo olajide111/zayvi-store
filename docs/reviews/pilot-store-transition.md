@@ -1,6 +1,6 @@
 # Pilot store transition — preparation
 
-Status: the user wants to make the current Zayvi store secondary and choose a different pilot. The user has clarified that this means a new store and that the present design should not be the default. The user has confirmed the new business name and catalogue are undecided; keep branding, product range and theme unconfigured. No store, domain, release, payment connection or data has been reassigned.
+Status: the user wants to make the current Zayvi store secondary and choose a different pilot. The user has clarified that this means a new store and that the present design should not be the default. The user has named the pilot Hammy Store, confirmed general fashion for men, women, children and babies, and authorized choosing the most suitable existing theme. Atelier is selected for this pilot only, with white/ink/cobalt appearance. No store, domain, release, payment connection or data has been reassigned.
 
 ## Distinguish the choices
 
@@ -33,4 +33,10 @@ Operator apply output confirms Preview API refresh and migrations 0029–0031; e
 
 ## Default-design correction
 
-Original is retained as an ordinary optional free theme in Everyday retail & home. Its featured group, first-position registry treatment, recommendation label and setup shortcut are removed. Existing saved choices and store records are untouched. A blank setup still has no theme selected; public seller registration/provisioning remains unfinished. The new pilot has not been created or assigned a theme.
+Original is retained as an ordinary optional free theme in Everyday retail & home. Its featured group, first-position registry treatment, recommendation label and setup shortcut are removed. Existing saved choices and store records are untouched. A blank setup still has no theme selected; public seller registration/provisioning remains unfinished. Hammy has a selected design brief, but independent tenant/store records have not been created.
+
+## Hammy Store design preview
+
+`/admin/pilots/hammy` provides the separate pilot brief; `/demo` supplies phone/tablet/laptop frames and `/preview` renders the selected Atelier design with Hammy branding. Its Women, Men, Kids and Baby departments use an explicitly illustrative sample catalogue. No setup API write occurs, and the pilot route cannot be switched to the current store catalogue by query string. Existing studio/demo routes remain unchanged. Sample GBP prices do not enable a market or represent real inventory. No studio-save shortcut points this pilot at the existing store.
+
+Kids/baby demo images are sourced from Unsplash pages identifying free-use photographs under the Unsplash License: Amanda Selby, “Baby clothes, sandals, and toy camera flat lay” (`https://unsplash.com/photos/baby-clothes-sandals-and-toy-camera-flat-lay-72l_I4s-hss`), and CARMELA LUSTRE, “Baby clothes in a woven basket” (`https://unsplash.com/photos/baby-clothes-in-a-woven-basket-AkPas1rErdE`). They are illustrative images, not evidence of Hammy inventory. Adult/editorial photographs reuse existing project demo assets. Replace samples with merchant-owned or supplier-authorized product photographs before selling.
