@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {HAMMY_SAMPLE_PRODUCTS,HAMMY_PILOT} from '../lib/hammy-pilot';
 import {addHammyLine,bagKey,readHammyBag,hammyGallery,filterHammyProducts,relatedHammyProducts,updateHammyVariant} from '../lib/hammy-shopping';
+import {hammyHref,readHammyFilters,hammyFiltersFromSearchParams} from '../lib/hammy-navigation';
+import Preview from '../app/admin/pilots/hammy/preview/page';
 import HammyShop,{HammyBasketItem} from '../components/pilots/HammyShop';
 const product=HAMMY_SAMPLE_PRODUCTS[0];
 const line={productId:product.id,size:product.sizes[0],colour:product.colours[0],qty:1};
@@ -86,4 +88,27 @@ test('invalid basket edits or over-limit merges preserve the existing basket for
 test('basket items expose named editing/removal and disable decrement at one',()=>{
  const html=renderToStaticMarkup(<HammyBasketItem line={line} product={product} productHref="/sample-product" onNavigate={()=>{}} onChange={()=>{}} onRemove={()=>{}} onEdit={()=>undefined}/>);
  assert.match(html,/Edit size and colour for/);assert.match(html,/Edit options/);assert.match(html,/Remove Everyday denim edit/);assert.match(html,/disabled="" aria-label="Decrease/);assert.match(html,/Quantity for/);
+});
+
+test('collection URL filters round-trip through product and basket links with safe encoding',()=>{
+ const filters={query:'denim & layers',size:'M',colour:'Black',sort:'low',budget:'under50'};
+ for(const view of ['product','bag','collection'] as const){
+  const url=new URL(hammyHref(view,'Women',view==='product'?product.id:undefined,filters),'https://example.test');
+  assert.deepEqual(readHammyFilters(Object.fromEntries(url.searchParams),'Women'),filters);
+  assert.equal(url.pathname,'/admin/pilots/hammy/preview');assert.equal(url.searchParams.get('view'),view);
+ }
+ assert.equal(readHammyFilters({q:'cotton '}).query,'cotton ');
+});
+test('URL filters reject repeated/unknown options and bound free text',()=>{
+ const values=readHammyFilters({q:'a'.repeat(1000),size:'UK 9',colour:'unknown',budget:'free',sort:['high','low']},'Baby');
+ assert.equal(hammyFiltersFromSearchParams(new URLSearchParams('q=one&q=two&sort=high&sort=low')).query,'');assert.equal(hammyFiltersFromSearchParams(new URLSearchParams('sort=high&sort=low')).sort,'featured');
+ assert.equal(values.query?.length,80);assert.equal(values.size,'');assert.equal(values.colour,'');assert.equal(values.budget,'');assert.equal(values.sort,'featured');
+ assert.equal(new URL(hammyHref('collection','invalid'), 'https://example.test').searchParams.has('department'),false);
+});
+test('filtered pages render their initial selection and product return links retain it',async()=>{
+ const filters={query:'denim',size:'M',colour:'Black',sort:'low',budget:'under50'};
+ const html=renderToStaticMarkup(await Preview({searchParams:Promise.resolve({view:'collection',department:'Women',q:'denim',size:'M',colour:'Black',sort:'low',budget:'under50'})}));
+ assert.match(html,/Active filters/);assert.match(html,/Remove Search: denim filter/);assert.match(html,/1 styles/);assert.doesNotMatch(html,/Occasionwear edit/);
+ const productHtml=renderToStaticMarkup(<HammyShop route={{view:'product',product:product.id,department:'Women',filters}}/>);
+ assert.match(productHtml,/view=collection&amp;department=Women&amp;q=denim&amp;size=M&amp;colour=Black&amp;sort=low&amp;budget=under50/);
 });

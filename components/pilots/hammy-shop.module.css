@@ -179,3 +179,6 @@
 .undo .secondary{min-height:44px;font-size:11px;padding:10px}
 .dismissUndo{border:0;background:transparent;font-size:20px;min-width:44px;min-height:44px}
 @media(max-width:600px){.variantEditor{grid-column:1/-1}.undo{flex-wrap:wrap;gap:8px}.undo>p{flex-basis:calc(100% - 52px)}.undo .secondary{order:3;flex-basis:100%}.undo .dismissUndo{order:2}.basketLines .lineControls{gap:6px}}
+.filterChips{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 26px}
+.filterChips button{display:inline-flex;gap:12px;align-items:center;min-height:44px;max-width:100%;border:1px solid #afb2ba;border-radius:25px;padding:9px 14px;background:transparent;font-size:11px;text-align:left;overflow-wrap:anywhere}
+.filterChips span{font-size:19px;line-height:1}

@@ -76,3 +76,12 @@ Nine focused tests pass for basket variant identity, quantity limits, storage va
 - Quantity cannot be reduced below one using the minus control; removal is explicit. Quantity and edit feedback use a live status message. Keyboard focus moves to the editor, returns after saving/cancelling, and moves to Undo after removal. Escape first cancels an inline edit before closing the surrounding basket.
 - Changes apply to the same Hammy-only session basket in the drawer and full basket. Checkout and real inventory remain disabled/unconfigured.
 - Verification: 15 focused tests and production build. Interactive browser acceptance remains outstanding due to the previously observed Chromium launch restriction.
+
+
+### Hammy collection context
+
+- Search, size, colour, budget and sort choices are encoded in the current collection URL using Next's integrated native history support. Typing/filter changes replace the current entry rather than adding one history entry per keystroke.
+- Product links, basket links and return-to-collection links carry that context. Server rendering restores a valid filter URL, including after refresh; client search parameters drive restoration after browser history navigation.
+- Added individually removable active-filter chips. Clear-all retains the selected sort order. New department links start a fresh collection.
+- URL inputs are bounded and validated against Hammy's sample catalogue, with consistent handling of repeated parameters on server and client. No arbitrary redirect URL or external catalogue is accepted.
+- Verification: 18 focused tests cover URL round trips, malformed inputs, server-rendered filtered results and preserved product return links, alongside prior basket/gallery coverage. Interactive browser history checks remain outstanding under the existing browser restriction.
