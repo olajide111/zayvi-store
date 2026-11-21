@@ -3,7 +3,7 @@ import { ALL_STUDIO_THEMES } from "@/lib/theme-registry";
 
 export default function StoreBuildStatus() {
   const items = [
-    { title: "Theme design", status: "Preview", description: `${ALL_STUDIO_THEMES.length} themes with editors and device demos. Drafts save on this browser. Store-backed activation and publishing are still required.`, href: "/admin/themes", action: "Explore themes" },
+    { title: "Theme design", status: "Preview", description: `${ALL_STUDIO_THEMES.length} themes with editors and device demos. Catalogue previews and browser drafts are available; account-backed versions require Preview API activation. Publishing remains unfinished.`, href: "/admin/themes", action: "Explore themes" },
     { title: "Product discovery", status: "Review-first", description: "Supplier imports, candidate review and approval are connected. AI product research and candidate scoring are not yet available.", href: "/admin/discovery", action: "Review candidates" },
     { title: "Sourcing score", status: "Rules-based", description: "Ranks recorded stock, supplier verification, margin and lead time. This is not an AI demand prediction or a guarantee of profit.", href: "/admin/sourcing", action: "Compare sourcing" },
   ];

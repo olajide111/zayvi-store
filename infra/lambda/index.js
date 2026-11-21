@@ -1,3 +1,4 @@
+const {queryThemeRelease} = require("./theme-releases");
 const { queryThemeDrafts } = require("./theme-drafts");
 const { queryStoreSetup } = require("./store-setup");
 const fs = require("node:fs");
@@ -7639,10 +7640,17 @@ const schemaMigrationDefinitions = [
     description: "Read and insert access to immutable tenant-scoped theme drafts.",
     probe: { type: "theme_draft_access" }
   }
+,
+ {name:"0031_preview_theme_release_access.sql",feature:"Preview theme releases",description:"Preview release pointer and append-only release history access.",probe:{type:"theme_release_access"}}
 
 ];
 
 async function probeSchemaMigration(client, definition) {
+  if(definition.probe.type === "theme_release_access"){
+    const result=await client.query("SELECT CASE WHEN to_regclass('public.store_theme_releases') IS NULL OR to_regclass('public.store_theme_release_events') IS NULL THEN false ELSE has_table_privilege(current_user,'public.store_theme_releases','SELECT') AND has_table_privilege(current_user,'public.store_theme_releases','INSERT') AND has_table_privilege(current_user,'public.store_theme_releases','UPDATE') AND has_table_privilege(current_user,'public.store_theme_release_events','SELECT') AND has_table_privilege(current_user,'public.store_theme_release_events','INSERT') END AS present");
+    return Boolean(result.rows[0]?.present);
+  }
+
   if (definition.probe.type === "theme_draft_access") {
     const result = await client.query("SELECT CASE WHEN to_regclass('public.store_theme_versions') IS NULL THEN false ELSE has_table_privilege(current_user, 'public.store_theme_versions', 'SELECT') AND has_table_privilege(current_user, 'public.store_theme_versions', 'INSERT') END AS present");
     return Boolean(result.rows[0]?.present);
@@ -7697,6 +7705,7 @@ async function checkSchemaMigrations(requiredNames) {
 }
 
 function requiredSchemaMigrationsForRoute(routePath) {
+  if(routePath.endsWith("/theme-release")) return ["0031_preview_theme_release_access.sql"];
   if (routePath.endsWith("/theme-drafts")) return ["0002_storefront_theme_versions.sql", "0030_theme_draft_access.sql"];
   if (routePath.endsWith("/store-setup")) return ["0029_store_setup.sql"];
 
@@ -12352,6 +12361,11 @@ exports.handler = async (event, context) => {
         error: "kredal_events_unavailable"
       });
     }
+  }
+
+  if(routePath.endsWith("/theme-release") && ["GET","POST"].includes(method)){
+    try{return response(200,await queryThemeRelease({getPool,withTenant},method === "POST" ? parseBody(event) : null,method === "POST"));}
+    catch(error){return response(error.statusCode||503,{error:error.statusCode?error.message:"Preview theme releases unavailable."});}
   }
 
   if (routePath.endsWith("/theme-drafts") && ["GET", "POST"].includes(method)) {
