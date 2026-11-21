@@ -54,6 +54,20 @@ case "$TF_VAR_kredal_preview_webhook_secret_arn" in
 esac
 # Read metadata only; never retrieve or print the secret value.
 aws secretsmanager describe-secret --secret-id "$TF_VAR_kredal_preview_webhook_secret_arn" --query ARN --output text >/dev/null
+# Recover the already-connected alert topic; do not silently remove notifications.
+if [ -z "${TF_VAR_operational_alarm_topic_arn:-}" ]; then
+  existing_alarm_topic="$(aws cloudwatch describe-alarms \
+    --alarm-names zayvi-preview-commerce-server-errors \
+    --query 'MetricAlarms[0].AlarmActions[0]' --output text)"
+  case "$existing_alarm_topic" in
+    arn:aws:sns:eu-west-2:001961766018:*)
+      export TF_VAR_operational_alarm_topic_arn="$existing_alarm_topic"
+      printf 'Preserving the existing Preview alarm notification topic.\n'
+      ;;
+    None|null|'') ;;
+    *) echo 'Unexpected alarm topic. Review Preview inputs before planning.' >&2; exit 1 ;;
+  esac
+fi
 printf '[5/8] Installing and packaging commerce API (npm may take time)…\n'
 npm --prefix ../lambda ci
 npm --prefix ../lambda run package

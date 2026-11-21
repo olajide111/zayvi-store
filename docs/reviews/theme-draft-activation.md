@@ -29,7 +29,7 @@ Implemented: immutable studio snapshots using migration 0002 tables; active main
 
 ## Catalogue preview follow-up
 
-Canvas now exposes Current store catalogue alongside its illustrated demo. Catalogue mode deliberately uses the shared product-first renderer, rather than presenting the illustrated campaign as a live catalogue. It reads the public API's default enabled market and explicit currency, never performs FX conversion, and has no real checkout. All 30 themes now offer Current store catalogue. All ten newer directions/signatures use the shared registered layout for this mode; their distinct campaign demos remain separate. Native campaign data adapters are still pending.
+Canvas now exposes Current store catalogue alongside its illustrated demo. Catalogue mode deliberately uses the shared product-first renderer, rather than presenting the illustrated campaign as a live catalogue. It reads the public API's default enabled market and explicit currency, never performs FX conversion, and has no real checkout. All 31 themes now offer Current store catalogue. Zayvi Original has its own homepage composition in both modes. All ten newer directions/signatures use the shared registered layout for this mode; their distinct campaign demos remain separate. Native campaign data adapters are still pending.
 
 The shared adapter retains real products with missing images (a labelled product placeholder is used), accepts HTTPS and same-origin relative image paths, and rejects mismatched market/currency or invalid prices. Loading, empty and error states do not substitute demo inventory. Errors offer retry. Variant validation, merchant content, actual stock reservation and checkout remain separate work.
 
@@ -57,3 +57,13 @@ The homepage can use the same release only when the private server variable `ZAY
 Released catalogue fetching uses the resolved storefront market, so the saved appearance does not reset country selection. The shared renderer still has a preview bag and no payment execution. This is a reviewable Preview theme flow, not launch-ready seller commerce.
 
 Acceptance: save A, release A, open released view; save B without releasing and confirm released A persists; release B, then rollback A and confirm the exact brand/appearance returns. Test default/disabled mode, production guard and market currency. Unit/query-fake tests cover release selection and guards; browser/PostgreSQL verification still requires deployment.
+
+## Original theme activation checkpoint
+
+The frontend deployment includes 31 registered themes and puts the free `original` theme first. The commerce API uses the same registry and must be deployed from the matching source before Original setup/draft saves work. Preview migration requirements remain 0029–0031; do not reapply or alter recorded migrations.
+
+From a clean checkout of the reviewed commit, run `bash infra/scripts/preview-plan.sh` with the existing Preview AWS credentials and backend inputs. The helper packages the matching API and migration runner, recovers the existing webhook signing-secret ARN and alarm notification topic, and creates a full saved plan without applying it. Failed metadata reads stop the script. Explicit `TF_VAR_operational_alarm_topic_arn` takes precedence; inspect the resulting alarm actions during review. The scope reviewer blocks removal of existing alarm/recovery actions and disabling alarm actions.
+
+Review the complete saved plan. Resolve unrelated changes first. Apply only that reviewed saved plan in your authenticated terminal. Then confirm System Readiness reports the required migrations, select Original in setup, save colours/font, reopen the studio, save a version and reload it. Keep guarded release flags disabled until the separate Preview release acceptance checks above pass. A successful frontend build alone does not prove backend saves or database access.
+
+The setup checklist now bounds its initial API read to 15 seconds and offers retry, business setup and System Readiness recovery links. Saving remains explicit. Unknown-theme rejections explain the matching API dependency; a retry does not automatically repeat a write.
