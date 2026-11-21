@@ -1,5 +1,6 @@
 "use client";
 
+import {useModalDialog} from "@/hooks/useModalDialog";
 import { type FormEvent, useEffect, useState } from "react";
 import {
   isDeliveryQuote, type DeliveryAddress, type DeliveryQuote,
@@ -44,6 +45,7 @@ export default function CartDrawer({
   pricingState,
   marketCode,
 }: Props) {
+  const dialog=useModalDialog(open,onClose);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -121,8 +123,7 @@ export default function CartDrawer({
           transition: "opacity .3s",
         }}
       />
-      <div
-        inert={!open}
+      <div ref={dialog} role="dialog" aria-modal={open?true:undefined} aria-label="Your shopping cart" aria-hidden={!open} inert={!open} tabIndex={-1}
         style={{
           position: "fixed",
           top: 0,

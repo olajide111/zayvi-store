@@ -1,10 +1,12 @@
 import Link from "next/link";
+import StoreBuildStatus from "@/components/admin/StoreBuildStatus";
 import { ArrowUpRight, CreditCard, FileText, Globe2, Link2, Palette, ShieldCheck, Truck } from "lucide-react";
 import StorefrontChecklist from "./StorefrontChecklist";
 import SetupOverview from "./SetupOverview";
 import AdminPageHeading from "@/components/admin/AdminPageHeading";
 
 const destinations = [
+  { href: "/admin/launch", title: "Setup & launch", description: "Continue saved setup and review launch requirements.", icon: ShieldCheck },
   { href: "/admin/get-started", title: "Design your store", description: "Tell us about your business and explore recommended themes in the full-window studio.", icon: Palette },
   { href: "/admin/markets", title: "Markets & currencies", description: "Choose where your store sells and manage regional pricing.", icon: Globe2 },
   { href: "/admin/content", title: "Content publishing", description: "Set up storefront pages and write articles by market.", icon: FileText },
@@ -37,6 +39,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           ))}
         </section>
       </div>
+      <StoreBuildStatus />
     </main>
   );
 }

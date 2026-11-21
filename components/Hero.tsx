@@ -1,24 +1,8 @@
-"use client";
-
-type Props = { onShopAll: () => void; onBestSellers: () => void };
-
-export default function Hero({ onShopAll, onBestSellers }: Props) {
-  return (
-    <section className="z-hero">
-      <div className="z-hero-copy">
-        <p className="z-eyebrow">A considered approach to everyday essentials</p>
-        <h1>Make room for<br /><em>better choices.</em></h1>
-        <p className="z-hero-intro">Explore a thoughtfully curated direction for travel, everyday carry and daily living. Useful things, selected with intention.</p>
-        <div className="z-hero-actions">
-          <button className="z-button z-button-dark" onClick={onBestSellers}>Explore the collection</button>
-          <button className="z-button z-button-light" onClick={onShopAll}>Browse categories</button>
-        </div>
-        <p className="z-preview-note">Store preview · Product range and market availability are being verified.</p>
-      </div>
-      <div className="z-hero-art" role="img" aria-label="Open road winding through a dramatic landscape">
-        <img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1400&q=85" alt="" fetchPriority="high" />
-        <div className="z-hero-art-caption"><span>THE ZAYVI EDIT</span><span>01 / EVERYDAY EXPLORATION</span></div>
-      </div>
-    </section>
-  );
-}
+'use client';
+import CatalogueImage from './CatalogueImage';
+import Link from 'next/link';
+import type {StorefrontProduct} from '@/lib/storefront-products';
+import {productPath} from '@/lib/storefront-market';
+import s from './original.module.css';
+type Props={onShopAll:()=>void;onBestSellers:()=>void;products?:StorefrontProduct[];loading?:boolean};
+export default function Hero({onShopAll,onBestSellers,products=[],loading=false}:Props){return <section className={s.hero}><div><p className={s.eyebrow}>THE ZAYVI ORIGINAL / EVERYDAY, CONSIDERED</p><h1>Good finds.<br/><em>For real life.</em></h1><p className={s.intro}>Useful pieces. A little more character. Explore the things that make your everyday feel more like you.</p><div className={s.actions}><button className={s.primary} onClick={onShopAll}>Explore all products ↗</button><button className={s.secondary} onClick={onBestSellers}>Discover the current edit</button></div><p className={s.note}>Choose your country to see its catalogue and currency.<br/>Preview shopping is available; live purchasing is not open yet.</p></div><div className={s.stage} aria-label="A first look at the catalogue">{products.slice(0,3).map((p,i)=><Link key={p.id} href={productPath(p.id,p.marketCode)} className={`${s.object} ${i===0?s.feature:''}`}>{p.image?<CatalogueImage src={p.image} alt={p.name} fallback={p.name} fetchPriority={i===0?'high':'auto'}/>:<div className={s.placeholder}>{p.category}</div>}<span>{p.name} ↗</span></Link>)}{!products.length&&<div className={s.empty}><p className={s.eyebrow}>MADE FOR EVERYDAY DISCOVERY</p><p>{loading?'Loading the current collection…':'Your next discovery starts with the catalogue.'}</p><button className={s.secondary} onClick={onShopAll}>Browse the collection</button></div>}</div></section>;}

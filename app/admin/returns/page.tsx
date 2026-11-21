@@ -3,6 +3,7 @@
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 import Link from "next/link";
+import {returnedKredalOrderId} from "@/lib/kredal-test-return";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -141,6 +142,7 @@ export default function AdminReturnsPage() {
     }
   }
 
+  useEffect(()=>{const id=returnedKredalOrderId(new URLSearchParams(window.location.search).get('order_id'));if(id)setOrderId(id);},[]);
   useEffect(() => {
     void load();
   }, []);

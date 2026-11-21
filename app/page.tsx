@@ -1,3 +1,5 @@
+import ThemedShop from '@/components/themes/ThemedShop';
+import {previewThemeStorefrontEnabled,resolveReleasedTheme} from '@/lib/released-theme';
 import Storefront from "@/components/Storefront";
 import { callZayviAwsApi } from "@/lib/aws-api";
 import { parseSocialLinks, type SocialLinks } from "@/lib/social-links";
@@ -9,6 +11,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ m
     resolveStorefrontMarket(requestedMarket),
     loadSocialLinks(),
   ]);
+  if(previewThemeStorefrontEnabled(process.env)){
+    const response=await callZayviAwsApi('/theme-release');
+    const release=response.ok?resolveReleasedTheme(response.data):null;
+    if(!release)return <main className="mx-auto max-w-2xl p-8"><h1>Store preview is not ready</h1><p>The released design is unavailable. Please try again later.</p></main>;
+    const d=release.config.draft;
+    return <ThemedShop key={`${release.releaseId}:${market}`} theme={release.theme} market={market} brand={d.brand} headline={d.headline} motion={d.motion} font={d.font} palette={d.palette} colourInput={d.colours} view="home" source="store"/>;
+  }
   return <Storefront key={market} marketCode={market} marketSettings={settings} socialLinks={socialLinks} />;
 }
 

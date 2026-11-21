@@ -1,5 +1,6 @@
 import type {StudioTheme} from '@/lib/theme-registry';
 export const THEME_GALLERY_GROUPS=[
+ {id:'original',title:'Start with Zayvi Original',note:'Our free flagship. A versatile starting point, with your colours, fonts and collection.',ids:['original']},
  {id:'african',title:'African signatures',note:'Attire houses, city markets and expressive everyday shops.',ids:['adire','accra','african-editorial','modern-marketplace','fresh-market']},
  {id:'london',title:'London signatures',note:'Three sides of the city: department-store discovery, independent street style and design-led living. Available for either market.',ids:['mayfair','camden','soho']},
  {id:'fashion',title:'Fashion & considered spaces',note:'From a single-piece showcase to a complete clothing collection.',ids:['atelier-minimal','fashion-showroom','atelier','studio','monolith','pulse']},
