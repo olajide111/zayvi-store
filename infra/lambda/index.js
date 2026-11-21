@@ -7512,6 +7512,7 @@ async function rejectDiscoveryCandidate(candidateId, input) {
 
 
 const schemaMigrationDefinitions = [
+  { name: "0002_storefront_theme_versions.sql", feature: "Theme version storage", description: "Immutable store theme versions.", probe: {type:"table",table:"store_theme_versions"} },
   {
     name: "0011_inventory_ledger.sql",
     feature: "Inventory",
@@ -7627,10 +7628,26 @@ const schemaMigrationDefinitions = [
     feature: "Storefront social links",
     description: "Seller-managed social profile links in the storefront footer.",
     probe: { type: "column", table: "stores", column: "storefront_social_links" }
+  },
+  {
+    name: "0029_store_setup.sql", feature: "Store setup",
+    description: "Account-backed business details and theme appearance preferences.",
+    probe: { type: "column", table: "stores", column: "setup_profile" }
+  },
+  {
+    name: "0030_theme_draft_access.sql", feature: "Store design versions",
+    description: "Read and insert access to immutable tenant-scoped theme drafts.",
+    probe: { type: "theme_draft_access" }
   }
+
 ];
 
 async function probeSchemaMigration(client, definition) {
+  if (definition.probe.type === "theme_draft_access") {
+    const result = await client.query("SELECT CASE WHEN to_regclass('public.store_theme_versions') IS NULL THEN false ELSE has_table_privilege(current_user, 'public.store_theme_versions', 'SELECT') AND has_table_privilege(current_user, 'public.store_theme_versions', 'INSERT') END AS present");
+    return Boolean(result.rows[0]?.present);
+  }
+
   if (definition.probe.type === "table") {
     const result = await client.query(
       "SELECT to_regclass($1) AS relation",
@@ -7663,7 +7680,7 @@ async function checkSchemaMigrations(requiredNames) {
       requiredNames.includes(definition.name)
     );
 
-    const pending = [];
+    const pending = requiredNames.filter(name => !definitions.some(definition => definition.name === name));
 
     for (const definition of definitions) {
       const applied = await probeSchemaMigration(client, definition);
