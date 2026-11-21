@@ -60,7 +60,7 @@ Acceptance: save A, release A, open released view; save B without releasing and 
 
 ## Original theme activation checkpoint
 
-The frontend deployment includes 31 registered themes and puts the free `original` theme first. The commerce API uses the same registry and must be deployed from the matching source before Original setup/draft saves work. Preview migration requirements remain 0029–0031; do not reapply or alter recorded migrations.
+The frontend includes 31 registered themes. The later pilot-store decision removes preferred-first treatment for `original`; it remains an optional free theme. The commerce API uses the same registry and must be deployed from the matching source before Original setup/draft saves work. Preview migration requirements remain 0029–0031; do not reapply or alter recorded migrations.
 
 From a clean checkout of the reviewed commit, run `bash infra/scripts/preview-plan.sh` with the existing Preview AWS credentials and backend inputs. The helper packages the matching API and migration runner, recovers the existing webhook signing-secret ARN and alarm notification topic, and creates a full saved plan without applying it. Failed metadata reads stop the script. Explicit `TF_VAR_operational_alarm_topic_arn` takes precedence; inspect the resulting alarm actions during review. The scope reviewer blocks removal of existing alarm/recovery actions and disabling alarm actions.
 

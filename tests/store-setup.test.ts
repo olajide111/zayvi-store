@@ -19,3 +19,9 @@ test('appearance uses theme defaults and rejects unreadable custom text',()=>{
  assert.equal(custom.appearance?.font,'serif');
  assert.equal(custom.appearance?.colours.accent,'#334455');
 });
+test('a fresh setup has no implicit theme and changing its name cannot supply one',()=>{
+ const fresh=validateStoreSetup({...valid,name:'New pilot',themeId:'',appearance:undefined});
+ assert.equal(fresh.themeId,'');assert.equal(fresh.appearance,undefined);
+ const updated=validateStoreSetup({...fresh,name:'Another name'});
+ assert.equal(updated.themeId,'');
+});

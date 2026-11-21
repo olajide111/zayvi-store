@@ -32,9 +32,9 @@ test('curated gallery groups cover every theme exactly once and preserve filters
  const all=groupedThemes(ALL_STUDIO_THEMES),ids=all.flatMap(g=>g.themes.map(t=>t.id));
  assert.equal(ids.length,31);assert.equal(new Set(ids).size,31);
  assert.deepEqual([...ids].sort(),ALL_STUDIO_THEMES.map(t=>t.id).sort());
- assert.deepEqual(all[0].themes.map(t=>t.id),['original']);
- assert.deepEqual(all[1].themes.slice(0,2).map(t=>t.id),['adire','accra']);
- assert.equal(THEME_GALLERY_GROUPS.length,7);
+ assert.deepEqual(all[0].themes.slice(0,2).map(t=>t.id),['adire','accra']);
+ assert.equal(all.find(group=>group.id==='everyday')?.themes.filter(theme=>theme.id==='original').length,1);
+ assert.equal(THEME_GALLERY_GROUPS.length,6);
  const forma=groupedThemes(ALL_STUDIO_THEMES.filter(t=>t.id==='atelier-minimal'));
  assert.equal(forma.length,1);assert.equal(forma[0].id,'fashion');
  assert.equal(groupedThemes([]).length,0);

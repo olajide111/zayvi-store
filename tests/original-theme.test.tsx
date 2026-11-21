@@ -9,8 +9,8 @@ import {themePreviewEngine} from '../lib/theme-preview-engine';
 import ThemedShop from '../components/themes/ThemedShop';
 import OriginalThemeHome from '../components/themes/OriginalThemeHome';
 
-test('Original is the first free choice and can save through setup and draft validation',()=>{
- assert.equal(ALL_STUDIO_THEMES[0].id,'original');assert.equal(ORIGINAL_THEME.free,true);assert(!ORIGINAL_THEME.premium);
+test('Original remains an optional free theme without being the first choice',()=>{
+ assert.notEqual(ALL_STUDIO_THEMES[0].id,'original');assert.equal(ORIGINAL_THEME.free,true);assert(!ORIGINAL_THEME.premium);
  const setup=validateStoreSetup({name:'My shop',industry:'General retail',otherIndustry:'',style:'Either',themeId:'original'});
  assert.equal(setup.themeId,'original');
  assert.equal(validateThemeDraft({themeId:'original',baseVersion:0,draft:{brand:'My shop',headline:'My collection',font:'sans',palette:'theme',motion:'off',colours:setup.appearance!.colours}}).theme.id,'original');

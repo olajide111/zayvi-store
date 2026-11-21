@@ -34,6 +34,6 @@ Six server-rendered component checks cover catalogue content, variant actions, s
 
 ### Registered flagship theme
 
-`original` is now the first free registered theme, with a dedicated gallery group and an explicit recommended-start action on the setup checklist. It does not overwrite an existing preference or automatically publish a theme. The regular studio, full-page demo, phone/tablet/desktop frames, appearance validation, immutable drafts and guarded Preview release paths accept the same registered ID.
+`original` is a registered free theme. Following the pilot-store decision, it appears as an ordinary option in Everyday retail & home, without a featured group, recommendation badge or setup shortcut. It does not overwrite an existing preference or automatically publish a theme. The regular studio, full-page demo, phone/tablet/desktop frames, appearance validation, immutable drafts and guarded Preview release paths accept the same registered ID.
 
 The theme preview uses the Original homepage composition with product montage, real category counts and current edit; its collection, product, story and preview bag use the existing themed shop flow. Its palette and heading font are configurable. The standalone Zayvi storefront still uses its existing commerce/cart flow; theme demos do not create orders or payments. Matching API packaging/deployment is required before the deployed API will accept the newly registered theme. This is existing-account setup, not completed public seller registration or production publishing.
