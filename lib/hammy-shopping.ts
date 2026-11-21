@@ -37,3 +37,16 @@ export function relatedHammyProducts(product:HammyProduct,limit=4){
   .map((item,index)=>({item,index,score:(item.category===product.category?4:0)+(item.department===product.department&&item.department!=='All'?2:0)}))
   .sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,limit).map(entry=>entry.item);
 }
+
+/** Change only a known line's options; quantities and product identity come from the basket. */
+export function updateHammyVariant(bag:HammyBagLine[],key:string,size:string,colour:string):HammyBagLine[]{
+ const original=bag.find(line=>bagKey(line)===key);
+ if(!original)throw new Error('This item is no longer in your basket.');
+ const changed=validHammyLine({...original,size,colour});
+ if(!changed)throw new Error('Choose an available size and colour.');
+ if(bagKey(changed)===key)return bag;
+ const remaining=bag.filter(line=>bagKey(line)!==key);
+ // Reuse the same quantity cap and merge rules as adding from the product page.
+ if(remaining.some(line=>bagKey(line)===bagKey(changed)))return addHammyLine(remaining,changed);
+ return bag.map(line=>bagKey(line)===key?changed:line);
+}

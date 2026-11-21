@@ -67,3 +67,12 @@ Nine focused tests pass for basket variant identity, quantity limits, storage va
 - Responsive layouts cover narrow phones (including a 320px rule), phones, tablets, laptops and wide desktops. Department navigation becomes four columns across two rows on phones; product detail stacks, controls wrap, the basket uses the full viewport and gallery height accounts for dynamic browser chrome. Touch controls use at least 44px targets and reduced-motion preferences disable hover transitions.
 - Kept product galleries, required options, filtering and variant-aware basket behaviour. Hero/product lead images load eagerly; lower-page imagery remains lazy loaded. Illustrative photos and checkout restrictions remain explicit.
 - Verification: 12 focused tests, TypeScript check and production build. Attempted local Playwright checks at 320, 390, 768, 1024 and 1440 pixels; Chromium could not launch because the execution environment denied its socket operation. No visual viewport acceptance or screenshot evidence is claimed.
+
+
+### Hammy basket editing and recovery
+
+- Shoppers can edit a basket line's size/colour inline, without removing/re-adding it. A matching variant merges quantities using the existing cap; invalid options and over-limit merges leave the previous basket intact.
+- Removal exposes an undo for the last removed line, including its options and quantity. Restoring also uses the same cap and does not silently lose quantity.
+- Quantity cannot be reduced below one using the minus control; removal is explicit. Quantity and edit feedback use a live status message. Keyboard focus moves to the editor, returns after saving/cancelling, and moves to Undo after removal. Escape first cancels an inline edit before closing the surrounding basket.
+- Changes apply to the same Hammy-only session basket in the drawer and full basket. Checkout and real inventory remain disabled/unconfigured.
+- Verification: 15 focused tests and production build. Interactive browser acceptance remains outstanding due to the previously observed Chromium launch restriction.

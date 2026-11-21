@@ -3,8 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {HAMMY_SAMPLE_PRODUCTS,HAMMY_PILOT} from '../lib/hammy-pilot';
-import {addHammyLine,bagKey,readHammyBag,hammyGallery,filterHammyProducts,relatedHammyProducts} from '../lib/hammy-shopping';
-import HammyShop from '../components/pilots/HammyShop';
+import {addHammyLine,bagKey,readHammyBag,hammyGallery,filterHammyProducts,relatedHammyProducts,updateHammyVariant} from '../lib/hammy-shopping';
+import HammyShop,{HammyBasketItem} from '../components/pilots/HammyShop';
 const product=HAMMY_SAMPLE_PRODUCTS[0];
 const line={productId:product.id,size:product.sizes[0],colour:product.colours[0],qty:1};
 test('basket merges only identical product/size/colour combinations',()=>{
@@ -63,4 +63,27 @@ test('Hammy home has distinct editorial departments and sports/footwear routes w
  assert.match(home,/Shop sportswear/);assert.match(home,/Find your footwear/);
  assert.match(home,/Footer departments/);assert.match(home,/NO CHECKOUT/);
  assert.match(home,/loading="eager"/);
+});
+
+test('basket option edits preserve quantities and merge matching variants only',()=>{
+ const other={...line,size:product.sizes[1],qty:3};
+ const bag=[{...line,qty:2},other];
+ const updated=updateHammyVariant(bag,bagKey(line),other.size,other.colour);
+ assert.deepEqual(updated,[{...other,qty:5}]);assert.equal(bag.length,2);assert.equal(bag[0].qty,2);
+ const separate=updateHammyVariant([line],bagKey(line),other.size,other.colour);
+ assert.deepEqual(separate,[{...line,size:other.size}]);
+ assert.equal(updateHammyVariant(bag,bagKey(line),line.size,line.colour),bag);
+});
+test('invalid basket edits or over-limit merges preserve the existing basket for correction',()=>{
+ const bag=[{...line,qty:9},{...line,size:product.sizes[1],qty:2}];
+ assert.throws(()=>updateHammyVariant(bag,bagKey(line),product.sizes[1],line.colour),/limit/);
+ assert.throws(()=>updateHammyVariant(bag,bagKey(line),'invalid',line.colour),/Choose/);
+ assert.throws(()=>updateHammyVariant(bag,'missing',line.size,line.colour),/no longer/);
+ assert.equal(bag[0].qty,9);assert.equal(bag[1].qty,2);
+ const restored=addHammyLine([line],{...line,qty:2});assert.equal(restored[0].qty,3);
+ assert.throws(()=>addHammyLine([{...line,qty:10}],line),/limit/);
+});
+test('basket items expose named editing/removal and disable decrement at one',()=>{
+ const html=renderToStaticMarkup(<HammyBasketItem line={line} product={product} productHref="/sample-product" onNavigate={()=>{}} onChange={()=>{}} onRemove={()=>{}} onEdit={()=>undefined}/>);
+ assert.match(html,/Edit size and colour for/);assert.match(html,/Edit options/);assert.match(html,/Remove Everyday denim edit/);assert.match(html,/disabled="" aria-label="Decrease/);assert.match(html,/Quantity for/);
 });
