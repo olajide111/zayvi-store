@@ -50,3 +50,12 @@ Cards lead to product choices. Product pages require size/colour, offer quantity
 Demo galleries are explicitly illustrative style imagery, not verified multiple views of a stocked garment. Additional free-use Unsplash references: Jonathan Mattson, “A white t-shirt hanging on a white wall” (`https://unsplash.com/photos/a-white-t-shirt-hanging-on-a-white-wall-fiA7sq2PdnQ`); Jadon Johnson, “A woman in athletic wear stands outdoors” (`https://unsplash.com/photos/a-woman-in-athletic-wear-stands-outdoors-Wp7KtcAZAo8`); mostafa mahmoudi, running shoes and shoe close-up (`https://unsplash.com/photos/a-pair-of-running-shoes-on-a-white-background-W_uDEmTq0po`, `https://unsplash.com/photos/a-close-up-of-a-shoe-on-a-white-background-beoVfTZDEb4`). Each source page identifies the Unsplash License. Real Hammy products need their own accurate photography, measurements, variants, market prices and inventory.
 
 Nine focused tests pass for basket variant identity, quantity limits, storage validation, twenty-image gallery bounds, department coverage, product options, route filtering and sample-data isolation. TypeScript and production build are checked separately. Live interactive browser acceptance remains pending behind Vercel Authentication. New-store provisioning and real checkout remain unfinished.
+
+
+### Hammy browsing refinements
+
+- Added intersecting collection filters for size, colour and budget, with an explicit reset and empty state. Available size/colour choices come from the current department's illustrative catalogue.
+- Added bounded related-style suggestions, prioritising the current product's category and audience without repeating that product.
+- Added previous/next gallery controls, arrow-key thumbnail navigation and an enlarged gallery with arrow keys. Mobile purchase actions retain the chosen options beside the add button.
+- Home collection cards remain independent of a previous collection search. Hammy continues to use only its sample catalogue; this does not provision a tenant or enable checkout.
+- Verification: TypeScript and production build plus 11 focused tests. Real browser interaction/visual acceptance still requires the protected Preview session.

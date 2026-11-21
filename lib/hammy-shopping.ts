@@ -1,4 +1,4 @@
-import {HAMMY_SAMPLE_PRODUCTS} from './hammy-pilot';
+import {HAMMY_SAMPLE_PRODUCTS,type HammyProduct} from './hammy-pilot';
 export type HammyBagLine={productId:string;size:string;colour:string;qty:number};
 export const HAMMY_BAG_KEY='zayvi-hammy-demo-bag-v1';
 export function bagKey(line:Omit<HammyBagLine,'qty'>){return JSON.stringify([line.productId,line.size,line.colour]);}
@@ -21,3 +21,19 @@ export function addHammyLine(bag:HammyBagLine[],line:HammyBagLine):HammyBagLine[
  return existing?bag.map(item=>bagKey(item)===key?{...item,qty:item.qty+valid.qty}:item):[...bag,valid];
 }
 export function hammyGallery(images:string[]){return [...new Set(images.filter(url=>/^https:\/\//.test(url)||/^\/(?!\/)/.test(url)))].slice(0,20);}
+
+export type HammyFilters={query?:string;size?:string;colour?:string;budget?:string;sort?:string};
+export function filterHammyProducts(products:HammyProduct[],department:string|undefined,filters:HammyFilters={}){
+ const query=(filters.query||'').trim().toLowerCase();
+ const ceiling=filters.budget==='under30'?30:filters.budget==='under50'?50:Infinity;
+ return products.filter(product=>(!department||product.category===department||product.department===department)
+  &&`${product.name} ${product.category} ${product.department}`.toLowerCase().includes(query)
+  &&(!filters.size||product.sizes.includes(filters.size))
+  &&(!filters.colour||product.colours.includes(filters.colour))&&product.price<=ceiling)
+  .sort((a,b)=>filters.sort==='low'?a.price-b.price:filters.sort==='high'?b.price-a.price:filters.sort==='name'?a.name.localeCompare(b.name):0);
+}
+export function relatedHammyProducts(product:HammyProduct,limit=4){
+ return HAMMY_SAMPLE_PRODUCTS.filter(item=>item.id!==product.id)
+  .map((item,index)=>({item,index,score:(item.category===product.category?4:0)+(item.department===product.department&&item.department!=='All'?2:0)}))
+  .sort((a,b)=>b.score-a.score||a.index-b.index).slice(0,limit).map(entry=>entry.item);
+}
