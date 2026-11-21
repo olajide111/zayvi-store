@@ -101,3 +101,8 @@ The real catalogue now has a prepared gallery contract:
 Activation is a separate Preview operation: package the reviewed commerce Lambda, create/review a fresh Preview Terraform plan while retaining private webhook/SNS inputs, and apply only the expected API change after resolving any other proposed changes. Verify the advertised gallery version, save one owned test product with two photos, reload it and check both storefront views. Do not point Hammy at the old store to perform this check. No AWS resources were changed by this code update.
 
 Remaining pilot prerequisites: independent tenant/store provisioning, owner-scoped authentication, product/variant SKU inventory, explicit market pricing and policies, and Hammy's own test payment connection. These are not verified by the design preview.
+
+
+### Hammy cooler palette
+
+Replaced the yellow editorial accents with pale blue and shifted the canvas, borders, image placeholders and basket summary to cooler neutrals. The sportswear CTA uses white against cobalt; its hover state stays within the same blue family. The overview palette and copy match the storefront. This is a visual-only update; the earlier yellow direction is superseded.
