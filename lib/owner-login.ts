@@ -1,6 +1,8 @@
+import {createOwnerLoginContext,type OwnerLoginContext} from './owner-login-context';
 import {createHash,randomBytes,timingSafeEqual} from 'node:crypto';
 
 export type OwnerLoginAttempt = {
+  contextKey: string;
   stateHash: string;
   browserHash: string;
   verifier: string;
@@ -16,7 +18,7 @@ export interface OwnerLoginAttempts {
   consume(stateHash: string,browserHash: string,now: number): Promise<OwnerLoginAttempt|null>;
 }
 export type OwnerLoginTokens = {accessToken:string;idToken:string;refreshToken?:string;expiresIn:number};
-export type OwnerLoginConfig = {domainPrefix:string;clientId:string;appOrigin:string;scopes:readonly string[]};
+export type OwnerLoginConfig = {domainPrefix:string;clientId:string;appOrigin:string;scopes:readonly string[];context:OwnerLoginContext};
 export type OwnerLoginDependencies = {
   attempts: OwnerLoginAttempts;
   fetcher?: typeof fetch;
@@ -31,13 +33,11 @@ export class OwnerLoginError extends Error {
 const secret=()=>randomBytes(32).toString('base64url');
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
 const matches=(left:string,right:string)=>{const a=Buffer.from(left),b=Buffer.from(right);return a.length===b.length&&timingSafeEqual(a,b);};
-const paths=new Set(['/admin/pilots/hammy','/admin/pilots/hammy/integrations']);
-const safePath=(value:string)=>paths.has(value);
 const opaque=(value:unknown):value is string=>typeof value==='string'&&/^[A-Za-z0-9_-]{43,128}$/.test(value);
 const token=(value:unknown):value is string=>typeof value==='string'&&value.length>0&&value.length<=16384;
 /** Prepared server-only PKCE orchestration. Nothing is activated by constructing this flow. */
 export function createOwnerLogin(config:OwnerLoginConfig,dependencies:OwnerLoginDependencies){
-  const origin=new URL(config.appOrigin);
+  const origin=new URL(config.appOrigin),context=createOwnerLoginContext(config.context);
   if(origin.protocol!=='https:'||origin.origin!==config.appOrigin||origin.username||origin.password||
     !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(config.domainPrefix)||
     !/^[a-z0-9]{1,128}$/.test(config.clientId)||!config.scopes.includes('openid')||
@@ -47,11 +47,11 @@ export function createOwnerLogin(config:OwnerLoginConfig,dependencies:OwnerLogin
   const clientId=config.clientId,scopes=[...new Set(config.scopes)];
   const fetcher=dependencies.fetcher??fetch,now=dependencies.now??(()=>Math.floor(Date.now()/1000));
   return {
-    async begin(returnTo='/admin/pilots/hammy'){
-      if(!safePath(returnTo))throw new OwnerLoginError();
+    async begin(returnTo=context.defaultPath){
+      if(!context.allows(returnTo))throw new OwnerLoginError();
       const state=secret(),browserBinding=secret(),verifier=secret(),nonce=secret(),createdAt=now();
       if(!Number.isInteger(createdAt)||createdAt<=0)throw new OwnerLoginError();
-      const attempt={stateHash:hash(state),browserHash:hash(browserBinding),verifier,nonce,createdAt,expiresAt:createdAt+600,returnTo};
+      const attempt={contextKey:context.key,stateHash:hash(state),browserHash:hash(browserBinding),verifier,nonce,createdAt,expiresAt:createdAt+600,returnTo};
       try{await dependencies.attempts.create(attempt);}catch{throw new OwnerLoginError();}
       const url=new URL('/oauth2/authorize',provider);
       url.search=new URLSearchParams({response_type:'code',client_id:clientId,redirect_uri:redirectUri,scope:scopes.join(' '),
@@ -68,9 +68,9 @@ export function createOwnerLogin(config:OwnerLoginConfig,dependencies:OwnerLogin
           (!!code===!!error)||(!error&&(!code||code.length>4096)))throw new OwnerLoginError();
         const current=now();
         const attempt=await dependencies.attempts.consume(hash(state),hash(browserBinding),current);
-        if(!attempt||!matches(attempt.stateHash,hash(state))||!matches(attempt.browserHash,hash(browserBinding))||
+        if(!attempt||attempt.contextKey!==context.key||!matches(attempt.stateHash,hash(state))||!matches(attempt.browserHash,hash(browserBinding))||
           attempt.expiresAt<=current||attempt.createdAt>current||attempt.expiresAt-attempt.createdAt!==600||
-          !opaque(attempt.verifier)||!opaque(attempt.nonce)||!safePath(attempt.returnTo)||error)throw new OwnerLoginError();
+          !opaque(attempt.verifier)||!opaque(attempt.nonce)||!context.allows(attempt.returnTo)||error)throw new OwnerLoginError();
         const response=await fetcher(`${provider}/oauth2/token`,{
           method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),
           headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},
