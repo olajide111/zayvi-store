@@ -1,3 +1,4 @@
+import {createOwnerLoginContext,type OwnerLoginContext} from './owner-login-context';
 import type {createOwnerLogin} from './owner-login';
 import type {StoredOwnerSession} from './owner-sessions';
 export const OWNER_BINDING_COOKIE='__Host-zayvi_owner_binding';
@@ -19,8 +20,8 @@ function cookie(request:Request,name:string){
 const setCookie=(name:string,value:string,maxAge:number)=>`${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
 const headers=()=>new Headers({'Cache-Control':'no-store','Pragma':'no-cache','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff'});
 /** Prepared Web handlers; no routes are mounted by this module. Disabled by default. */
-export function createOwnerAuthHandlers(config:{origin:string;enabled?:boolean},dependencies?:OwnerAuthHttpDependencies){
-  const origin=new URL(config.origin);
+export function createOwnerAuthHandlers(config:{origin:string;enabled?:boolean;context:OwnerLoginContext},dependencies?:OwnerAuthHttpDependencies){
+  const origin=new URL(config.origin),context=createOwnerLoginContext(config.context);
   if(origin.protocol!=='https:'||origin.origin!==config.origin)throw new Error('A pinned HTTPS owner origin is required.');
   if(config.enabled&&(!dependencies||typeof dependencies.limit!=='function'||typeof dependencies.authorise!=='function'))throw new Error('Complete owner HTTP dependencies are required.');
   const json=(body:unknown,status:number)=>Response.json(body,{status,headers:headers()});
@@ -45,7 +46,7 @@ export function createOwnerAuthHandlers(config:{origin:string;enabled?:boolean},
       const h=headers();h.append('Set-Cookie',setCookie(OWNER_BINDING_COOKIE,'',0));
       try{
         const result=await dependencies!.flow.complete(new URL(request.url).searchParams,cookie(request,OWNER_BINDING_COOKIE));
-        if(!opaque(result.sessionToken)||!['/admin/pilots/hammy','/admin/pilots/hammy/integrations'].includes(result.returnTo))throw new Error();
+        if(!opaque(result.sessionToken)||!context.allows(result.returnTo))throw new Error();
         const session=await dependencies!.sessions.load(result.sessionToken),ttl=session?Math.min(3600,session.expiresAt-Math.floor(Date.now()/1000)):0;
         if(ttl<=0||!Number.isInteger(ttl))throw new Error();
         h.append('Set-Cookie',setCookie(OWNER_SESSION_COOKIE,result.sessionToken,ttl));h.set('Location',new URL(result.returnTo,origin).toString());

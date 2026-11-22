@@ -1,3 +1,4 @@
+import {HAMMY_OWNER_LOGIN_CONTEXT} from '../lib/hammy-owner-login-context';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createOwnerAuthHandlers,OWNER_BINDING_COOKIE,OWNER_SESSION_COOKIE,type OwnerAuthHttpDependencies} from '../lib/owner-auth-http';
@@ -7,11 +8,11 @@ function fixture(){
  const deps:OwnerAuthHttpDependencies={flow:{async begin(){calls.push('begin');return {authorizationUrl:'https://zayvi-preview.auth.eu-west-2.amazoncognito.com/oauth2/authorize?state=public-state',browserBinding:binding,maxAge:600};},async complete(_params,cookie){calls.push('complete');if(cookie!==binding)throw new Error('private detail');return {sessionToken:session,returnTo:'/admin/pilots/hammy'};}},
  sessions:{async load(token){calls.push('load');assert.equal(token,session);return {tenantId:'tenant',storeId:'store',membershipId:'member',issuer:'issuer',subject:'subject',role:'owner',authenticationTime:1,providerSessionId:'provider',providerTokenId:'token',expiresAt:Math.floor(Date.now()/1000)+300};},async revoke(value){calls.push('revoke');if(value)assert.equal(value,session);revoked=true;}},
  async authorise(value){calls.push('authorise');assert.equal(value,session);if(denied||revoked)throw new Error('private detail');},async limit(){calls.push('limit');return !limited;}};
- return {handlers:createOwnerAuthHandlers({origin,enabled:true},deps),calls,deny(){denied=true;},limit(){limited=true;}};
+ return {handlers:createOwnerAuthHandlers({origin,enabled:true,context:HAMMY_OWNER_LOGIN_CONTEXT},deps),calls,deny(){denied=true;},limit(){limited=true;}};
 }
 const post=(path:string,requestOrigin=origin)=>new Request(`${origin}${path}`,{method:'POST',headers:{origin:requestOrigin,cookie:`${OWNER_SESSION_COOKIE}=${session}`}});
 test('owner HTTP is disabled unless explicitly configured',async()=>{
- const handlers=createOwnerAuthHandlers({origin});const response=await handlers.start(post('/api/owner/auth/start'));assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');assert(!response.headers.has('set-cookie'));
+ const handlers=createOwnerAuthHandlers({origin,context:HAMMY_OWNER_LOGIN_CONTEXT});const response=await handlers.start(post('/api/owner/auth/start'));assert.equal(response.status,503);assert.equal(response.headers.get('cache-control'),'no-store');assert(!response.headers.has('set-cookie'));
 });
 test('start uses a secure host-only binding cookie and never puts the binding in JSON',async()=>{
  const f=fixture(),response=await f.handlers.start(post('/api/owner/auth/start'));assert.equal(response.status,303);assert.match(response.headers.get('set-cookie')!,/HttpOnly; Secure; SameSite=Lax/);assert.match(response.headers.get('set-cookie')!,/Path=\/; Max-Age=600/);assert(!response.headers.get('set-cookie')!.includes('Domain='));assert(!response.headers.get('location')!.includes(binding));assert.equal(await response.text(),'');

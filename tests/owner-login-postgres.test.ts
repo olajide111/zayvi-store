@@ -1,3 +1,4 @@
+import {HAMMY_OWNER_LOGIN_CONTEXT} from '../lib/hammy-owner-login-context';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
@@ -5,7 +6,7 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 import {createPostgresOwnerLoginAttempts} from '../lib/owner-login-attempts';
 import {createOwnerLogin,OwnerLoginError,type OwnerLoginAttempt} from '../lib/owner-login';
-function attempt():OwnerLoginAttempt{const createdAt=Math.floor(Date.now()/1000);return {stateHash:randomBytes(32).toString('hex'),browserHash:randomBytes(32).toString('hex'),verifier:randomBytes(32).toString('base64url'),nonce:randomBytes(32).toString('base64url'),createdAt,expiresAt:createdAt+600,returnTo:'/admin/pilots/hammy'};}
+function attempt():OwnerLoginAttempt{const createdAt=Math.floor(Date.now()/1000);return {contextKey:HAMMY_OWNER_LOGIN_CONTEXT.key,stateHash:randomBytes(32).toString('hex'),browserHash:randomBytes(32).toString('hex'),verifier:randomBytes(32).toString('base64url'),nonce:randomBytes(32).toString('base64url'),createdAt,expiresAt:createdAt+600,returnTo:'/admin/pilots/hammy'};}
 test('encrypted login attempts against embedded PostgreSQL',async t=>{
  const db=new PGlite();await db.waitReady;
  try{
@@ -40,7 +41,7 @@ test('encrypted login attempts against embedded PostgreSQL',async t=>{
   });
   await t.test('PKCE callback works through another instance without an in-memory attempt store',async()=>{
    let completed=0;
-   const config={domainPrefix:'zayvi-preview',clientId:'testclient',appOrigin:'https://preview.zayvi.store',scopes:['openid','zayvi/store.access']};
+   const config={domainPrefix:'zayvi-preview',clientId:'testclient',appOrigin:'https://preview.zayvi.store',scopes:['openid','zayvi/store.access'],context:HAMMY_OWNER_LOGIN_CONTEXT};
    const dependencies={fetcher:(async()=>Response.json({access_token:'access',id_token:'identity',token_type:'Bearer',expires_in:900})) as typeof fetch,
     async finishVerifiedSignIn(){completed++;return {sessionToken:'s'.repeat(43)};}};
    const start=await createOwnerLogin(config,{...dependencies,attempts:first}).begin();

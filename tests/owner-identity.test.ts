@@ -15,8 +15,8 @@ const active:OwnerSessionVerifier=async()=>({active:true,mfaVerified:true});
 function provider(check=active){return createOwnerIdentityProvider(config,check,resolver);}
 async function rejects(payload:JWTPayload){await assert.rejects(provider().verifyAccessToken(await sign(payload)),e=>e instanceof TenantAccessError&&e.code==='UNAUTHENTICATED'&&!e.message.includes('token-1'));}
 test('a signed access token resolves identity only after the trusted session check',async()=>{
- let called=0;const p=provider(async session=>{called++;assert.deepEqual(session,{issuer,subject,tokenId:'token-1',sessionId:'session-1',authenticationTime:claims().auth_time});return {active:true,mfaVerified:true};});
- const result=await p.verifyAccessToken(await sign(claims()));assert.equal(result.subject,subject);assert.equal(result.issuer,issuer);assert.equal(result.mfaVerified,true);assert.equal(called,1);assert(!('role' in result));
+ const issued=claims();let called=0;const p=provider(async session=>{called++;assert.deepEqual(session,{issuer,subject,tokenId:'token-1',sessionId:'session-1',authenticationTime:issued.auth_time});return {active:true,mfaVerified:true};});
+ const result=await p.verifyAccessToken(await sign(issued));assert.equal(result.subject,subject);assert.equal(result.issuer,issuer);assert.equal(result.mfaVerified,true);assert.equal(called,1);assert(!('role' in result));
 });
 test('forged signatures, unknown signing keys and malformed tokens never reach session checking',async()=>{
  let checked=false;const p=provider(async()=>{checked=true;return {active:true,mfaVerified:true};});

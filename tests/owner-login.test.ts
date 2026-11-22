@@ -1,8 +1,9 @@
+import {HAMMY_OWNER_LOGIN_CONTEXT} from '../lib/hammy-owner-login-context';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {createOwnerLogin,OwnerLoginError,type OwnerLoginAttempt} from '../lib/owner-login';
-const config={domainPrefix:'zayvi-preview',clientId:'testclient123',appOrigin:'https://preview.zayvi.store',scopes:['openid','zayvi/store.access']};
+const config={domainPrefix:'zayvi-preview',clientId:'testclient123',appOrigin:'https://preview.zayvi.store',scopes:['openid','zayvi/store.access'],context:HAMMY_OWNER_LOGIN_CONTEXT};
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 function fixture(options:{fetcher?:typeof fetch;finishFails?:boolean}={}){
  let clock=1000,exchanges=0,completed=0;const attempts=new Map<string,OwnerLoginAttempt>();

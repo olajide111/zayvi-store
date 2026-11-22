@@ -2,7 +2,7 @@
 
 Status: server orchestration and encrypted PostgreSQL attempt storage are implemented and tested. No sign-in route, provider resource or selling activation is enabled.
 
-`lib/owner-login.ts` prepares the Cognito authorization-code flow in London with S256 PKCE. Each start generates independent random state, nonce, browser binding and verifier values. Only a hash of state/binding is indexed. The authorization URL contains the challenge, not the verifier. The callback must match the state and browser binding before exchanging a code at the configured provider endpoint. Destinations are limited to the two reviewed Hammy workspace paths.
+`lib/owner-login.ts` prepares the Cognito authorization-code flow in London with S256 PKCE. Each start generates independent random state, nonce, browser binding and verifier values. Only a hash of state/binding is indexed. The authorization URL contains the challenge, not the verifier. The callback must match the state and browser binding before exchanging a code at the configured provider endpoint. Destinations come from an explicit trusted server context; Hammy’s two pilot paths are configured separately in `lib/hammy-owner-login-context.ts`. Attempts are bound to that context and cannot be completed by another context, even if paths overlap.
 
 The stored attempt expires after ten minutes and is consumed before token exchange. Provider cancellation, exchange failure or verification failure requires a new start; there is no automatic callback retry. Provider diagnostic text and token values are not exposed by errors or returned to the browser.
 
