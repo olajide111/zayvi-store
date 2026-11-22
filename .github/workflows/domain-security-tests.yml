@@ -4,7 +4,7 @@ on:
   push:
     branches: [zayvi-aws-integration, zayvi-admin-dashboard]
   pull_request:
-    branches: [main]
+    branches: [main, zayvi-admin-dashboard]
 
 jobs:
   security-domain-tests:
@@ -16,4 +16,4 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx --yes tsx --test tests/security-domain.test.ts
+      - run: npm run test:store-access

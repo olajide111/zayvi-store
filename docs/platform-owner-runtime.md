@@ -1,6 +1,6 @@
 # Preview owner authentication runtime
 
-Status: composed and tested locally. No authentication routes are mounted, no provider resources are provisioned and no database proposals are applied by this change.
+Status: composed and tested locally. The operator has provisioned the dedicated Preview Cognito resources and supplied a passing configuration preflight. No authentication routes are mounted and no database proposals are applied by this change.
 
 `lib/owner-auth-runtime.ts` connects the existing login, encrypted attempt repository, signed token-pair verifier, membership directory, transactional session writer, HTTP handlers and protected store-operation authoriser. It is shared platform infrastructure; Hammy can supply its separate navigation context and trusted tenant/store binding as the first pilot. The retained Store Templates baseline is unchanged.
 
@@ -21,6 +21,8 @@ The exchange transport, provider assurance and limiter in this test are test dou
 ## Preview activation still required
 
 The existing private database Lambda has no NAT gateway/default outbound route. It cannot simply call public provider token/JWKS endpoints. Vercel cannot directly connect to private RDS. Review runtime placement and a typed application RPC boundary before activation; do not expose RDS publicly or add a generic SQL-forwarding endpoint.
+
+The first [typed private boundary](owner-private-attempt-boundary.md) now separates encrypted login-attempt persistence from its web-side encryption. It is tested locally and is not mounted or a replacement for the remaining transactional session/membership boundary.
 
 The remaining work is to configure and verify the real provider and network path, review/promote the three SQL proposals as new migrations, supply a durable limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
 

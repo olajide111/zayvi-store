@@ -1,10 +1,10 @@
 # Preview owner identity infrastructure
 
-Status: opt-in Terraform configuration, not applied. The confirmed London pool inventory was empty. Owner runtime, database migrations and sign-in routes remain disabled/pending.
+Status: the operator reported a successful Preview apply on 22 November 2026: four resources added, zero changed and zero destroyed. Pool `eu-west-2_VA9Jt43V4` and client `2rum6s096vv9b3nab5guuodfvs` passed all 15 configuration-preflight checks. Owner runtime, database migrations and sign-in routes remain disabled/pending. These deployment results were supplied by the operator; this checkout has no live AWS credentials.
 
 ## Stable Preview domain
 
-The user selected `https://preview.zayvi.store`. Vercel now associates that hostname with project `zayvi-store`, branch `zayvi-admin-dashboard`, without changing the production domains. Vercel reported ownership verified but DNS misconfigured. Its authoritative nameservers are external (`dns1.registrar-servers.com` and `dns2.registrar-servers.com`).
+The user selected `https://preview.zayvi.store`. Vercel associates that hostname with project `zayvi-store`, branch `zayvi-admin-dashboard`, without changing the production domains. Initial DNS propagation completed and the operator confirmed the hostname works. Its authoritative nameservers are external (`dns1.registrar-servers.com` and `dns2.registrar-servers.com`).
 
 At the authoritative DNS provider, add the record returned by Vercel on 22 November 2026:
 
@@ -14,7 +14,7 @@ At the authoritative DNS provider, add the record returned by Vercel on 22 Novem
 
 This is the domain-specific recommendation observed for this project, not a universal Vercel value. Recheck Vercel's domain configuration if acting later. Preserve the apex, www, email/MX and all unrelated records. DNS acceptance is not proof of propagation or HTTPS readiness; verify both after the change. Keep Vercel Preview protection enabled.
 
-## Proposed AWS resources
+## Provisioned Preview AWS resources
 
 `infra/terraform/owner-identity.tf` is disabled by default (`preview_owner_identity = null`). Explicit enablement proposes exactly four resources in the existing Preview state:
 
