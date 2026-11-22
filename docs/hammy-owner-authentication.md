@@ -19,3 +19,7 @@ Verified identity contains only issuer, subject, authentication time and assuran
 Validation: eight tests use generated RSA keys and signed JWTs to check acceptance, forged signatures, unknown keys, ID/machine tokens, wrong pool/client/audience, expired/future/missing claims, scopes, revoked sessions, missing MFA, provider failures and algorithm substitution. These are local cryptographic tests, not a live Cognito sign-in test.
 
 References: [AWS Cognito token verification](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html), [jose verification options](https://github.com/panva/jose/blob/main/docs/jwt/verify/interfaces/JWTVerifyOptions.md), [trusted remote signing keys](https://github.com/panva/jose/blob/main/docs/jwks/remote/functions/createRemoteJWKSet.md).
+
+## Sign-in orchestration
+
+The PKCE callback flow and encrypted one-use PostgreSQL attempt repository are now prepared. See [owner sign-in flow](hammy-owner-login-flow.md). HTTP handlers, verified session completion and provider activation remain pending.
