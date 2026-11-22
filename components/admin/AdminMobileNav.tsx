@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminSignOut from "./AdminSignOut";
 import AdminPageSearch from "./AdminPageSearch";
 import { adminGroups, adminPrimary, isAdminRouteActive } from "./admin-navigation";
+import {useModalDialog} from '@/hooks/useModalDialog';
 
 const tabClass = "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[10px] font-semibold leading-tight";
 
@@ -15,6 +16,7 @@ export default function AdminMobileNav() {
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
   const open = menuPath !== null && menuPath === pathname;
+  const dialog=useModalDialog(open,()=>setMenuPath(null));
   const moreActive = adminGroups.some(({ items }) =>
     items.some(({ href }) => isAdminRouteActive(pathname, href)),
   );
@@ -22,15 +24,10 @@ export default function AdminMobileNav() {
   useEffect(() => {
     if (!open) return;
 
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setMenuPath(null);
-        moreButton.current?.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    const desktop=window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop=()=>{if(desktop.matches)setMenuPath(null);};
+    closeOnDesktop();desktop.addEventListener('change',closeOnDesktop);
+    return()=>desktop.removeEventListener('change',closeOnDesktop);
   }, [open]);
 
   if (!pathname || pathname === "/admin") return null;
@@ -81,9 +78,15 @@ export default function AdminMobileNav() {
         </div>
         <div
           id="admin-more-menu"
+          ref={dialog}
+          role="dialog"
+          aria-modal={open?true:undefined}
+          aria-labelledby="admin-more-title"
+          tabIndex={-1}
           hidden={!open}
           className="absolute inset-x-2 bottom-[calc(100%+0.5rem)] mx-auto max-h-[min(68dvh,29rem)] max-w-xl overflow-y-auto overscroll-contain rounded-2xl border border-[#dfe6e1] bg-white p-3 shadow-xl"
         >
+          <div className="mb-2 flex items-center justify-between gap-3 px-2"><h2 id="admin-more-title" className="text-sm font-semibold">More pages</h2><button type="button" aria-label="Close more pages" onClick={()=>setMenuPath(null)} className="grid min-h-11 min-w-11 place-items-center rounded-lg hover:bg-[#f1f5f2]"><X size={18} aria-hidden="true"/></button></div>
           <AdminPageSearch key={`${pathname}:${open}`} onNavigate={() => setMenuPath(null)} />
           {adminGroups.map(({ label, items }) => (
             <div key={label} className="mb-3 last:mb-0">

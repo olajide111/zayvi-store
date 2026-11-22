@@ -29,9 +29,9 @@ export function analyticsCsv(report:AnalyticsReport){
 export function growthActions(report:AnalyticsReport){
   const c=report.orders;
   return [
-    {key:'payment',count:c.unpaid+c.pending,title:'Review unpaid orders',detail:'Check payment state before contacting a customer. These are recorded orders, not measured abandoned carts.',href:'/admin/orders',action:'Review orders'},
-    {key:'service',count:c.awaitingFulfilment,title:'Check paid orders awaiting fulfilment',detail:'Resolve allocation and delivery issues. Preview test payments remain blocked from real fulfilment.',href:'/admin/orders',action:'Open orders'},
-    {key:'failure',count:c.failed,title:'Investigate failed payments',detail:'Review the payment attempt before offering another checkout.',href:'/admin/payments',action:'Review payments'},
+    {key:'payment',count:c.unpaid+c.pending,title:'Review unpaid orders',detail:'Check payment state before contacting a customer. These are recorded orders, not measured abandoned carts.',href:'/admin/orders?queue=payment',action:'Review orders'},
+    {key:'service',count:c.awaitingFulfilment,title:'Check paid orders awaiting fulfilment',detail:'Resolve allocation and delivery issues. Preview test payments remain blocked from real fulfilment.',href:'/admin/orders?queue=review&payment=paid&fulfilment=unfulfilled',action:'Open orders'},
+    {key:'failure',count:c.failed,title:'Investigate failed payments',detail:'Review the payment attempt before offering another checkout.',href:'/admin/orders?payment=failed',action:'Review payments'},
     {key:'returns',count:c.refunded+c.partiallyRefunded,title:'Learn from refunded orders',detail:'Review sizing, product and delivery issues. Order value is not the actual amount refunded.',href:'/admin/returns',action:'Review returns'},
   ].filter(item=>item.count>0);
 }
