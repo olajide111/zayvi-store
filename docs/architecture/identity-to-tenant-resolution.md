@@ -1,6 +1,6 @@
 # Identity-to-Tenant Resolution and Bootstrap
 
-**Status:** Implementation specification; not yet implemented
+**Status:** Access orchestration, token verification and a tested membership-directory SQL proposal are prepared; deployment and sign-in integration remain pending. See `../hammy-membership-resolution.md`.
 **Applies to:** Authentication, tenant selection, membership provisioning and PostgreSQL RLS
 **Decision:** Use a managed identity provider (AWS Cognito is the preferred AWS-aligned candidate), while keeping tenant membership and application permissions in Zayvi's database.
 
