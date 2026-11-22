@@ -1,5 +1,7 @@
 'use client';
 import Link from 'next/link';
+import HammyStoreFooter from './HammyStoreFooter';
+import {HAMMY_CUSTOMER_CARE,hammyCareHref} from '@/lib/hammy-customer-care';
 import {Check,ChevronLeft,ChevronRight,Minus,Plus,X} from 'lucide-react';
 import {useSearchParams} from 'next/navigation';
 import {useEffect,useRef,useState,useReducer,type CSSProperties} from 'react';
@@ -124,7 +126,8 @@ export default function HammyShop({route}:{route:HammyRoute}){
  {route.view==='product'&&(selected?<ProductDetail key={selected.id} product={selected} department={route.department} filters={filters} ready={ready} adding={adding} onAdd={add}/>:<section className={s.empty}><h1>Product not found.</h1><Link href={href('collection')}>Back to the collection</Link></section>)}
  {route.view==='product'&&selected&&<section className={s.section}><div className={s.sectionHeading}><div><p className={s.eyebrow}>KEEP EXPLORING</p><h2>More styles to explore.</h2></div><Link href={href('collection',selected.category)}>Shop {selected.category}</Link></div>{cards(4,relatedHammyProducts(selected))}</section>}
  {route.view==='bag'&&<section className={`${s.section} ${s.fullBasket}`}><Link className={s.back} href={href('collection',route.department,undefined,filters)}>Continue shopping</Link><h1>Your basket.</h1>{basket()}</section>}
- <footer className={`${s.footer} ${s.leanFooter}`}><Link className={s.footerBrand} href={href('home')}>HAMMY</Link><nav aria-label="Footer shopping links"><Link href={href('collection')}>Shop all</Link><Link href={href('bag',route.department,undefined,filters)}>Basket</Link></nav><details className={s.previewInfo}><summary>Preview information</summary><p>Sample products, options and prices. Photos are illustrative. Checkout is unavailable.</p></details></footer>
+ {route.view==='help'&&<section className={s.carePage}><Link className={s.back} href={href('collection')}>Back to shopping</Link>{route.helpTopic?<><h1>{HAMMY_CUSTOMER_CARE[route.helpTopic].title}</h1><p className={s.careIntro}>{HAMMY_CUSTOMER_CARE[route.helpTopic].intro}</p>{HAMMY_CUSTOMER_CARE[route.helpTopic].sections.map(section=><div key={section.heading}><h2>{section.heading}</h2><p>{section.text}</p></div>)}</>:<><h1>Customer care</h1><p>Find information about shopping with Hammy.</p><nav aria-label="Customer care topics">{(['delivery','returns','sizing','contact','privacy','terms'] as const).map(topic=><Link key={topic} href={hammyCareHref(topic)}>{HAMMY_CUSTOMER_CARE[topic].title}</Link>)}</nav></>}</section>}
+ <HammyStoreFooter/>
 
  {flow.quickProductId&&HAMMY_SAMPLE_PRODUCTS.find(item=>item.id===flow.quickProductId)&&<HammyQuickView product={HAMMY_SAMPLE_PRODUCTS.find(item=>item.id===flow.quickProductId)!} ready={ready} adding={adding} onAdd={add} department={route.department} filters={filters} onClose={()=>dispatchFlow({type:'close-quick'})}/>}
  {flow.receipt&&<HammyCartToast line={flow.receipt} count={count} total={total} onDismiss={dismissReceipt} onViewBasket={()=>{cancelFlight();addTrigger.current=basketButton.current;setDrawer(true);}}/>}
