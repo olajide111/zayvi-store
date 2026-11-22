@@ -139,3 +139,11 @@ Default Store and Hammy Store now have independent entries in the Stores navigat
 Picture work is deferred per the user. The existing workspace is retained in a collapsed saved-for-later section; no image-upload code or image assets changed. No changes were made to Default Store's retained shopping component, CSS, sample catalogue or helpers. This update changes dashboard presentation and navigation, not backend store identities, operational data scope or checkout activation.
 
 Verification: production build and 26 focused dashboard/baseline/Hammy checks passed. A source diff confirmed the retained Default Store shopping component, CSS, catalogue and helpers are unchanged from the saved v1 baseline. Browser visual acceptance remains outstanding.
+
+### Generic template naming and extensible dashboard pages
+
+The saved starter's dashboard label is now Store Templates, with Fashion starter v1 inside its demo. The working store entry is My Store — Hammy. Internal paths, preview identities and the retained starter shopping implementation remain unchanged.
+
+Dashboard destinations and search now share one typed registry in `components/admin/admin-navigation.ts`, consumed by desktop/mobile navigation and page search. Extension instructions are in `docs/admin-navigation.md`. Checks cover duplicate routes, missing page files, title search and the independent store destinations. This is developer-extensible navigation, not a no-code page generator or new store provisioning.
+
+Verification: TypeScript and 28 focused navigation/baseline/Hammy checks passed; production build passed. No retained starter shopping files or photo-workspace code changed. Browser visual acceptance remains outstanding.

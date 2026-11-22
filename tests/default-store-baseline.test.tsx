@@ -30,7 +30,7 @@ test('Default Store retains its own navigation and shopping flow',()=>{
  const bag=addDefaultStoreLine([],line);const changed=updateDefaultStoreVariant(bag,bagKey(line),product.sizes[1],line.colour);assert.equal(changed[0].size,product.sizes[1]);assert.equal(bag[0].size,line.size);
 });
 test('the dashboard opens Default Store and both design routes exist independently',()=>{
- const entry=adminGroups.flatMap(group=>[...group.items]).find(item=>item.title==='Default Store');
+ const entry=adminGroups.flatMap(group=>[...group.items]).find(item=>item.title==='Store Templates');
  assert.equal(entry?.href,'/admin/pilots/default');
  for(const name of ['default','hammy'])for(const suffix of ['','/demo','/preview'])assert(existsSync(`app/admin/pilots/${name}${suffix}/page.tsx`));
  for(const file of ['components/pilots/DefaultStoreShop.tsx','lib/default-store-pilot.ts','lib/default-store-navigation.ts','lib/default-store-shopping.ts']){

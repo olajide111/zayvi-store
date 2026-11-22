@@ -7,7 +7,7 @@ import DefaultStorePage from '../app/admin/pilots/default/page';
 import HammyStorePage from '../app/admin/pilots/hammy/page';
 test('Default and Hammy have independent store tabs with exclusive active routes',()=>{
  const stores=adminGroups.find(group=>group.label==='Stores');assert(stores);
- assert.deepEqual(stores.items.map(item=>[item.title,item.href]),[['Default Store','/admin/pilots/default'],['Hammy Store','/admin/pilots/hammy']]);
+ assert.deepEqual(stores.items.map(item=>[item.title,item.href]),[['Store Templates','/admin/pilots/default'],['My Store — Hammy','/admin/pilots/hammy']]);
  for(const suffix of ['','/photos','/preview']){
   assert(isAdminRouteActive('/admin/pilots/hammy'+suffix,'/admin/pilots/hammy'));
   assert(!isAdminRouteActive('/admin/pilots/hammy'+suffix,'/admin/pilots/default'));
@@ -17,7 +17,7 @@ test('Default and Hammy have independent store tabs with exclusive active routes
 });
 test('Default Store overview is a baseline reference rather than a combined Hammy page',()=>{
  const html=renderToStaticMarkup(<DefaultStorePage/>);
- assert.match(html,/>Default Store<\/h1>/);assert.match(html,/Saved baseline · Version 1/);assert.match(html,/Design reference/);
+ assert.match(html,/>Store Templates<\/h1>/);assert.match(html,/Saved baseline · Version 1/);assert.match(html,/Design reference/);
  assert.doesNotMatch(html,/Open Hammy Store|\/pilots\/hammy/);
 });
 test('Hammy has its own working overview and keeps deferred photo tools collapsed',()=>{

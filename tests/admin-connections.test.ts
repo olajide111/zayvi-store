@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { adminGroups, adminPrimary } from '../components/admin/admin-navigation';
+import { adminGroups, adminPrimary,adminDestinations,searchAdminPages } from '../components/admin/admin-navigation';
 import { ALL_STUDIO_THEMES } from '../lib/theme-registry';
 import { THEME_GALLERY_GROUPS } from '../components/themes/theme-gallery-groups';
 
@@ -20,4 +20,15 @@ test('every theme has one gallery entry and shared editor, demo and preview rout
     assert.match(source, /theme-registry/);
     assert.match(source, /notFound/);
   }
+});
+
+test('registered dashboard pages have unique routes and are searchable by their title',()=>{
+ assert.equal(new Set(adminDestinations.map(item=>item.href)).size,adminDestinations.length);
+ for(const page of adminDestinations)assert(searchAdminPages(page.title).some(result=>result.href===page.href),page.title);
+ assert.deepEqual(searchAdminPages('  '),[]);
+});
+test('store search distinguishes templates from the working Hammy store and keeps old naming discoverable',()=>{
+ assert.deepEqual(searchAdminPages('store templates').map(item=>item.href),['/admin/pilots/default']);
+ assert.deepEqual(searchAdminPages('my store hammy').map(item=>item.href),['/admin/pilots/hammy']);
+ assert(searchAdminPages('default store').some(item=>item.href==='/admin/pilots/default'));
 });
