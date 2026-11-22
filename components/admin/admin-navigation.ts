@@ -35,6 +35,7 @@ export const adminGroups = [
     label: "Insights",
     items: [
       { title: "Sales Analytics", href: "/admin/analytics", icon: BarChart3 },
+      { title: "Marketing & sales growth", href: "/admin/growth", icon: Activity },
       { title: "Supplier Performance", href: "/admin/supplier-performance", icon: Activity },
       { title: "Product Discovery", href: "/admin/discovery", icon: ScanSearch },
       { title: "Sourcing", href: "/admin/sourcing", icon: Boxes },
@@ -83,6 +84,7 @@ const adminKeywords:Record<string,string>={
  '/admin/settings':'start onboarding configuration settings',
  '/admin/returns':'refund returns requests',
  '/admin/payments':'kredal paypal square verify refund webhook',
+ '/admin/growth':'marketing sales growth campaigns abandoned cart recovery conversion opportunities',
  '/admin/themes':'design appearance colours layout',
 };
 export function searchAdminPages(query:string){
