@@ -32,3 +32,16 @@ jobs:
       - run: terraform -chdir=infra/terraform validate -no-color
       - run: terraform -chdir=infra/terraform test -no-color
       - run: node --test infra/scripts/deployment-tools.test.cjs infra/scripts/owner-preview-preflight.test.cjs
+
+  macos-shell:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    env:
+      ZAYVI_TEST_BASH: /bin/bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: /bin/bash --version
+      - run: node --test infra/scripts/deployment-tools.test.cjs
