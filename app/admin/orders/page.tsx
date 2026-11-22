@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import {useSearchParams} from 'next/navigation';
 import {orderQueue,orderNextAction,type OrderQueue} from "@/lib/order-work-queue";
+import {readOrderRouteFilters,orderFiltersHref,EMPTY_ORDER_FILTERS,type OrderRouteFilters} from '@/lib/order-filter-navigation';
 import { ArrowUpRight, Package, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
 
 type Order = {
@@ -53,7 +55,9 @@ function StatusPill({ value, category }: { value: string; category: string }) {
   );
 }
 
-export default function AdminOrdersPage() {
+function OrdersWorkspace() {
+  const routeParams=useSearchParams();
+  const routeQuery=routeParams?.toString()||'';
   const [data, setData] = useState<OrdersResponse | null>(null);
   const [queue,setQueue]=useState<OrderQueue>("all");
   const [query, setQuery] = useState("");
@@ -66,6 +70,15 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  function applyRouteFilters(filters:OrderRouteFilters){setQueue(filters.queue);setPayment(filters.payment);setFulfilment(filters.fulfilment);setOrderState(filters.orderState);setCurrency(filters.currency);}
+  function updateRouteFilters(patch:Partial<OrderRouteFilters>){
+    const next={queue,payment,fulfilment,orderState,currency,...patch};applyRouteFilters(next);
+    window.history.replaceState(window.history.state,'',orderFiltersHref(next));
+  }
+  useEffect(()=>{
+    applyRouteFilters(readOrderRouteFilters(new URLSearchParams(routeQuery)));
+  },[routeQuery]);
+
   function refresh() {
     setLoading(true);
     setError("");
@@ -73,12 +86,8 @@ export default function AdminOrdersPage() {
   }
 
   function clearFilters() {
-    setQueue("all");
     setQuery("");
-    setPayment("all");
-    setFulfilment("all");
-    setOrderState("all");
-    setCurrency("all");
+    updateRouteFilters(EMPTY_ORDER_FILTERS);
   }
 
   useEffect(() => {
@@ -177,7 +186,7 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        <nav aria-label="Order work queues" className="flex flex-wrap gap-2">{([{id:'all',label:'All orders'},{id:'review',label:'Paid · review fulfilment'},{id:'payment',label:'Payment needs review'},{id:'closed',label:'Refunded / closed'}] as const).map(item=><button key={item.id} type="button" disabled={loading} aria-pressed={queue===item.id} onClick={()=>setQueue(item.id)} className={`min-h-11 rounded-lg border px-4 text-sm font-semibold ${queue===item.id?'bg-[#215241] text-white':'bg-white text-[#215241]'}`}>{item.label} <span className="ml-2">{loading||error?'—':currencyOrders.filter(o=>item.id==='all'||orderQueue(o)===item.id).length}</span></button>)}</nav>
+        <nav aria-label="Order work queues" className="flex flex-wrap gap-2">{([{id:'all',label:'All orders'},{id:'review',label:'Paid · review fulfilment'},{id:'payment',label:'Payment needs review'},{id:'closed',label:'Refunded / closed'}] as const).map(item=><button key={item.id} type="button" disabled={loading} aria-pressed={queue===item.id} onClick={()=>updateRouteFilters({queue:item.id})} className={`min-h-11 rounded-lg border px-4 text-sm font-semibold ${queue===item.id?'bg-[#215241] text-white':'bg-white text-[#215241]'}`}>{item.label} <span className="ml-2">{loading||error?'—':currencyOrders.filter(o=>item.id==='all'||orderQueue(o)===item.id).length}</span></button>)}</nav>
         <p className="text-sm text-[#52635b]">Actions open the order for review. Paid Preview orders remain blocked from real dispatch. <Link href="/admin/automation" className="font-semibold underline">How fulfilment works</Link></p>
         <fieldset disabled={loading} className="grid gap-3 rounded-xl border border-[#dfe6e1] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
           <legend className="sr-only">Filter orders</legend>
@@ -186,10 +195,10 @@ export default function AdminOrdersPage() {
               className="mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#dfe6e1] px-3 text-sm font-normal text-[#172a21]" />
           </label>
           {[
-            {title: "Payment status", value: payment, set: setPayment, options: ["unpaid", "pending", "paid", "failed", "partially_refunded", "refunded"]},
-            {title: "Fulfilment status", value: fulfilment, set: setFulfilment, options: ["unfulfilled", "processing", "fulfilled", "cancelled"]},
-            {title: "Order status", value: orderState, set: setOrderState, options: ["draft", "pending_payment", "confirmed", "cancelled", "completed"]},
-            {title: "Currency", value: currency, set: setCurrency, options: currencies},
+            {title: "Payment status", value: payment, set: (value:string)=>updateRouteFilters({payment:value}), options: ["unpaid", "pending", "paid", "failed", "partially_refunded", "refunded"]},
+            {title: "Fulfilment status", value: fulfilment, set: (value:string)=>updateRouteFilters({fulfilment:value}), options: ["unfulfilled", "processing", "fulfilled", "cancelled"]},
+            {title: "Order status", value: orderState, set: (value:string)=>updateRouteFilters({orderState:value}), options: ["draft", "pending_payment", "confirmed", "cancelled", "completed"]},
+            {title: "Currency", value: currency, set: (value:string)=>updateRouteFilters({currency:value}), options: currencies},
           ].map(({title, value, set, options}) => (
             <label key={title} className="min-w-0 text-xs font-semibold text-[#52635b]">{title}
               <select aria-label={title} value={value} onChange={(event) => set(event.target.value)} className="mt-1 block min-h-11 w-full rounded-lg border border-[#dfe6e1] bg-white px-3 text-sm font-normal text-[#172a21]">
@@ -231,4 +240,8 @@ export default function AdminOrdersPage() {
       </section>
     </main>
   );
+}
+
+export default function AdminOrdersPage(){
+  return <Suspense fallback={<main className="px-4 py-12"><p role="status">Loading order workspace…</p></main>}><OrdersWorkspace/></Suspense>;
 }

@@ -62,7 +62,15 @@ export default function CommerceAnalyticsWorkspace({growth=false}:{growth?:boole
         <button disabled={!data} onClick={download} className={`${adminAction} disabled:opacity-40`}><Download size={15}/>Export CSV</button>
       </div>
       <p className="text-xs leading-relaxed text-[#64756b]">Existing commerce workspace · Preview order data. Hammy’s sample storefront is not connected to these figures.</p>
-      {growth&&<CampaignLinkBuilder/>}
+      {growth&&<>
+        <section className={panel} aria-labelledby="growth-shortcuts"><h2 id="growth-shortcuts" className="font-semibold">Quick follow-ups</h2><p className="mt-1 text-sm text-[#64756b]">Open the relevant workspace. Order views cover loaded records.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[
+            ['Payment review','/admin/orders?queue=payment'],['Paid orders','/admin/orders?queue=review&payment=paid&fulfilment=unfulfilled'],
+            ['Failed payments','/admin/orders?payment=failed'],['Returns','/admin/returns'],
+          ].map(([title,href])=><Link key={href} href={href} className="flex min-h-12 items-center justify-between gap-2 rounded-xl bg-[#f5f8f5] p-3 text-sm font-medium text-[#215241]">{title}<ArrowRight size={15} className="shrink-0"/></Link>)}</div>
+        </section>
+        <CampaignLinkBuilder/>
+      </>}
       {!state&&<p role="status" className={panel}>Loading your report…</p>}
       {state?.legacy&&<section className={panel} aria-label="Existing all-time report">
         <p className="text-sm text-[#64756b]">All-time report. Date comparisons and growth analysis will become available after the analytics API update is deployed to AWS.</p>
