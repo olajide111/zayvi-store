@@ -11,6 +11,8 @@ const destinations = [
 ];
 
 const keywords: Record<string, string> = {
+  "/admin/pilots/default": "default store starter baseline version reference",
+  "/admin/pilots/hammy": "hammy custom store fashion workspace launch departments",
   "/admin/settings/social-links": "facebook instagram tiktok youtube social profiles footer",
   "/admin/content": "blog articles guides pages privacy terms contact about",
   "/admin/markets": "country countries nigeria uk currencies where sell",

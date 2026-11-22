@@ -36,12 +36,18 @@ export const adminGroups = [
     ],
   },
   {
+    label: "Stores",
+    items: [
+      { title: "Default Store", href: "/admin/pilots/default", icon: Layers3 },
+      { title: "Hammy Store", href: "/admin/pilots/hammy", icon: House },
+    ],
+  },
+  {
     label: "Storefront",
     items: [
       { title: "Content publishing", href: "/admin/content", icon: FileText },
       { title: "Social links", href: "/admin/settings/social-links", icon: Link2 },
       { title: "Themes", href: "/admin/themes", icon: Palette },
-      { title: "Default Store", href: "/admin/pilots/default", icon: Palette },
       { title: "Product Images", href: "/admin/product-images", icon: ImagePlus },
     ],
   },

@@ -130,3 +130,12 @@ The workspace validates complete upload responses, handles session expiry withou
 This uploads image assets only. It does not attach them to the existing store, save/publish a product, provision Hammy or enable checkout. Gallery persistence still needs the reviewed Preview API deployment and independent store setup. No real image uploads were exercised during verification.
 
 Verification: 29 focused photo-workspace/baseline/Hammy/dashboard checks passed, including mocked upload, authentication and malformed-response cases. Frontend production build passed. Browser interaction and live AWS upload checks remain outstanding.
+
+
+### Separate store dashboard entries; pictures deferred
+
+Default Store and Hammy Store now have independent entries in the Stores navigation group, used by the desktop sidebar, mobile menu and page search. Their active routes do not overlap. Default Store's overview is a neutral, versioned starter reference rather than the route to Hammy. Hammy's overview is a distinct dark-ink working-store dashboard, with direct shopping/device-preview links, department navigation and clearly unverified selling-setup priorities.
+
+Picture work is deferred per the user. The existing workspace is retained in a collapsed saved-for-later section; no image-upload code or image assets changed. No changes were made to Default Store's retained shopping component, CSS, sample catalogue or helpers. This update changes dashboard presentation and navigation, not backend store identities, operational data scope or checkout activation.
+
+Verification: production build and 26 focused dashboard/baseline/Hammy checks passed. A source diff confirmed the retained Default Store shopping component, CSS, catalogue and helpers are unchanged from the saved v1 baseline. Browser visual acceptance remains outstanding.
