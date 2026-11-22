@@ -49,3 +49,5 @@ The current pilot contract requires a dedicated Preview-tagged London pool, cont
 This inspection does not enable payments or fulfilment, apply Terraform, retrieve webhook secrets or alter alarm inputs. Preserve the existing webhook-secret ARN and notification-topic ARN on later Preview plans.
 
 References: [Cognito PrivateLink limitations](https://docs.aws.amazon.com/cognito/latest/developerguide/vpc-interface-endpoints.html), [DescribeUserPoolClient fields and token units](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/describe-user-pool-client.html), and [prepared runtime](platform-owner-runtime.md).
+
+The empty London inventory confirmed during activation is addressed by the [opt-in Preview identity infrastructure proposal](preview-owner-identity-infrastructure.md). Its first dependency is DNS for the selected stable Preview origin.
