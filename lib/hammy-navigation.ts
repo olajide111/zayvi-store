@@ -1,6 +1,7 @@
+import type {HammyCareTopic} from './hammy-customer-care';
 import {HAMMY_PILOT,HAMMY_SAMPLE_PRODUCTS} from './hammy-pilot';
 import {filterHammyProducts,type HammyFilters} from './hammy-shopping';
-export type HammyRoute={view:'home'|'collection'|'product'|'bag';department?:string;product?:string;filters?:HammyFilters};
+export type HammyRoute={view:'home'|'collection'|'product'|'bag'|'help';helpTopic?:HammyCareTopic;department?:string;product?:string;filters?:HammyFilters};
 export type HammyQuery=Record<string,string|string[]|undefined>;
 const scalar=(value:string|string[]|undefined)=>typeof value==='string'?value:'';
 export function hammyDepartment(value:string|string[]|undefined){return HAMMY_PILOT.departments.find(item=>item===scalar(value));}

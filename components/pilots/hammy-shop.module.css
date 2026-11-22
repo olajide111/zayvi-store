@@ -259,3 +259,35 @@
 .collectionSection .filterChips{margin:0 0 16px}
 @media(max-width:800px){.collectionSection{padding-block:20px 32px}}
 @media(max-width:600px){.collectionSection{padding-block:16px 28px}.collectionSection .collectionHeading{padding-bottom:10px}.collectionSection .collectionHeading h1{font-size:32px}.collectionSection .tools{gap:10px;margin-top:10px}.collectionSection .filters{margin-bottom:12px}.collectionSection .filterChips{margin-bottom:12px}}
+
+/* Keep the home feature contained instead of stretching it across large screens. */
+.activeEdit{width:calc(100% - 64px);max-width:1200px;margin:24px auto 0;padding:36px;gap:36px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-radius:8px}
+.activeEdit h2{font-size:clamp(36px,4vw,52px);margin:0;line-height:1.04}
+.activeEdit .heroActions{margin-top:24px;gap:12px 20px}
+.activePhoto{transform:none;width:100%;max-width:480px;justify-self:end}
+.activePhoto img{height:280px}
+.activePhoto>span{bottom:12px;left:12px;right:12px;padding:10px}
+.storeFooter{margin-top:32px;background:var(--ink);color:var(--paper)}
+.storeFooterInner{max-width:1264px;margin:0 auto;padding:40px 32px 16px}
+.storeFooterTop{display:grid;grid-template-columns:1.4fr repeat(3,minmax(0,1fr));gap:32px;padding-bottom:28px}
+.storeFooterBrand>a{display:inline-block;font-size:32px;font-weight:900;letter-spacing:-.07em;line-height:1}
+.storeFooterBrand>a>span{display:block;font-size:8px;letter-spacing:.5em;margin:8px 0 0 2px}
+.storeFooterBrand>p{font-size:13px;line-height:1.7;color:#c5cad6;margin:18px 0 0}
+.storeFooter nav{display:flex;flex-direction:column;align-items:start;gap:0}
+.storeFooter h2{font-size:13px;font-weight:600;margin:0 0 10px;color:white}
+.storeFooter nav>a{display:flex;align-items:center;min-height:44px;font-size:12px;line-height:1.5;color:#c5cad6}
+.storeFooter a:hover{text-decoration:underline;text-underline-offset:4px;color:white}
+.storeFooterBottom{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid #3a4050;padding:18px 0 8px}
+.storeFooterBottom p{font-size:11px;line-height:1.6;color:#aeb6c8;margin:0}
+.storeFooterPreview{font-size:11px;color:#aeb6c8}
+.storeFooterPreview summary{min-height:44px;align-content:center;cursor:pointer;width:fit-content}
+.storeFooterPreview p{margin:0 0 8px;line-height:1.7;max-width:460px}
+.carePage{max-width:800px;margin:0 auto;padding:28px 32px 40px}
+.carePage h1{font-size:clamp(30px,4vw,44px);line-height:1.1;letter-spacing:-.04em;margin:0 0 18px}
+.carePage p{font-size:14px;line-height:1.8;color:#505866;margin:0 0 16px}
+.carePage .careIntro{font-size:16px;margin-bottom:28px}
+.carePage h2{font-size:18px;margin:24px 0 10px;line-height:1.4}
+.carePage nav{display:flex;flex-direction:column;align-items:start}
+.carePage nav a{min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:800px){.activeEdit{width:calc(100% - 48px);padding:28px;gap:28px}.activePhoto img{height:240px}.storeFooterTop{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.storeFooterBrand{grid-column:1/-1}.storeFooterBrand>p{margin-top:12px}.storeFooterInner{padding:32px 24px 12px}}
+@media(max-width:600px){.activeEdit{width:calc(100% - 36px);padding:24px;gap:24px;grid-template-columns:1fr;margin-top:16px}.activeEdit h2{font-size:40px}.activeEdit .heroActions{margin-top:18px}.activePhoto{margin:0;max-width:none}.activePhoto img{height:auto;aspect-ratio:4/3}.storeFooter{margin-top:24px}.storeFooterInner{padding:28px 18px 12px}.storeFooterTop{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 20px}.storeFooterBrand{grid-column:1/-1}.storeFooter h2{margin-bottom:6px}.carePage{padding:20px 18px 28px}}
