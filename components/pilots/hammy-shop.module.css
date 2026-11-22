@@ -291,3 +291,24 @@
 .carePage nav a{min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:4px}
 @media(max-width:800px){.activeEdit{width:calc(100% - 48px);padding:28px;gap:28px}.activePhoto img{height:240px}.storeFooterTop{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.storeFooterBrand{grid-column:1/-1}.storeFooterBrand>p{margin-top:12px}.storeFooterInner{padding:32px 24px 12px}}
 @media(max-width:600px){.activeEdit{width:calc(100% - 36px);padding:24px;gap:24px;grid-template-columns:1fr;margin-top:16px}.activeEdit h2{font-size:40px}.activeEdit .heroActions{margin-top:18px}.activePhoto{margin:0;max-width:none}.activePhoto img{height:auto;aspect-ratio:4/3}.storeFooter{margin-top:24px}.storeFooterInner{padding:28px 18px 12px}.storeFooterTop{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 20px}.storeFooterBrand{grid-column:1/-1}.storeFooter h2{margin-bottom:6px}.carePage{padding:20px 18px 28px}}
+
+/* Product-first home: a compact introduction, then complete rows of styles. */
+.hero.homeHero{max-width:1360px;padding:24px 32px 28px;gap:36px}
+.homeHero .heroCopy{padding:0}
+.homeHero h1{font-size:clamp(44px,4.5vw,64px);line-height:1;margin:8px 0 14px}
+.homeHero .heroCopy>p:not(.eyebrow):not(.heroIndex){font-size:14px;line-height:1.6;margin:0 0 18px}
+.homeHero .heroCollage{padding:0 0 24px 28px}
+.homeHero .heroMain img{height:240px}
+.homeHero .heroInset{width:32%;padding:5px}
+.homeHero .heroInset img{height:100px}
+.homeHero .heroInset>span{padding:8px 3px 4px;font-size:10px}
+.homeHero .heroStamp{width:70px;height:70px;font-size:30px;right:-8px;top:-8px}
+.homeHero .heroStamp small{font-size:6px;margin-top:3px}
+.homeProducts{padding-top:20px;padding-bottom:32px}
+.homeProducts .sectionHeading{margin-bottom:20px;gap:16px}
+.homeProducts h2{font-size:clamp(26px,3vw,36px)}
+.homeProducts .grid{gap:24px 20px}
+.homeProducts .cardPhoto{aspect-ratio:4/5}
+@media(max-width:800px){.hero.homeHero{padding:20px 24px;gap:24px}.homeHero h1{font-size:48px}.homeHero .heroMain img{height:220px}.homeHero .heroCollage{padding-left:20px}.homeProducts{padding-top:16px;padding-bottom:24px}.homeProducts .grid{gap:22px 16px}}
+@media(max-width:600px){.hero.homeHero{grid-template-columns:1.1fr .9fr;padding:20px 18px;gap:16px}.homeHero h1{font-size:clamp(34px,10vw,48px);margin:0 0 12px}.homeHero .heroCopy>p:not(.eyebrow):not(.heroIndex){font-size:12px;line-height:1.5;margin-bottom:14px}.homeHero .heroCollage{padding:0;margin:0}.homeHero .heroMain{transform:none}.homeHero .heroMain img{height:220px}.homeHero .heroMain>span{font-size:8px;padding:7px;bottom:8px;left:8px;right:8px}.homeHero .heroInset,.homeHero .heroStamp,.homeHero .eyebrow{display:none}.homeHero .heroActions .primary{min-height:44px;padding:10px 12px;font-size:11px;gap:8px}.homeProducts{padding-top:14px;padding-bottom:22px}.homeProducts .sectionHeading{margin-bottom:16px;align-items:center}.homeProducts .sectionHeading>.textLink{font-size:11px;max-width:none;flex-shrink:0}.homeProducts h2{font-size:26px}.homeProducts .grid{gap:20px 13px}}
+@media(max-width:360px){.hero.homeHero{padding-inline:14px;gap:12px}.homeHero .heroMain img{height:190px}.homeHero h1{font-size:34px}}
