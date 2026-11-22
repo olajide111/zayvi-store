@@ -241,3 +241,7 @@
 .quickView>header p{margin:6px 0 0;font-size:10px;letter-spacing:0;text-transform:none;color:#656b77}
 .quickView .purchase fieldset{margin:20px 0}.quickView .quantity{margin:18px 0}.quickView .productSpecs{margin-top:14px}
 @media(max-width:600px){.leanFooter{padding-bottom:22px;gap:15px}.leanFooter .footerBrand{font-size:34px}.leanFooter nav{gap:18px}.heroCopy>p:not(.eyebrow):not(.heroIndex){font-size:14px}.quickView .detail{gap:8px}}
+
+/* Functional icons are SVG; labels carry the action. */
+.shop svg{vertical-align:middle;flex-shrink:0}
+.galleryControls button,.quantity button,.lineControls button,.toastClose,.dismissUndo{display:inline-flex;align-items:center;justify-content:center}
