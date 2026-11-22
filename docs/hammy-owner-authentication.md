@@ -23,3 +23,5 @@ References: [AWS Cognito token verification](https://docs.aws.amazon.com/cognito
 ## Sign-in orchestration
 
 The PKCE callback flow and encrypted one-use PostgreSQL attempt repository are now prepared. See [owner sign-in flow](hammy-owner-login-flow.md). HTTP handlers, verified session completion and provider activation remain pending.
+
+Returned ID/access token pairing, nonce checks and the authorised session-completion coordinator are now prepared; see [session completion](hammy-owner-session-completion.md). Provider assurance, persistent session handling and HTTP/workspace wiring are still required.
