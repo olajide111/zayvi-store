@@ -6,6 +6,7 @@ export type StorefrontProduct = {
   slug: string;
   name: string;
   image: string;
+  images?: string[];
   price: number;
   currency: string;
   marketCode?: string;

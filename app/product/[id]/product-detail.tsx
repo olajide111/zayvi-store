@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ProductGallery from "@/components/ProductGallery";
 import { cartStorageKey, marketPath } from "@/lib/storefront-market";
 import type { ContentMarket } from "@/lib/storefront-content";
 import type {
@@ -131,15 +132,8 @@ export default function ProductDetails({ id, market }: { id: string; market: Con
       </header>
 
       <div className="mx-auto grid max-w-[1100px] gap-6 px-4 py-6 sm:grid-cols-2 sm:gap-12 sm:px-6 sm:py-10">
-        <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden", aspectRatio: "1", boxShadow: "0 4px 24px rgba(0,0,0,.06)" }}>
-          {product.image ? (
-            <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 72 }}>
-              {product.emoji || "◇"}
-            </div>
-          )}
-        </div>
+        <ProductGallery key={product.id} image={product.image} images={product.images} name={product.name}/>
+
 
         <div>
           <div style={{ fontSize: 12, color: "#777", marginBottom: 8 }}>{product.category}</div>

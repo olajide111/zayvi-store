@@ -12,6 +12,13 @@ function review(plan) {
     if (actions.includes('delete') && !migration) blocked.push(`${item.address}: deletion or replacement`);
     if (/^aws_(db_instance|db_subnet_group|vpc|subnet|route_table|security_group|vpc_security_group_|vpc_endpoint|s3_|cloudfront_)/.test(item.type)) blocked.push(`${item.address}: protected database, network or media resource changed`);
     if (/^aws_iam_/.test(item.type)) blocked.push(`${item.address}: IAM change requires separate scope review`);
+    if (item.type === 'aws_cloudwatch_metric_alarm') {
+      const before = item.change.before || {}, after = item.change.after || {};
+      for (const key of ['alarm_actions', 'ok_actions']) {
+        if (Array.isArray(before[key]) && before[key].length && (!Array.isArray(after[key]) || !after[key].length)) blocked.push(`${item.address}: existing ${key} notifications would be removed or are unknown`);
+      }
+      if (before.actions_enabled !== false && after.actions_enabled === false) blocked.push(`${item.address}: alarm actions would be disabled`);
+    }
     if (migration) notes.push('The checksum-protected database bootstrap will run; review its package and migration ledger before apply.');
   }
   return { changes: changes.map(item => ({ address: item.address, actions: item.change.actions })), blocked: [...new Set(blocked)], notes: [...new Set(notes)] };

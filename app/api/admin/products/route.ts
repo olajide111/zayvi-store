@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   const payload = result.data as {
     source?: string;
     total?: number;
+    productGalleryVersion?: number;
     products?: Array<{ category?: string }>;
   };
 
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
     source: payload?.source || "postgresql",
     total: payload?.total ?? products.length,
     categories,
+    productGalleryVersion: payload?.productGalleryVersion === 1 ? 1 : 0,
     products,
   });
 }

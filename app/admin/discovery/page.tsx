@@ -563,7 +563,7 @@ export default function ProductDiscoveryPage() {
           <p className="mt-1 max-w-4xl text-xs leading-5 text-blue-700">
             Supplier feed items become review candidates only. Approval requires
             an explicit customer price and creates a catalogue product in pending
-            review. Nothing is published automatically.
+            review. Nothing is published automatically. AI research and candidate scoring are not yet connected; quality flags identify missing data and possible duplicates.
           </p>
         </div>
 
@@ -572,8 +572,8 @@ export default function ProductDiscoveryPage() {
           <aside className="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 className="text-sm font-semibold">Import supplier feed</h2>
             <p className="mt-1 text-xs leading-5 text-gray-400">
-              This manual JSON importer is the first ingestion adapter. API,
-              file and connector sources can use the same backend contract later.
+              Import JSON here, or use a supplier’s feed:write API credential.
+              Both routes create candidates for review; neither publishes products.
             </p>
 
             <label className="mt-5 block text-xs font-medium text-gray-500">

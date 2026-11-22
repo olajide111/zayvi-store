@@ -9,6 +9,7 @@ type Product = {
   id: string;
   name: string;
   image: string;
+  images?: string[];
   price: number;
   category: string;
   desc: string;
@@ -24,6 +25,7 @@ type Product = {
 };
 
 type ProductsResponse = {
+  productGalleryVersion?: number;
   total: number;
   categories: string[];
   products: Product[];
@@ -34,6 +36,7 @@ type ProductForm = {
   category: string;
   price: string;
   image: string;
+  gallery: string;
   desc: string;
   status: Product["status"];
   publicationStatus: Product["publicationStatus"];
@@ -44,6 +47,7 @@ const emptyForm: ProductForm = {
   category: "Travel",
   price: "",
   image: "",
+  gallery: "",
   desc: "",
   status: "active",
   publicationStatus: "pending_review",
@@ -104,6 +108,7 @@ export default function AdminProductsPage() {
       category: product.category,
       price: String(product.price),
       image: product.image,
+      gallery: (product.images||[]).filter(url=>url!==product.image).join("\n"),
       desc: product.desc,
       status: product.status,
       publicationStatus: product.publicationStatus,
@@ -122,13 +127,17 @@ export default function AdminProductsPage() {
     setError("");
 
     try {
+      const {gallery,...fields}=form;
+      const images=gallery.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+      if(data?.productGalleryVersion===1&&new Set([form.image,...images].filter(Boolean)).size>20)throw new Error("Use at most 20 images including the primary image.");
       const response = await fetch("/api/admin/products", {
         method: editing ? "PATCH" : "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...(editing ? { id: editing.id } : {}),
-          ...form,
+          ...fields,
+          ...(data?.productGalleryVersion===1?{images}:{}),
           price: Number(form.price),
         }),
       });
@@ -246,6 +255,10 @@ export default function AdminProductsPage() {
                 placeholder="Image URL"
                 className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#78927d]"
               />
+              <label className="md:col-span-2 grid gap-2 text-sm">Additional product images
+                <textarea value={form.gallery} disabled={saving||data?.productGalleryVersion!==1} onChange={event=>setForm(current=>({...current,gallery:event.target.value}))} rows={4} placeholder="One HTTPS image URL per line" className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm disabled:bg-gray-100"/>
+                <span className="text-xs text-slate-600">{data?.productGalleryVersion===1?'Up to 20 images including the primary image, in the order entered. Upload your own product photos from Product images, then paste their URLs here.':'Gallery editing requires the updated Preview commerce API. Existing single-image editing remains available.'}</span>
+              </label>
               <select
                 value={form.status}
                 onChange={(event) =>

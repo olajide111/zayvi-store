@@ -3,31 +3,13 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useId, useState } from "react";
-import { adminGroups, adminPrimary } from "./admin-navigation";
-
-const destinations = [
-  ...adminPrimary.map((item) => ({ ...item, group: "Workspace" })),
-  ...adminGroups.flatMap(({ label, items }) => items.map((item) => ({ ...item, group: label }))),
-];
-
-const keywords: Record<string, string> = {
-  "/admin/settings/social-links": "facebook instagram tiktok youtube social profiles footer",
-  "/admin/content": "blog articles guides pages privacy terms contact about",
-  "/admin/markets": "country countries nigeria uk currencies where sell",
-  "/admin/settings": "start onboarding configuration settings",
-  "/admin/returns": "refund returns requests",
-  "/admin/payments": "kredal paypal square verify refund webhook",
-  "/admin/themes": "design appearance colours layout",
-};
+import {searchAdminPages} from "./admin-navigation";
 
 export default function AdminPageSearch({ dark = false, onNavigate }: { dark?: boolean; onNavigate?: () => void }) {
   const [query, setQuery] = useState("");
   const id = useId();
   const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const matches = terms.length ? destinations.filter(({ href, title, group }) => {
-    const text = `${title} ${group} ${keywords[href] || ""}`.toLowerCase();
-    return terms.every((term) => text.includes(term));
-  }) : [];
+  const matches = searchAdminPages(query);
 
   return (
     <div className={dark ? "mx-3 mb-3 text-[#dfebe3]" : "mb-3 text-[#172a21]"}>

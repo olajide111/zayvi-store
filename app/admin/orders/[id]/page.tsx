@@ -371,6 +371,7 @@ export default function AdminOrderDetailPage({
         <Link href="/admin/orders" prefetch={false} className={adminAction}>All orders</Link>
       </AdminPageHeading>
 
+      <section aria-labelledby="resolve-customer-issue" className="mx-auto max-w-[1200px] px-4 pt-5 sm:px-7 lg:px-8"><div className="rounded-2xl border border-[#dfe6e1] bg-white p-5"><h2 id="resolve-customer-issue" className="text-lg font-semibold">Resolve a customer issue</h2><p className="mt-1 text-sm text-[#52635b]">Work from this order’s payment evidence, delivery details and returns. Opening a tool does not execute a refund or fulfilment.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Link href={order.marketCode==='NG'?`/admin/payments?order_id=${encodeURIComponent(order.id)}`:'#order-payment-evidence'} className="rounded-xl border p-4"><strong>Payment or refund</strong><p className="mt-1 text-sm">Review this order’s provider and payment evidence.</p></Link><Link href={`/admin/returns?order_id=${encodeURIComponent(order.id)}`} className="rounded-xl border p-4"><strong>Return request</strong><p className="mt-1 text-sm">Review eligible lines and quantities.</p></Link><a href="#order-delivery-address" className="rounded-xl border p-4"><strong>Delivery address</strong><p className="mt-1 text-sm">Check the saved delivery details.</p></a><a href="#order-fulfilment-plan" className="rounded-xl border p-4"><strong>Supplier or tracking</strong><p className="mt-1 text-sm">Review allocations and dispatch evidence.</p></a></div></div></section>
       <section className="mx-auto grid max-w-[1200px] gap-6 px-4 py-5 sm:px-7 lg:px-8 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div>
           <div className="rounded-2xl border border-gray-200 bg-white">
@@ -400,6 +401,7 @@ export default function AdminOrderDetailPage({
             <div className="mt-1 text-sm text-gray-500">{order.customerEmail}</div>
           </div>
 
+          {!order.deliveryAddress&&<section id="order-delivery-address" className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-semibold">Delivery address missing</h2><p className="mt-2 text-sm">This order has no saved delivery address. Confirm the delivery details before any real dispatch.</p></section>}
           {order.deliveryAddress && (
             <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5" aria-labelledby="order-delivery-address">
               <h2 id="order-delivery-address" className="text-sm font-semibold">Delivery address</h2>
@@ -414,7 +416,7 @@ export default function AdminOrderDetailPage({
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold">Fulfilment plan</h2>
+                <h2 id="order-fulfilment-plan" className="text-sm font-semibold">Fulfilment plan</h2>
                 <p className="mt-1 text-xs leading-5 text-gray-400">
                   Human-approved source allocation. Supplier plans do not contact or dispatch to suppliers automatically.
                 </p>
@@ -609,7 +611,7 @@ export default function AdminOrderDetailPage({
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold">Payment evidence</h2>
+                <h2 id="order-payment-evidence" className="text-sm font-semibold">Payment evidence</h2>
                 <p className="mt-1 text-xs text-[#52635b]">
                   Provider-controlled payment state and reconciliation history.
                 </p>

@@ -21,4 +21,5 @@ export const LONDON_SIGNATURE_THEMES:StudioTheme[]=[
 export const ESSENTIAL_THEMES:StudioTheme[]=[
  {id:'canvas',name:'Canvas',signatureFamily:'canvas',family:'general-commerce',collection:'Signature',free:true,description:'A clean white, product-first storefront with black typography, light borders, clear collections and an uncomplicated shopping flow.',industries:['General retail','Fashion','Home','Lifestyle','Bags & accessories'],layout:'catalogue',canvas:'#FFFFFF',ink:'#171717',accent:'#171717',accentInk:'#FFFFFF',serif:false,headline:'Good things. Simply.'},
 ];
-export const ALL_STUDIO_THEMES:StudioTheme[]=[...THEME_DESIGNS,...ADDITIONAL_STUDIO_THEMES,...LONDON_SIGNATURE_THEMES,...ESSENTIAL_THEMES];
+export const ORIGINAL_THEME:StudioTheme={id:'original',name:'Zayvi Original',family:'general-commerce',collection:'Signature',free:true,description:'A warm everyday shop with a product montage, clear categories and a considered collection. Make it your own with colours and typography.',industries:['General retail','Fashion','Beauty','Home','Lifestyle','Gifts'],layout:'tiles',canvas:'#FAFAF6',ink:'#172B23',accent:'#203E31',accentInk:'#FFFFFF',serif:true,headline:'Good finds. For real life.'};
+export const ALL_STUDIO_THEMES:StudioTheme[]=[...THEME_DESIGNS,...ADDITIONAL_STUDIO_THEMES,...LONDON_SIGNATURE_THEMES,...ESSENTIAL_THEMES,ORIGINAL_THEME];

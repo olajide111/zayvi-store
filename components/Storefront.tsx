@@ -1,5 +1,6 @@
 "use client";
 
+import original from "./original.module.css";
 import { Search } from "lucide-react";
 import { cartStorageKey, type StorefrontMarketSettings } from "@/lib/storefront-market";
 import type { SocialLinks } from "@/lib/social-links";
@@ -38,6 +39,7 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
   const [qv, setQv] = useState<StorefrontProduct | null>(null);
   const [cat, setCat] = useState("All");
   const [query, setQuery] = useState("");
+  const [sort,setSort]=useState("featured");
   const [scrolled, setScrolled] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const gridRef = useRef<HTMLElement>(null);
@@ -354,7 +356,7 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f8f6", fontFamily: "system-ui, -apple-system, sans-serif", color: "#111" }}>
+    <div className={original.root} style={{minHeight:"100vh"}}>
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[#142e26] px-3 py-1 text-xs text-white">
         <span className="py-1">Zayvi Store Preview</span>
         <MarketSwitcher market={marketCode} settings={marketSettings} />
@@ -362,6 +364,7 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
 
       <Header
         market={marketCode}
+        categories={categories.filter(c=>c!=="All")}
         onBestSellers={scrollToBest}
         cartCount={cartCount}
         onCartOpen={() => setCartOpen(true)}
@@ -372,19 +375,21 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
       />
 
       <Hero
+        products={products}
+        loading={catalogueLoading}
         onShopAll={() => browseCategory("All")}
         onBestSellers={scrollToBest}
       />
 
-      <TrustBar />
+      <TrustBar market={marketCode} />
 
-      <div ref={bestRef}>
+      <div ref={bestRef} className="scroll-mt-36">
         <BestSellers products={products} onView={(p) => setQv(p)} onAdd={addToCart} />
       </div>
 
-      <CategoryGrid onSelect={browseCategory} />
+      <CategoryGrid onSelect={browseCategory} products={products} />
 
-      <section ref={gridRef} aria-labelledby="catalogue-title" className="mx-auto max-w-[1280px] scroll-mt-16 px-4 pt-8 pb-16 sm:px-6">
+      <section ref={gridRef} aria-labelledby="catalogue-title" className="mx-auto max-w-[1280px] scroll-mt-36 px-4 pt-8 pb-16 sm:px-6">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h2 id="catalogue-title" className="text-2xl font-semibold tracking-tight">{cat === "All" ? "All products" : cat}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -418,6 +423,7 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
               placeholder="Search products or product code"
               className="min-h-11 w-full rounded-lg border border-[#9eafa3] bg-white px-3 pl-9 text-base text-[#172a21]" />
           </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">Sort by<select aria-label="Sort products" value={sort} onChange={e=>setSort(e.target.value)} className="min-h-11 rounded-lg border border-[#cbd6c6] bg-white px-3"><option value="featured">Catalogue order</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name: A–Z</option></select></label>
           {!catalogueLoading && !catalogueError && (terms.length > 0 || cat !== "All") && (
             <p role="status" className="text-sm text-[#52635b]">{filtered.length} {filtered.length === 1 ? "product" : "products"}</p>
           )}
@@ -433,8 +439,8 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
           </div>
         ) : (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
-              {filtered.map((p) => (
+            <div className={original.browseGrid}>
+              {[...filtered].sort((a,b)=>sort==="price-low"?a.price-b.price:sort==="price-high"?b.price-a.price:sort==="name"?a.name.localeCompare(b.name):0).map((p) => (
                 <ProductCard key={p.id} product={p} onView={(prod) => setQv(prod)} onAdd={addToCart} />
               ))}
             </div>
@@ -452,7 +458,7 @@ export default function Storefront({ marketCode, marketSettings, socialLinks }: 
         )}
       </section>
 
-      <Newsletter />
+      <Newsletter market={marketCode} />
       <Footer market={marketCode} socialLinks={socialLinks} onShopAll={() => browseCategory("All")} />
 
       <CartDrawer

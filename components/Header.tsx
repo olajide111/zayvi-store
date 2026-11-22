@@ -6,10 +6,11 @@ import { useRef } from "react";
 import { ChevronDown, Search, ShoppingBag } from "lucide-react";
 import { contentUrl, type ContentMarket } from "@/lib/storefront-content";
 
-const categories = ["Travel", "Carry", "Recovery", "Daily"];
+
 
 type Props = {
   market: ContentMarket;
+  categories?:string[];
   cartCount: number;
   onCartOpen: () => void;
   onSearch: () => void;
@@ -19,7 +20,7 @@ type Props = {
   scrolled: boolean;
 };
 
-export default function Header({ market, cartCount, onCartOpen, onSearch, onShopAll, onBestSellers, onCategory, scrolled }: Props) {
+export default function Header({ categories=[],market, cartCount, onCartOpen, onSearch, onShopAll, onBestSellers, onCategory, scrolled }: Props) {
   const shop = useRef<HTMLDetailsElement>(null);
 
   function select(action: () => void) {
@@ -54,13 +55,13 @@ export default function Header({ market, cartCount, onCartOpen, onSearch, onShop
             </summary>
             <ul className="absolute top-full left-1/2 z-10 mt-1 w-40 -translate-x-1/2 rounded-xl border border-[#dfe6e1] bg-white p-1.5 shadow-lg">
               <li><button type="button" className={item} onClick={() => select(onShopAll)}>All products</button></li>
-              <li><button type="button" className={item} onClick={() => select(onBestSellers)}>Best sellers</button></li>
+              <li><button type="button" className={item} onClick={() => select(onBestSellers)}>The current edit</button></li>
               {categories.map((category) => (
                 <li key={category}><button type="button" className={item} onClick={() => select(() => onCategory(category))}>{category}</button></li>
               ))}
             </ul>
           </details>
-          <button type="button" onClick={onBestSellers} className="hidden min-h-11 items-center rounded-md px-2 hover:bg-[#edf4ee] sm:inline-flex">Best sellers</button>
+          <button type="button" onClick={onBestSellers} className="hidden min-h-11 items-center rounded-md px-2 hover:bg-[#edf4ee] sm:inline-flex">The current edit</button>
           <Link href={contentUrl(market)} className="inline-flex min-h-11 items-center rounded-md px-2 hover:bg-[#edf4ee]">Guides</Link>
         </div>
 
@@ -74,6 +75,7 @@ export default function Header({ market, cartCount, onCartOpen, onSearch, onShop
           </button>
         </div>
       </div>
+      {categories.length>0&&<div className="border-t border-[#edf0e8]"><div className="mx-auto flex max-w-[1280px] gap-2 overflow-x-auto px-3 py-2 sm:px-6" aria-label="Product categories">{categories.map(category=><button key={category} type="button" onClick={()=>onCategory(category)} className="min-h-11 shrink-0 rounded-md px-3 text-sm text-[#38543f] hover:bg-[#edf4ee]">{category}</button>)}</div></div>}
     </nav>
   );
 }

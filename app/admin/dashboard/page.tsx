@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import StoreBuildStatus from "@/components/admin/StoreBuildStatus";
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck,
   ClipboardList, Inbox, RefreshCw, ShoppingBag,
@@ -392,6 +393,7 @@ export default function AdminDashboard() {
           <InventoryPanel sources={{ GB: stockGB, NG: stockNG }} market={market} />
         </div>
       </div>
+      <StoreBuildStatus />
     </main>
   );
 }

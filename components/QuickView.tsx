@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {useModalDialog} from "@/hooks/useModalDialog";
+import { useState, useEffect,useId } from "react";
 import type { StorefrontProduct } from "@/lib/storefront-products";
 import Link from "next/link";
+import ProductGallery from "./ProductGallery";
 import { productPath } from "@/lib/storefront-market";
 
-const STORE_COLOR = "#16a34a";
+const STORE_COLOR = "#215241";
 
 type Props = {
   product: StorefrontProduct | null;
@@ -15,6 +17,7 @@ type Props = {
 };
 
 export default function QuickView({ product, open, onClose, onAdd }: Props) {
+  const dialog=useModalDialog(open && !!product,onClose),titleId=useId();
   const [qty, setQty] = useState(1);
   const [col, setCol] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(0);
@@ -29,7 +32,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
     }
   }, [open, product]);
 
-  if (!product) return null;
+  if (!product||!open) return null;
 
   const handleAdd = () => {
     onAdd(product, Math.min(20, qty), product.colors[col]?.name, product.sizes[sizeIdx]);
@@ -64,7 +67,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
           pointerEvents: open ? "all" : "none",
         }}
       >
-        <div
+        <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="z-original-quick-view"
           style={{
             background: "#fff",
             borderRadius: 20,
@@ -81,20 +84,18 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
           }}
         >
           <div style={{ background: "#f7f7f5", minHeight: 360 }}>
-            <img
-              src={product.image}
-              alt={product.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
+            <ProductGallery key={product.id} image={product.image} images={product.images} name={product.name}/>
+
           </div>
 
           <div style={{ padding: 28, display: "flex", flexDirection: "column" }}>
             <button
               onClick={onClose}
+              aria-label="Close quick view"
               style={{
                 alignSelf: "flex-end",
-                width: 32,
-                height: 32,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 border: "1px solid #eee",
                 background: "#fafafa",
@@ -104,7 +105,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
             >
               ✕
             </button>
-            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{product.name}</h2>
+            <h2 id={titleId} style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{product.name}</h2>
             <p style={{ fontSize: 12, color: "#777", marginBottom: 12 }}>Preview catalogue · Not yet available to purchase</p>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 1.6, marginBottom: 16 }}>{product.desc}</p>
 
@@ -160,9 +161,9 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
 
             <div style={{ display: "flex", gap: 10, marginTop: "auto" }}>
               <div style={{ display: "flex", border: "1px solid #ddd", borderRadius: 10 }}>
-                <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>−</button>
+                <button aria-label="Decrease quantity" onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>−</button>
                 <span style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{qty}</span>
-                <button onClick={() => setQty(Math.min(20, qty + 1))} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>+</button>
+                <button aria-label="Increase quantity" onClick={() => setQty(Math.min(20, qty + 1))} style={{ width: 36, height: 40, border: "none", background: "none", cursor: "pointer" }}>+</button>
               </div>
               <button
                 onClick={handleAdd}
@@ -201,7 +202,7 @@ export default function QuickView({ product, open, onClose, onAdd }: Props) {
 
       <style>{`
         @media (max-width: 640px) {
-          div[style*="grid-template-columns: 1fr 1fr"] {
+          div.z-original-quick-view {
             grid-template-columns: 1fr !important;
           }
         }
