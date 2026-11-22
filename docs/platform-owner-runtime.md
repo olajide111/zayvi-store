@@ -22,7 +22,7 @@ The exchange transport, provider assurance and limiter in this test are test dou
 
 The existing private database Lambda has no NAT gateway/default outbound route. It cannot simply call public provider token/JWKS endpoints. Vercel cannot directly connect to private RDS. Review runtime placement and a typed application RPC boundary before activation; do not expose RDS publicly or add a generic SQL-forwarding endpoint.
 
-The first [typed private boundary](owner-private-attempt-boundary.md) now separates encrypted login-attempt persistence from its web-side encryption. It is tested locally and is not mounted or a replacement for the remaining transactional session/membership boundary.
+The [typed private attempt boundary](owner-private-attempt-boundary.md) separates encrypted login-attempt persistence from web-side encryption. The [private session completion boundary](owner-private-session-completion.md) now verifies a short-lived signed web-side statement and keeps membership/store checks and session insertion in one database transaction. Both are tested locally and unmounted; the existing in-process runtime still needs the remaining remote lifecycle/operation adapters before activation.
 
 The remaining work is to configure and verify the real provider and network path, review/promote the three SQL proposals as new migrations, supply a durable limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
 
