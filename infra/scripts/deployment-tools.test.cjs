@@ -53,7 +53,7 @@ test('no-change plans are readable and incomplete plans cannot pass', () => {
 // Exercise the deployment shell flow with fake local CLIs, never AWS.
 const { chmodSync, mkdirSync, copyFileSync, readFileSync, symlinkSync } = require('node:fs');
 const { spawnSync } = require('node:child_process');
-function planFixture(account) {
+function planFixture(account,options={}) {
   const root=mkdtempSync(path.join(tmpdir(),'zayvi-plan-flow-'));
   mkdirSync(path.join(root,'bin'));mkdirSync(path.join(root,'infra/terraform'),{recursive:true});mkdirSync(path.join(root,'infra/scripts'));
   copyFileSync(path.join(__dirname,'review-preview-plan.cjs'),path.join(root,'infra/scripts/review-preview-plan.cjs'));
@@ -61,12 +61,12 @@ function planFixture(account) {
     git: `#!/bin/sh\ncase "$*" in\n'rev-parse --show-toplevel') echo "$FIXTURE_ROOT";;\n'rev-parse HEAD') echo reviewed-commit;;\nstatus*) ;;\nesac\n`,
     aws: `#!/bin/sh\necho "aws $*" >> "$FIXTURE_TRACE"\ncase "$1 $2" in\n'sts get-caller-identity') echo "$FIXTURE_ACCOUNT";;\n'lambda get-function-configuration') echo arn:aws:secretsmanager:eu-west-2:001961766018:secret:zayvi/preview/webhook-abc123;;\n'cloudwatch describe-alarms') echo arn:aws:sns:eu-west-2:001961766018:zayvi-preview-alerts;;\n'secretsmanager describe-secret') echo existing-arn;;\nesac\n`,
     npm: `#!/bin/sh\necho "npm $*" >> "$FIXTURE_TRACE"\n`,
-    terraform: `#!/bin/sh\necho "terraform $* alarm-topic=$TF_VAR_operational_alarm_topic_arn" >> "$FIXTURE_TRACE"\ncase "$1" in\nworkspace) echo default;;\nstate) printf '%s\\n' aws_lambda_function.api aws_db_instance.postgres aws_apigatewayv2_stage.default 'aws_lambda_function.db_bootstrap[0]';;\nplan) exit 2;;\nshow) echo '{"resource_changes":[{"mode":"managed","type":"aws_cloudwatch_metric_alarm","address":"aws_cloudwatch_metric_alarm.test","change":{"actions":["create"],"after":{"secret":"hidden-test-value"}}}]}';;\nesac\n`,
+    terraform: `#!/bin/sh\necho "terraform $* alarm-topic=$TF_VAR_operational_alarm_topic_arn" >> "$FIXTURE_TRACE"\ncase "$1" in\nworkspace) echo default;;\nstate) printf '%s\\n' aws_lambda_function.api aws_db_instance.postgres aws_apigatewayv2_stage.default 'aws_lambda_function.db_bootstrap[0]';;\nplan) exit 2;;\nshow) printf '%s\\n' \"$FIXTURE_PLAN\";;\nesac\n`,
   };
   for(const [name,body] of Object.entries(commands)){const file=path.join(root,'bin',name);writeFileSync(file,body);chmodSync(file,0o700);}
   symlinkSync(process.execPath,path.join(root,'bin/node'));
   const trace=path.join(root,'trace');
-  const result=spawnSync('bash',[path.join(__dirname,'preview-plan.sh')],{encoding:'utf8',env:{...process.env,PATH:path.join(root,'bin')+':'+process.env.PATH,FIXTURE_ROOT:root,FIXTURE_TRACE:trace,FIXTURE_ACCOUNT:account,TF_VAR_kredal_preview_webhook_secret_arn:'',TF_VAR_operational_alarm_topic_arn:''}});
+  const result=spawnSync(process.env.ZAYVI_TEST_BASH||'bash',[path.join(__dirname,'preview-plan.sh'),...(options.args||[])],{encoding:'utf8',env:{...process.env,PATH:path.join(root,'bin')+':'+process.env.PATH,FIXTURE_ROOT:root,FIXTURE_TRACE:trace,FIXTURE_ACCOUNT:account,FIXTURE_PLAN:JSON.stringify(options.plan||{resource_changes:[{mode:'managed',type:'aws_cloudwatch_metric_alarm',address:'aws_cloudwatch_metric_alarm.test',change:{actions:['create'],after:{secret:'hidden-test-value'}}}]}),TF_VAR_kredal_preview_webhook_secret_arn:'',TF_VAR_operational_alarm_topic_arn:''}});
   return {root,result,trace:require('node:fs').existsSync(trace)?readFileSync(trace,'utf8'):''};
 }
 
@@ -87,6 +87,8 @@ test('plan helper preserves active inputs, handles plan exit 2, never applies or
     assert.ok(!fixture.trace.includes('-target'));assert.ok(!fixture.trace.includes('terraform apply'));
     assert.ok(!fixture.trace.includes('get-secret-value'));
     assert.ok(!fixture.result.stdout.includes('hidden-test-value'));
+    assert.ok(fixture.result.stdout.includes(`terraform -chdir="${fixture.root}/infra/terraform" show`));
+    assert.ok(fixture.result.stdout.includes(`terraform -chdir="${fixture.root}/infra/terraform" apply`));
   }finally{rmSync(fixture.root,{recursive:true,force:true});}
 });
 
@@ -111,4 +113,14 @@ test('owner identity activation is isolated from ordinary Preview plans',()=>{
  assert(review(plan(...resources)).blocked.length);
  for(const bad of [plan(...resources.slice(1)),plan(...resources,change('aws_lambda_function',['update'])),plan(...resources.map((r,i)=>i? r:change(types[0],['delete','create'],types[0]+'.preview_owners[0]'))),plan(...resources,change('aws_db_instance',['update']))])assert(review(bad,'owner-identity').blocked.length);
  assert(review({...plan(...resources),complete:false},'owner-identity').blocked.length);
+});
+
+
+test('owner plan shell selects its strict scope and generic scope rejects identity resources',()=>{
+ const resources=['aws_cognito_user_pool','aws_cognito_user_pool_client','aws_cognito_user_pool_domain','aws_cognito_resource_server'].map(type=>change(type,['create'],type+'.preview_owners[0]'));
+ for(const [args,status] of [[['--owner-identity'],0],[[],2]]){
+  const fixture=planFixture('001961766018',{args,plan:plan(...resources)});
+  try{assert.equal(fixture.result.status,status,fixture.result.stderr);assert(!fixture.trace.includes('terraform apply'));assert(!fixture.result.stderr.includes('unbound variable'));}
+  finally{rmSync(fixture.root,{recursive:true,force:true});}
+ }
 });

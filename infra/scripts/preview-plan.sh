@@ -2,9 +2,9 @@
 # Create a full saved Preview plan. This script never applies infrastructure.
 set -euo pipefail
 umask 077
-review_args=()
+review_scope=general
 if [ "$#" -eq 1 ] && [ "$1" = --owner-identity ]; then
-  review_args=(--owner-identity)
+  review_scope=owner-identity
 elif [ "$#" -ne 0 ]; then
   echo 'Usage: bash infra/scripts/preview-plan.sh [--owner-identity]' >&2
   exit 1
@@ -99,7 +99,12 @@ else
 fi
 if [ "$plan_status" -ne 0 ] && [ "$plan_status" -ne 2 ]; then exit "$plan_status"; fi
 printf '\nSaved plan: %s\n' "$plan_path"
-terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs "${review_args[@]}"
-printf '\nReview locally: terraform -chdir=infra/terraform show -no-color "%s"\n' "$plan_path"
-printf 'After reviewing and resolving scope issues: terraform -chdir=infra/terraform apply "%s"\n' "$plan_path"
+# macOS ships Bash 3.2, where expanding an empty array under nounset fails.
+if [ "$review_scope" = owner-identity ]; then
+  terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs --owner-identity
+else
+  terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs
+fi
+printf '\nReview locally: terraform -chdir="%s" show -no-color "%s"\n' "$repo_root/infra/terraform" "$plan_path"
+printf 'After reviewing and resolving scope issues: terraform -chdir="%s" apply "%s"\n' "$repo_root/infra/terraform" "$plan_path"
 printf 'Preserve the webhook secret ARN and optional alarm topic ARN in your private Preview inputs for future plans.\n'
