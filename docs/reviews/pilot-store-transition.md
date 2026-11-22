@@ -119,3 +119,14 @@ Hammy retains its own files and existing preview basket. Its overview explains t
 This names and versions the design baseline; it does not rename database store records, activate a default for every tenant, provision a new tenant or enable checkout. The independent-store and gallery-API activation prerequisites above remain outstanding.
 
 Baseline verification: production build and 23 focused baseline/Hammy/dashboard checks passed. Visual browser acceptance remains outstanding under the previously documented browser restriction.
+
+
+### Hammy-only product photo workspace
+
+Added `/admin/pilots/hammy/photos`, linked from Hammy's overview, without changing Default Store v1. It selects up to 20 supported images (5 MB each), displays local previews, changes image order and uploads selected files sequentially through the existing authenticated product-image endpoint. Successful uploads are retained in the current workspace; failed files can be retried independently, and the queue can stop after the current request.
+
+The workspace validates complete upload responses, handles session expiry without discarding the selection, bounds waiting per upload, revokes local object URLs and avoids uploading already successful rows again. The full ordered gallery list is available only when all selected images have confirmed URLs. Selection/order are page-local; the UI tells the user to copy URLs before leaving. Removing a row or clearing the workspace does not delete stored files.
+
+This uploads image assets only. It does not attach them to the existing store, save/publish a product, provision Hammy or enable checkout. Gallery persistence still needs the reviewed Preview API deployment and independent store setup. No real image uploads were exercised during verification.
+
+Verification: 29 focused photo-workspace/baseline/Hammy/dashboard checks passed, including mocked upload, authentication and malformed-response cases. Frontend production build passed. Browser interaction and live AWS upload checks remain outstanding.
