@@ -12,7 +12,7 @@ Verified identity contains only issuer, subject, authentication time and assuran
 
 - Review and configure the actual Cognito pool, app client, scopes, session/revocation strategy and MFA flows in Preview. No resources are provisioned by this module.
 - Implement the browser sign-in/return flow with state, nonce where applicable, PKCE and secure session handling. The shared admin-password cookie is not an identity-provider token.
-- Implement and verify the restricted issuer/subject membership-discovery function described in `architecture/identity-to-tenant-resolution.md`.
+- Review and deploy the restricted issuer/subject membership-discovery proposal, then verify it on RDS; see `hammy-membership-resolution.md`.
 - Connect the membership recheck, session verifier and database runner, then prove cross-tenant access denial with actual non-privileged PostgreSQL credentials.
 - Bind Hammy's independent store UUID and exercise owner sign-in, logout/revocation, recovery and MFA before enabling data changes or checkout.
 
