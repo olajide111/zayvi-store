@@ -1,6 +1,11 @@
 import {HAMMY_SAMPLE_PRODUCTS,type HammyProduct} from './hammy-pilot';
 export type HammyBagLine={productId:string;size:string;colour:string;qty:number};
 export const HAMMY_BAG_KEY='zayvi-hammy-demo-bag-v1';
+export const HAMMY_SHOPPING_KEY='zayvi-hammy-shopping-v2';
+export function readHammyShopping(value:unknown){
+ const input=value&&typeof value==='object'?value as {bag?:unknown;saved?:unknown}:{};
+ return {bag:readHammyBag(input.bag),saved:readHammyBag(input.saved)};
+}
 export function bagKey(line:Omit<HammyBagLine,'qty'>){return JSON.stringify([line.productId,line.size,line.colour]);}
 export function validHammyLine(value:unknown):HammyBagLine|null{
  if(!value||typeof value!=='object')return null;
@@ -49,4 +54,13 @@ export function updateHammyVariant(bag:HammyBagLine[],key:string,size:string,col
  // Reuse the same quantity cap and merge rules as adding from the product page.
  if(remaining.some(line=>bagKey(line)===bagKey(changed)))return addHammyLine(remaining,changed);
  return bag.map(line=>bagKey(line)===key?changed:line);
+}
+
+/** Validate the destination before removing the source, so a quantity-limit failure
+ * cannot silently discard a selection. The caller commits both lists together. */
+export function moveHammySelection(from:HammyBagLine[],to:HammyBagLine[],key:string){
+ const line=from.find(item=>bagKey(item)===key);
+ if(!line)throw new Error('This item is no longer available in this list.');
+ const destination=addHammyLine(to,line);
+ return {from:from.filter(item=>bagKey(item)!==key),to:destination};
 }

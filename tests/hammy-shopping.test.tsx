@@ -9,6 +9,10 @@ import Preview from '../app/admin/pilots/hammy/preview/page';
 import HammyShop,{HammyBasketItem} from '../components/pilots/HammyShop';
 const product=HAMMY_SAMPLE_PRODUCTS[0];
 const line={productId:product.id,size:product.sizes[0],colour:product.colours[0],qty:1};
+test('basket selections expose a named save-for-later action without removing option editing',()=>{
+ const html=renderToStaticMarkup(<HammyBasketItem line={line} product={product} productHref="/product" onNavigate={()=>{}} onChange={()=>{}} onRemove={()=>{}} onEdit={()=>undefined} onSave={()=>{}}/>);
+ assert.match(html,/Save for later/);assert(html.includes(`aria-label="Save ${product.name}, ${line.size}, ${line.colour} for later"`));assert.match(html,/Edit options/);
+});
 test('basket merges only identical product/size/colour combinations',()=>{
  const one=addHammyLine([],line),two=addHammyLine(one,line);
  assert.equal(one[0].qty,1);assert.equal(two[0].qty,2);
@@ -63,7 +67,7 @@ test('Hammy home has distinct editorial departments and sports/footwear routes w
  const home=renderToStaticMarkup(<HammyShop route={{view:'home'}}/>);
  assert.match(home,/Every kind/);assert.match(home,/Made to/);
  assert.match(home,/Shop sportswear/);assert.match(home,/Find your footwear/);
- assert.match(home,/Footer shopping links/);assert.match(home,/Checkout unavailable/);
+ assert.match(home,/aria-label="Footer shop"/);assert.match(home,/aria-label="Footer customer care"/);assert.match(home,/Checkout unavailable/);
  assert.match(home,/loading="eager"/);
 });
 
