@@ -7,7 +7,7 @@ import {
 export type StoreRecord = {
   id: string;
   tenantId: string;
-  status: 'draft' | 'active' | 'suspended' | 'closed';
+  status: 'draft' | 'active' | 'paused' | 'archived';
 };
 export type StoreRequestContext = TenantRequestContext & {store: StoreRecord};
 export interface StoreDirectory {
