@@ -16,9 +16,9 @@ The repository uses an atomic conditional DELETE through restricted PostgreSQL f
 
 - Review the SQL role/grants and promote it into a separate new migration before a saved Preview plan/apply.
 - Configure the exact provider domain prefix, app client, callback URI and API scope. Scope settings must match the existing owner-token verifier. No provider is provisioned here.
-- Implement rate-limited HTTP start/callback handlers. Pin the application origin in server settings rather than deriving it from Host/forwarded headers.
+- Mount the prepared HTTP handler factory with a real durable limiter; see `hammy-owner-sessions.md`. Pin the application origin in server settings rather than deriving it from Host/forwarded headers.
 - Set the browser binding in a host-only, HttpOnly, Secure, SameSite=Lax cookie with Path=/ and a ten-minute expiry. Clear it on callback success or failure. Use no-store and no-referrer response headers; exclude authorization codes and token bodies from request logging.
-- Connect the prepared token-pair verifier and `createOwnerLoginCompletion` coordinator to a real provider revocation/MFA adapter and a transactional session writer. See `hammy-owner-session-completion.md`. Token verification and membership/store orchestration are tested; live session persistence remains pending.
+- Connect the prepared token-pair verifier and `createOwnerLoginCompletion` coordinator to a real provider revocation/MFA adapter and a transactional session writer. See `hammy-owner-session-completion.md`. Token verification and membership/store orchestration are tested; persistent session storage is prepared; runtime wiring and live verification remain pending.
 - Set a separate secure owner-session cookie from that opaque handle. Never mint the existing shared-password admin cookie. Update workspace guards to validate the owner session and store membership; the current admin paths still use their existing guard.
 - Exercise real browser cookies, callback failure/recovery, MFA, revocation and RDS multi-connection behavior before enabling sign-in or catalogue writes.
 
