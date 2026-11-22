@@ -147,3 +147,14 @@ The saved starter's dashboard label is now Store Templates, with Fashion starter
 Dashboard destinations and search now share one typed registry in `components/admin/admin-navigation.ts`, consumed by desktop/mobile navigation and page search. Extension instructions are in `docs/admin-navigation.md`. Checks cover duplicate routes, missing page files, title search and the independent store destinations. This is developer-extensible navigation, not a no-code page generator or new store provisioning.
 
 Verification: TypeScript and 28 focused navigation/baseline/Hammy checks passed; production build passed. No retained starter shopping files or photo-workspace code changed. Browser visual acceptance remains outstanding.
+
+
+### Hammy integration review and add-to-basket feedback
+
+A source review confirms Hammy's storefront still imports its sample catalogue and stores its basket in browser session storage. No real order, payment or stock-reservation request occurs when adding. Backend tenant selection and main-store queries remain independent provisioning work. The platform's earlier Kredal Preview tests do not establish a Hammy business/store connection.
+
+Added a Hammy-only integration-status page linked from its workspace. It explicitly distinguishes implemented preview features, unconnected catalogue/inventory/payments, unverified store/owner access, unconfigured delivery/policies and disabled checkout. It is labelled a source review, not a live health check. Gallery API activation remains pending and photo work remains deferred.
+
+Hammy adds now show a 104×124px product thumbnail travelling toward the basket, an arrival pulse, an Added button state and a slide-in confirmation with the exact chosen options, quantity and preview subtotal. Reduced-motion preferences skip movement and open confirmation immediately. The local basket commits before presentation, capacity errors never trigger success feedback, rapid additions are guarded while motion runs, and missing animation support falls back to immediate confirmation. Route changes/unmount cancel the delayed drawer; dismissal restores focus to its origin. Default Store v1 shopping code is unchanged.
+
+Verification: 32 focused tests cover motion endpoint geometry on phone/desktop sizes, actual variant receipt values, capacity failure preservation, the integration review and existing navigation/basket flows. TypeScript and production build passed. Interactive animation/device and live backend integration checks remain outstanding under the documented browser/runtime limitations. No AWS resources, products or orders were changed.

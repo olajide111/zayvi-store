@@ -182,3 +182,26 @@
 .filterChips{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 26px}
 .filterChips button{display:inline-flex;gap:12px;align-items:center;min-height:44px;max-width:100%;border:1px solid #afb2ba;border-radius:25px;padding:9px 14px;background:transparent;font-size:11px;text-align:left;overflow-wrap:anywhere}
 .filterChips span{font-size:19px;line-height:1}
+.basketButton{display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.countRest,.countBubble{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;background:var(--soft);color:var(--accent);border-radius:50%;font-size:10px;font-weight:700}
+.countBubble{animation:hammy-count-pop .4s ease-out .3s}
+.addButtonDone{background:#172b65!important;border-color:#172b65!important}
+.addButtonDone:disabled{opacity:1}
+.basketFlight{position:fixed;z-index:1600;width:104px;height:124px;border:5px solid white;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px #171b2940;pointer-events:none;animation:hammy-to-basket .62s cubic-bezier(.2,.65,.25,1) both;will-change:transform,opacity}
+.basketFlight img{width:100%;height:100%;object-fit:cover}
+.basketFlight>span{position:absolute;right:5px;bottom:5px;display:grid;place-items:center;width:25px;height:25px;background:var(--accent);color:white;border-radius:50%;font-size:15px}
+.drawer{animation:hammy-basket-open .28s ease-out}
+.addReceipt{margin:20px 0;padding:18px;background:var(--soft);border-radius:10px}
+.receiptTitle{display:flex;align-items:center;gap:10px;font-size:15px;letter-spacing:-.02em}
+.receiptTitle>span{display:grid;place-items:center;background:var(--accent);color:white;width:27px;height:27px;border-radius:50%}
+.receiptProduct{display:grid;grid-template-columns:70px 1fr;gap:14px;margin-top:18px;align-items:center}
+.receiptProduct img{width:70px;height:88px;object-fit:cover;border-radius:6px}
+.receiptProduct strong{font-size:13px;line-height:1.6}
+.receiptProduct p{font-size:11px;line-height:1.7;color:#505866;margin:5px 0}
+.receiptTotal{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid #c3cfe5;padding-top:14px;margin:16px 0 0;font-size:11px}
+@keyframes hammy-to-basket{0%{transform:translate(0,0) rotate(-7deg) scale(1);opacity:1}25%{transform:translate(calc(var(--fly-x)*.2),calc(var(--fly-y)*.12 - 30px)) rotate(3deg) scale(1.08);opacity:1}85%{opacity:1}100%{transform:translate(var(--fly-x),var(--fly-y)) rotate(5deg) scale(.55);opacity:0}}
+@keyframes hammy-count-pop{0%,100%{transform:scale(1)}45%{transform:scale(1.35);background:#b9c8ff}}
+@keyframes hammy-basket-open{from{transform:translateX(100%);opacity:.5}to{transform:translateX(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){.basketFlight{display:none}.drawer,.countBubble{animation:none!important}}
+.receiptProduct .placeholder{min-height:88px;height:88px;padding:5px;font-size:9px}
+@media(max-width:360px){.basketButton{gap:5px;padding-inline:10px}.basketButton svg{display:none}}
