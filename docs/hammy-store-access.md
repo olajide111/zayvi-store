@@ -30,3 +30,7 @@ This adapter does not discover memberships, verify tokens, provision Hammy, or a
 Validation: 26 mocked-client access/database tests and TypeScript passed. Actual PostgreSQL role, policy, lock behaviour and pooled-connection isolation still need integration verification before activation.
 
 References: [PostgreSQL transaction-local configuration](https://www.postgresql.org/docs/15/functions-admin.html), [row security](https://www.postgresql.org/docs/15/ddl-rowsecurity.html).
+
+## Owner-token adapter
+
+`lib/owner-identity.ts` now provides signed Cognito access-token verification, with mandatory active-session and MFA checks supplied by a trusted server adapter. See [owner authentication](hammy-owner-authentication.md) for the remaining provider, sign-in and membership wiring. This does not change the activation status above.
