@@ -23,7 +23,7 @@ test('department navigation filters only the pilot sample collection and rejects
  const page=await Preview({searchParams:Promise.resolve({department:'Kids'})});
  const html=renderToStaticMarkup(page);
  assert.match(html,/Kids’ summer edit/);assert.doesNotMatch(html,/Everyday denim edit/);
- assert.match(html,/DESIGN PREVIEW/);
+ assert.match(html,/Preview store/);
  const unknown=renderToStaticMarkup(await Preview({searchParams:Promise.resolve({department:'invalid'})}));
  assert.match(unknown,/Every kind/);
 });

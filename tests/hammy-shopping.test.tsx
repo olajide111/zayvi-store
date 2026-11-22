@@ -35,7 +35,7 @@ test('product flow presents a gallery and required options, while cards open cho
  const html=renderToStaticMarkup(<HammyShop route={{view:'product',product:product.id}}/>);
  assert.match(html,/Product image gallery/);assert.match(html,/Size/);assert.match(html,/required/);assert.match(html,/Colour/);assert.match(html,/Add to basket/);assert.match(html,/Delivery &amp; returns/);
  const collection=renderToStaticMarkup(<HammyShop route={{view:'collection',department:'Sportswear'}}/>);
- assert.match(collection,/Activewear edit/);assert.match(collection,/Choose size &amp; colour/);
+ assert.match(collection,/Activewear edit/);assert.match(collection,/Choose options/);
  const women=renderToStaticMarkup(<HammyShop route={{view:'collection',department:'Women'}}/>);assert.match(women,/Activewear edit/);assert.doesNotMatch(women,/Training essentials/);assert.doesNotMatch(collection,/Everyday denim edit/);
  const missing=renderToStaticMarkup(<HammyShop route={{view:'product',product:'not-found'}}/>);
  assert.match(missing,/Product not found/);assert.doesNotMatch(missing,/Add to basket/);
@@ -56,14 +56,14 @@ test('related styles prioritise the same department, exclude the current product
  const html=renderToStaticMarkup(<HammyShop route={{view:'product',product:product.id}}/>);
  assert.match(html,/Next product image/);assert.match(html,/Previous product image/);assert.match(html,/More styles to explore/);
  const collection=renderToStaticMarkup(<HammyShop route={{view:'collection',department:'Baby'}}/>);
- assert.match(collection,/Refine your selection/);assert.match(collection,/All sizes/);assert.match(collection,/0–3 months/);assert.doesNotMatch(collection,/UK 9/);
+ assert.match(collection,/Filters/);assert.match(collection,/All sizes/);assert.match(collection,/0–3 months/);assert.doesNotMatch(collection,/UK 9/);
 });
 
 test('Hammy home has distinct editorial departments and sports/footwear routes without enabling checkout',()=>{
  const home=renderToStaticMarkup(<HammyShop route={{view:'home'}}/>);
- assert.match(home,/Every kind/);assert.match(home,/The active edit|THE ACTIVE EDIT/);
+ assert.match(home,/Every kind/);assert.match(home,/Made to/);
  assert.match(home,/Shop sportswear/);assert.match(home,/Find your footwear/);
- assert.match(home,/Footer departments/);assert.match(home,/NO CHECKOUT/);
+ assert.match(home,/Footer shopping links/);assert.match(home,/Checkout unavailable/);
  assert.match(home,/loading="eager"/);
 });
 

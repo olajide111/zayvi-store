@@ -39,3 +39,14 @@ test('the sales roadmap keeps identity and real checkout ahead of growth automat
  assert.deepEqual(HAMMY_SALES_BUILD_ORDER.map(phase=>phase.id),['identity','checkout','recovery','bundles','service']);
  const before=new Set<string>();for(const phase of HAMMY_SALES_BUILD_ORDER){assert(phase.requires.every(id=>before.has(id)));before.add(phase.id);}
 });
+
+test('optional shopping details stay collapsed while primary choices remain available',()=>{
+ const collection=renderToStaticMarkup(<HammyShop route={{view:'collection'}}/>);
+ const disclosures=[...collection.matchAll(/<details([^>]*)>/g)];
+ assert(disclosures.length>=2);for(const disclosure of disclosures)assert.doesNotMatch(disclosure[1],/\bopen(?:=|\s|$)/);
+ assert.match(collection,/Find a style/);assert.match(collection,/Choose options/);assert.match(collection,/Checkout unavailable/);
+ assert.doesNotMatch(collection,/About this pilot|Refine your selection|No order, stock reservation/);
+ const quick=renderToStaticMarkup(<HammyQuickView product={product} ready adding={false} onAdd={()=>({ok:true})} onClose={()=>{}} filters={{}}/>);
+ assert.doesNotMatch(quick,/<details[^>]*\bopen(?:=|\s|>)/);assert.match(quick,/Size/);assert.match(quick,/Colour/);assert.match(quick,/Add to basket/);
+ assert.doesNotMatch(quick,/Sample sizes|Sample colours|Explore the fit/);
+});
