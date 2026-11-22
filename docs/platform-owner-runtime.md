@@ -25,3 +25,5 @@ The existing private database Lambda has no NAT gateway/default outbound route. 
 The remaining work is to configure and verify the real provider and network path, review/promote the three SQL proposals as new migrations, supply a durable limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
 
 No real payments, fulfilment, production configuration or existing theme is changed here.
+
+Use the [read-only Preview configuration check](preview-owner-activation.md) to inventory existing pools and inspect a selected client before preparing any infrastructure activation. A matching metadata report does not enable this runtime.
