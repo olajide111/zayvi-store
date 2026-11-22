@@ -102,3 +102,13 @@ test('commerce entry preserves responses/exceptions and marks only handled 5xx w
   assert.equal(logs.length,1);
   response=new Error('runtime failure');await assert.rejects(()=>exports.handler({}),/runtime failure/);
 });
+
+
+test('owner identity activation is isolated from ordinary Preview plans',()=>{
+ const types=['aws_cognito_user_pool','aws_cognito_user_pool_client','aws_cognito_user_pool_domain','aws_cognito_resource_server'];
+ const resources=types.map(type=>change(type,['create'],type+'.preview_owners[0]'));
+ assert.equal(review(plan(...resources),'owner-identity').blocked.length,0);
+ assert(review(plan(...resources)).blocked.length);
+ for(const bad of [plan(...resources.slice(1)),plan(...resources,change('aws_lambda_function',['update'])),plan(...resources.map((r,i)=>i? r:change(types[0],['delete','create'],types[0]+'.preview_owners[0]'))),plan(...resources,change('aws_db_instance',['update']))])assert(review(bad,'owner-identity').blocked.length);
+ assert(review({...plan(...resources),complete:false},'owner-identity').blocked.length);
+});

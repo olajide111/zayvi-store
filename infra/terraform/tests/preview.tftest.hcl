@@ -75,3 +75,45 @@ run "preview_with_signed_webhook" {
     error_message = "Monitor storage, memory and CPU pressure without changing the database."
   }
 }
+
+
+run "owner_identity_disabled_by_default" {
+  command = plan
+  assert {
+    condition     = length(aws_cognito_user_pool.preview_owners) == 0 && output.preview_owner_identity == null
+    error_message = "Ordinary Preview plans must not create owner identity resources."
+  }
+}
+
+run "owner_identity_reviewed_preview_only" {
+  command = plan
+  variables {
+    preview_owner_identity = {
+      origin        = "https://preview.zayvi.store"
+      domain_prefix = "zayvi-preview-owners-001961766018"
+    }
+  }
+  assert {
+    condition     = aws_cognito_user_pool.preview_owners[0].user_pool_tier == "LITE" && aws_cognito_user_pool.preview_owners[0].mfa_configuration == "ON" && aws_cognito_user_pool.preview_owners[0].software_token_mfa_configuration[0].enabled && aws_cognito_user_pool.preview_owners[0].admin_create_user_config[0].allow_admin_create_user_only && aws_cognito_user_pool.preview_owners[0].deletion_protection == "ACTIVE"
+    error_message = "Preview owners require controlled provisioning, TOTP MFA, Lite tier and deletion protection."
+  }
+  assert {
+    condition     = !aws_cognito_user_pool_client.preview_owners[0].generate_secret && aws_cognito_user_pool_client.preview_owners[0].enable_token_revocation && toset(aws_cognito_user_pool_client.preview_owners[0].allowed_oauth_flows) == toset(["code"]) && toset(aws_cognito_user_pool_client.preview_owners[0].callback_urls) == toset(["https://preview.zayvi.store/api/owner/auth/callback"]) && aws_cognito_user_pool_client.preview_owners[0].access_token_validity == 60 && aws_cognito_user_pool_client.preview_owners[0].id_token_validity == 60
+    error_message = "Use a no-secret, revocable, code-flow Preview client with the exact callback and one-hour tokens."
+  }
+  assert {
+    condition     = aws_cognito_resource_server.preview_owners[0].identifier == "zayvi" && aws_cognito_user_pool_domain.preview_owners[0].managed_login_version == 1 && !output.preview_owner_identity.runtime_ready
+    error_message = "Keep the existing resource scope and Lite-compatible classic login; infrastructure alone cannot enable runtime access."
+  }
+}
+
+run "owner_identity_rejects_production_origin" {
+  command = plan
+  variables {
+    preview_owner_identity = {
+      origin        = "https://www.zayvi.store"
+      domain_prefix = "zayvi-preview-owners-001961766018"
+    }
+  }
+  expect_failures = [var.preview_owner_identity]
+}

@@ -1,0 +1,34 @@
+name: Preview Terraform validation
+on:
+  pull_request:
+    branches: [zayvi-admin-dashboard]
+    paths: ['infra/terraform/**', 'infra/scripts/**', '.github/workflows/preview-terraform.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AWS_EC2_METADATA_DISABLED: 'true'
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.9
+          terraform_wrapper: false
+      - name: Create synthetic archive fixtures for mocked plans only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          for name in ['zayvi-api-bootstrap.zip', 'zayvi-db-bootstrap.zip']:
+              with zipfile.ZipFile(Path('infra/terraform') / name, 'w') as archive:
+                  archive.writestr('index.js', '// Mock test fixture only; never deploy.\n')
+          PY
+      - run: terraform -chdir=infra/terraform init -backend=false -input=false -lockfile=readonly
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform validate -no-color
+      - run: terraform -chdir=infra/terraform test -no-color
+      - run: node --test infra/scripts/deployment-tools.test.cjs infra/scripts/owner-preview-preflight.test.cjs
