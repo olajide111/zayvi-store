@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const swc=require('next/dist/build/swc');
-require.extensions['.jsx']=(module,file)=>{const r=swc.transformSync(fs.readFileSync(file,'utf8'),{filename:file,jsc:{parser:{syntax:'ecmascript',jsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});module._compile(r.code,file);};
+for(const ext of ['.jsx','.tsx'])require.extensions[ext]=(module,file)=>{const r=swc.transformSync(fs.readFileSync(file,'utf8'),{filename:file,jsc:{parser:{syntax:ext==='.tsx'?'typescript':'ecmascript',tsx:true,jsx:true},transform:{react:{runtime:'automatic'}}},module:{type:'commonjs'}});module._compile(r.code,file);};
 const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 let rendered=0,interactions=0;
 for(const family of ['showroom','editorial','market','atelier','fresh','spec'])for(const device of ['desktop','mobile']){
