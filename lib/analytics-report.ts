@@ -18,6 +18,14 @@ export function dailyOrderSeries(report:Pick<AnalyticsReport,'trendFrom'|'period
   while(cursor<=end&&points.length<92){const day=cursor.toISOString().slice(0,10);points.push({day,orders:totals.get(day)||0});cursor.setUTCDate(cursor.getUTCDate()+1);}
   return points;
 }
+/** Select a single market/currency before aggregating any monetary amount. */
+export function dailyPaidValueSeries(report:Pick<AnalyticsReport,'trendFrom'|'period'|'daily'>,marketCode:string,currency:string){
+  const totals=new Map<string,number>();
+  for(const row of report.daily){
+    if(row.marketCode===marketCode&&row.currency===currency)totals.set(row.day,(totals.get(row.day)||0)+row.paidValue);
+  }
+  return dailyOrderSeries(report).map(point=>({day:point.day,value:totals.get(point.day)||0}));
+}
 export function analyticsCsv(report:AnalyticsReport){
   const cell=(value:unknown)=>{const text=String(value??'');return '"'+(/^[=+\-@\t\r]/.test(text)?"'"+text:text).replaceAll('"','""')+'"';};
   const rows:unknown[][]=[['Period start (UTC)',report.period.from||'All time'],['Period end (UTC)',report.period.to],

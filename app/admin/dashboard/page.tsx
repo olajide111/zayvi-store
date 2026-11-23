@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import StoreBuildStatus from "@/components/admin/StoreBuildStatus";
+import SalesValueChart from '@/components/admin/SalesValueChart';
+import type {AnalyticsReport} from '@/lib/analytics-report';
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck,
   ClipboardList, Inbox, RefreshCw, ShoppingBag,
@@ -24,7 +26,7 @@ type MarketMetric = {
   paidValue: number;
 };
 
-type Analytics = {
+type LegacyAnalytics = {
   markets: MarketMetric[];
   recentOrders: {
     id: string;
@@ -37,6 +39,8 @@ type Analytics = {
     createdAt: string;
   }[];
 };
+
+type Analytics=LegacyAnalytics|AnalyticsReport;
 
 type Operations = {
   total: number;
@@ -237,6 +241,17 @@ function PerformancePanel({ source, market }: { source: Source<Analytics>; marke
   );
 }
 
+function DashboardSalesPanel({source,market}:{source:Source<Analytics>;market:MarketFilter}){
+  if(source.status==='ready'&&'schemaVersion' in source.data&&source.data.schemaVersion===2){
+    const report=source.data;
+    const selected=market==='all'?report:{...report,markets:report.markets.filter(m=>m.marketCode===market),daily:report.daily.filter(d=>d.marketCode===market),filters:{...report.filters,market}};
+    return <SalesValueChart key={`${market}:${report.generatedAt}`} data={selected}/>;
+  }
+  return <section className={panelClass}><PanelHeading title="Sales value over time" subtitle="Daily paid order value, with GBP and NGN kept separate" href="/admin/analytics" linkLabel="Analytics"/>
+    <PanelNotice>{source.status==='loading'?'Loading chart data…':source.status==='unavailable'?'Chart data is unavailable. Refresh to try again.':'The sales graph is ready. Daily figures will appear after the pending Preview analytics API update is applied.'}</PanelNotice>
+  </section>;
+}
+
 function OrdersPanel({ source, market }: { source: Source<Analytics>; market: MarketFilter }) {
   const orders = source.status === "ready" ? source.data.recentOrders
     .filter((order) => market === "all" || order.marketCode === market)
@@ -389,6 +404,7 @@ export default function AdminDashboard() {
             </div>
             <PerformancePanel source={analytics} market={market} />
           </div>
+          <DashboardSalesPanel source={analytics} market={market}/>
           <OrdersPanel source={analytics} market={market} />
           <InventoryPanel sources={{ GB: stockGB, NG: stockNG }} market={market} />
         </div>
