@@ -4,6 +4,7 @@ import {useEffect,useState} from 'react';
 import {Download,RefreshCw,ArrowRight} from 'lucide-react';
 import AdminPageHeading,{adminAction} from './AdminPageHeading';
 import CampaignLinkBuilder from './CampaignLinkBuilder';
+import SalesValueChart from './SalesValueChart';
 import {analyticsCsv,dailyOrderSeries,growthActions,percentageChange,type AnalyticsReport} from '@/lib/analytics-report';
 
 const panel='min-w-0 rounded-2xl border border-[#dfe6e1] bg-white p-5';
@@ -77,6 +78,7 @@ export default function CommerceAnalyticsWorkspace({growth=false}:{growth?:boole
         <dl className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3"><div><dt className="text-xs text-[#64756b]">Orders</dt><dd className="mt-1 text-2xl font-semibold">{state.legacy.orders.total}</dd></div><div><dt className="text-xs text-[#64756b]">Currently paid</dt><dd className="mt-1 text-2xl font-semibold">{state.legacy.orders.paid}</dd></div><div><dt className="text-xs text-[#64756b]">Refunded orders</dt><dd className="mt-1 text-2xl font-semibold">{state.legacy.orders.refunded}</dd></div></dl>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">{state.legacy.markets.map(m=><article key={`${m.marketCode}:${m.currency}`} className="rounded-xl bg-[#f5f8f5] p-4"><h2 className="font-semibold">{marketName(m.marketCode)} · {m.currency}</h2><p className="mt-2 text-xs text-[#64756b]">Currently paid order value</p><p className="mt-1 text-xl font-semibold">{money(m.paidValue,m.currency)}</p></article>)}</div>
         <Link href="/admin/orders" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#215241]">Review orders<ArrowRight size={15}/></Link>
+        {!growth&&<div className="mt-5 rounded-xl border border-dashed border-[#cbd7ce] bg-[#f7f9f6] p-5"><h2 className="font-semibold">Sales value over time</h2><p className="mt-2 text-sm leading-relaxed text-[#64756b]">The sales graph is ready. Daily figures will appear after the pending Preview API update is applied. All-time totals cannot be used to reconstruct a daily graph.</p></div>}
       </section>}
       {state?.error&&<div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"><p>{state.error}</p><button onClick={()=>setRevision(n=>n+1)} className="mt-3 min-h-11 underline">Try again</button></div>}
       {data&&<>
@@ -96,7 +98,7 @@ export default function CommerceAnalyticsWorkspace({growth=false}:{growth?:boole
             ['Store content','Publish useful guidance and customer-care pages.','/admin/content'],
           ].map(([title,detail,href])=><Link key={href} href={href} className="rounded-xl bg-[#f5f8f5] p-4"><h3 className="font-medium">{title}</h3><p className="mt-2 text-sm text-[#64756b]">{detail}</p><ArrowRight className="mt-3" size={16}/></Link>)}</div></section>
           <section className={panel}><h2 className="font-semibold">Measurement still to connect</h2><p className="mt-2 text-sm leading-relaxed text-[#64756b]">Visitor conversion, abandoned carts, campaign return and customer acquisition cost are not measured yet. Recovery messages, bundles and campaigns are not enabled by this page.</p><Link href="/admin/pilots/hammy/integrations" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#215241]">View Hammy integration readiness<ArrowRight className="ml-2" size={15}/></Link></section>
-        </>:<OrderTrend data={data}/>}
+        </>:<><SalesValueChart key={`${data.period.from}:${data.period.to}:${data.filters.market}`} data={data}/><OrderTrend data={data}/></>}
         <section aria-labelledby="market-metrics"><h2 id="market-metrics" className="mb-3 text-lg font-semibold">Market performance</h2><div className="grid gap-4 md:grid-cols-2">{data.markets.map(item=>{
           const previous=data.previous?.markets.find(m=>m.marketCode===item.marketCode&&m.currency===item.currency);
           return <article key={`${item.marketCode}:${item.currency}`} className={panel}><div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{marketName(item.marketCode)}</h3><span className="rounded-lg bg-[#edf4ed] px-3 py-1 text-xs font-medium">{item.currency}</span></div><p className="mt-4 text-xs text-[#64756b]">Currently paid order value</p><p className="mt-1 break-words text-3xl font-semibold tabular-nums">{money(item.paidValue,item.currency)}</p><p className="mt-2 text-xs text-[#64756b]">{change(item.paidValue,data.previous?previous?.paidValue||0:undefined)}</p><dl className="mt-5 grid grid-cols-2 gap-4 border-t border-[#e8ede8] pt-4"><div><dt className="text-xs text-[#64756b]">Orders</dt><dd className="mt-1 font-semibold">{item.orderCount}</dd></div><div><dt className="text-xs text-[#64756b]">Average paid order</dt><dd className="mt-1 break-words font-semibold">{item.paidAverageOrderValue===null?'—':money(item.paidAverageOrderValue,item.currency)}</dd></div></dl></article>;

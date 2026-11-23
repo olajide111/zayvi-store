@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {PGlite} from '@electric-sql/pglite';
 import {queryCommerceAnalytics} from '../infra/lambda/commerce-analytics';
 import {parseAnalyticsQuery} from '../lib/analytics-query.cjs';
-import {analyticsCsv,dailyOrderSeries,growthActions,percentageChange,type AnalyticsReport} from '../lib/analytics-report';
+import {analyticsCsv,dailyOrderSeries,dailyPaidValueSeries,growthActions,percentageChange,type AnalyticsReport} from '../lib/analytics-report';
 import {buildCampaignLink} from '../lib/campaign-links';
 const tenant='11111111-1111-1111-1111-111111111111',foreign='22222222-2222-2222-2222-222222222222';
 const now=new Date('2026-11-22T12:00:00Z');
@@ -62,6 +62,13 @@ test('analytics filters and cohorts against PostgreSQL with forced tenant RLS',a
       assert.equal(percentageChange(4,2),100);assert.equal(percentageChange(2,0),null);
       assert.equal(growthActions(report).find(a=>a.key==='payment')?.count,1);
       assert(analyticsCsv({...report,markets:[{...report.markets[0],marketCode:'=HYPERLINK("bad")'}]}).includes("'=HYPERLINK"));
+    });
+    await t.test('sales graph separates GBP from NGN and zero-fills days without paid orders',()=>{
+      const gb=dailyPaidValueSeries(report,'GB','GBP'),ng=dailyPaidValueSeries(report,'NG','NGN');
+      assert.equal(gb.reduce((sum,p)=>sum+p.value,0),180);assert.equal(ng.reduce((sum,p)=>sum+p.value,0),5000);
+      assert.equal(ng.find(p=>p.day==='2026-11-19')?.value,0);assert(gb.some(p=>p.value===0));
+      assert(dailyPaidValueSeries(report,'GB','NGN').every(p=>p.value===0));
+      assert.deepEqual(gb.map(p=>p.day),ng.map(p=>p.day));
     });
   }finally{await db.close();}
 });
