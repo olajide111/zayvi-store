@@ -4,7 +4,7 @@ import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 const temporary=await mkdtemp(join(process.cwd(),'.zayvi-storefront-tests-'));
 try{
-  await build({entryPoints:['tests/sales-value-chart.test.tsx','tests/hammy-shopping.test.tsx','tests/hammy-seamless-shopping.test.tsx','tests/hammy-cart-feedback.test.tsx','tests/hammy-pilot.test.tsx','tests/default-store-baseline.test.tsx'],
+  await build({entryPoints:['tests/theme-icons.test.tsx','tests/sales-value-chart.test.tsx','tests/hammy-shopping.test.tsx','tests/hammy-seamless-shopping.test.tsx','tests/hammy-cart-feedback.test.tsx','tests/hammy-pilot.test.tsx','tests/default-store-baseline.test.tsx'],
     bundle:true,platform:'node',format:'cjs',packages:'external',jsx:'automatic',outdir:temporary,outExtension:{'.js':'.cjs'},logLevel:'warning',
     plugins:[{name:'css-module-test-names',setup(build){
       // SSR behavioural assertions need class keys, not stylesheet processing.

@@ -17,3 +17,5 @@ Hammy shopping should keep customers browsing: product quick view must preserve 
 Hammy uses SVG icons only for functional controls; avoid emoji and Unicode glyph icons. Prefer clear text labels and omit unnecessary decorative icons.
 
 On 22 November 2026 the user explicitly authorised a Default Store spacing and product-display refresh alongside Hammy: compact collection controls, a shorter home hero and a product-first home with 12 styles. This is a scoped baseline update. Keep Default Store independent and continue treating future unqualified changes as Hammy-only.
+
+On 23 November 2026 the user extended the SVG-only icon requirement to all themes, including the independent Default Store baseline and desktop/mobile design previews. Use actual SVG for icon marks, with accessible labels on icon-only controls. Preserve mathematical operators, currency and ordinary punctuation as text. Archived design-board HTML in `components/storefront-directions/source/` is reference material; active renderers and generated JSX must comply.
