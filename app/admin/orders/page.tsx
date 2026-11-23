@@ -140,9 +140,10 @@ function OrdersWorkspace() {
   }, [revision]);
 
   const orders = useMemo(() => data?.orders ?? [], [data]);
-  const currencies = [...new Set(orders.map((order) => order.currency))].sort();
-  const currencyOrders = orders.filter((order) => currency === "all" || order.currency === currency);
   const normalized = query.trim().toLowerCase();
+  const scopedOrders=exactEmail&&normalized?orders.filter(order=>matchesOrderEmail(order.customerEmail,normalized)):orders;
+  const currencies = [...new Set(scopedOrders.map((order) => order.currency))].sort();
+  const currencyOrders = scopedOrders.filter((order) => currency === "all" || order.currency === currency);
   const visibleOrders = currencyOrders.filter((order) => {
     const matchesSearch = !normalized || (exactEmail?matchesOrderEmail(order.customerEmail,normalized):[order.orderNumber, order.customerName, order.customerEmail]
       .some((value) => value?.toLowerCase().includes(normalized)));
@@ -166,7 +167,7 @@ function OrdersWorkspace() {
       </AdminPageHeading>
 
       <section className="mx-auto max-w-[1500px] space-y-5 px-4 py-5 sm:px-7 lg:px-8">
-        <p className="text-xs text-[#52635b]">Summary for {currency === "all" ? "all currencies" : currency}, before search and status filters. Search and totals cover loaded orders only.
+        <p className="text-xs text-[#52635b]">{exactEmail?'Summary for this email match':'Workspace summary'} · {currency === "all" ? "all currencies" : currency}, before {exactEmail?'status':'search and status'} filters. Search and totals cover loaded orders only.
           {refreshedAt && !loading && !error && <> Last refreshed <time dateTime={refreshedAt}>{new Date(refreshedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })}</time> (London time).</>}
         </p>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
