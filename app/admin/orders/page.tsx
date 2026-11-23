@@ -4,6 +4,8 @@ import Link from "next/link";
 import {useSearchParams} from 'next/navigation';
 import {orderQueue,orderNextAction,type OrderQueue} from "@/lib/order-work-queue";
 import {readOrderRouteFilters,orderFiltersHref,EMPTY_ORDER_FILTERS,type OrderRouteFilters} from '@/lib/order-filter-navigation';
+import {useAdminOrderSearch} from '@/components/admin/AdminOrderSearch';
+import {matchesOrderEmail} from '@/lib/order-search-handoff';
 import { ArrowUpRight, Package, RefreshCw } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import AdminPageHeading, { adminAction } from "@/components/admin/AdminPageHeading";
@@ -56,6 +58,8 @@ function StatusPill({ value, category }: { value: string; category: string }) {
 }
 
 function OrdersWorkspace() {
+  const orderSearch=useAdminOrderSearch();
+  const [exactEmail,setExactEmail]=useState(false);
   const routeParams=useSearchParams();
   const routeQuery=routeParams?.toString()||'';
   const [data, setData] = useState<OrdersResponse | null>(null);
@@ -78,6 +82,10 @@ function OrdersWorkspace() {
   useEffect(()=>{
     applyRouteFilters(readOrderRouteFilters(new URLSearchParams(routeQuery)));
   },[routeQuery]);
+  useEffect(()=>{
+    const email=orderSearch?.take();
+    if(email){setQuery(email);setExactEmail(true);applyRouteFilters(EMPTY_ORDER_FILTERS);window.history.replaceState(window.history.state,'','/admin/orders');}
+  },[orderSearch]);
 
   function refresh() {
     setLoading(true);
@@ -87,6 +95,7 @@ function OrdersWorkspace() {
 
   function clearFilters() {
     setQuery("");
+    setExactEmail(false);
     updateRouteFilters(EMPTY_ORDER_FILTERS);
   }
 
@@ -135,8 +144,8 @@ function OrdersWorkspace() {
   const currencyOrders = orders.filter((order) => currency === "all" || order.currency === currency);
   const normalized = query.trim().toLowerCase();
   const visibleOrders = currencyOrders.filter((order) => {
-    const matchesSearch = !normalized || [order.orderNumber, order.customerName, order.customerEmail]
-      .some((value) => value?.toLowerCase().includes(normalized));
+    const matchesSearch = !normalized || (exactEmail?matchesOrderEmail(order.customerEmail,normalized):[order.orderNumber, order.customerName, order.customerEmail]
+      .some((value) => value?.toLowerCase().includes(normalized)));
     return (queue === "all" || orderQueue(order) === queue) && matchesSearch && (payment === "all" || order.paymentStatus === payment) &&
       (fulfilment === "all" || order.fulfilmentStatus === fulfilment) &&
       (orderState === "all" || order.orderStatus === orderState);
@@ -191,9 +200,10 @@ function OrdersWorkspace() {
         <fieldset disabled={loading} className="grid gap-3 rounded-xl border border-[#dfe6e1] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
           <legend className="sr-only">Filter orders</legend>
           <label className="text-xs font-semibold text-[#52635b] sm:col-span-2 xl:col-span-4">Search orders
-            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Order number, customer or email"
+            <input type="search" value={query} onChange={(event) => {setQuery(event.target.value);setExactEmail(false);}} placeholder="Order number, customer or email"
               className="mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-[#dfe6e1] px-3 text-sm font-normal text-[#172a21]" />
           </label>
+          {exactEmail&&<p className="text-xs text-[#52635b] sm:col-span-2 xl:col-span-4">Exact email match across loaded orders. Editing the search returns to general search.</p>}
           {[
             {title: "Payment status", value: payment, set: (value:string)=>updateRouteFilters({payment:value}), options: ["unpaid", "pending", "paid", "failed", "partially_refunded", "refunded"]},
             {title: "Fulfilment status", value: fulfilment, set: (value:string)=>updateRouteFilters({fulfilment:value}), options: ["unfulfilled", "processing", "fulfilled", "cancelled"]},
