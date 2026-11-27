@@ -5,7 +5,8 @@ import {Download,RefreshCw,ArrowRight} from 'lucide-react';
 import AdminPageHeading,{adminAction} from './AdminPageHeading';
 import CampaignLinkBuilder from './CampaignLinkBuilder';
 import SalesValueChart from './SalesValueChart';
-import {analyticsCsv,dailyOrderSeries,growthActions,percentageChange,type AnalyticsReport} from '@/lib/analytics-report';
+import OrderTrend from './OrderTrend';
+import {analyticsCsv,growthActions,percentageChange,type AnalyticsReport} from '@/lib/analytics-report';
 
 const panel='min-w-0 rounded-2xl border border-[#dfe6e1] bg-white p-5';
 const money=(value:number,currency:string)=>new Intl.NumberFormat(currency==='NGN'?'en-NG':'en-GB',{style:'currency',currency}).format(value);
@@ -15,19 +16,6 @@ function change(current:number,previous:number|undefined){
   if(previous===undefined)return 'No comparison selected';
   const value=percentageChange(current,previous);
   return value===null?(current?'New activity; previous period was zero':'No change from zero'):`${value>0?'+':''}${value.toFixed(1)}% vs previous period`;
-}
-function OrderTrend({data}:{data:AnalyticsReport}){
-  const points=dailyOrderSeries(data),max=Math.max(1,...points.map(p=>p.orders)),width=640,height=140,barWidth=width/Math.max(points.length,1);
-  return <section className={panel} aria-labelledby="trend-title">
-    <div className="flex flex-wrap justify-between gap-2"><h2 id="trend-title" className="font-semibold">Orders over time</h2><span className="text-xs text-[#64756b]">Daily · UTC{data.filters.range==='all'?' · last 90 days':''}</span></div>
-    <p className="mt-1 text-sm text-[#64756b]">Order counts across selected markets. No currencies are combined.</p>
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily order counts, ${points.reduce((n,p)=>n+p.orders,0)} orders in the chart`} className="mt-5 h-36 w-full">
-      <line x1="0" y1={height-1} x2={width} y2={height-1} stroke="#dfe6e1"/>
-      {points.map((p,i)=><rect key={p.day} x={i*barWidth+1} y={height-p.orders/max*(height-5)} width={Math.max(1,barWidth-2)} height={p.orders/max*(height-5)} rx="2" fill="#215241"><title>{p.day}: {p.orders} orders</title></rect>)}
-    </svg>
-    <div className="mt-1 flex justify-between text-xs text-[#64756b]"><span>{points[0]?.day}</span><span>{points.at(-1)?.day}</span></div>
-    <details className="mt-4 text-sm"><summary className="cursor-pointer font-medium text-[#215241]">View daily figures</summary><div className="mt-3 max-h-60 overflow-auto"><table className="w-full text-left"><thead><tr><th className="py-2">Date (UTC)</th><th className="text-right">Orders</th></tr></thead><tbody>{points.map(p=><tr key={p.day} className="border-t border-[#e8ede8]"><td className="py-2">{p.day}</td><td className="text-right tabular-nums">{p.orders}</td></tr>)}</tbody></table></div></details>
-  </section>;
 }
 export default function CommerceAnalyticsWorkspace({growth=false}:{growth?:boolean}){
   const [range,setRange]=useState('30d'),[market,setMarket]=useState('all'),[revision,setRevision]=useState(0);
