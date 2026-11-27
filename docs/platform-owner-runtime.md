@@ -28,6 +28,8 @@ The [durable limiter](owner-durable-limiter.md) now has a tested PostgreSQL prop
 
 The [private session lifecycle](owner-private-session-lifecycle.md) now supplies tested hash-only lookup and revocation adapters. It remains unmounted. Session activity and current membership/role checks must still run within each private business-operation transaction; a remote lookup cannot replace them.
 
+The first [protected private store read](owner-private-store-summary.md) now verifies an operation-bound, short-lived web-side assurance proof and runs current access checks and the summary query in one database transaction. It is unmounted and read-only. Other business operations and the actual live provider assurance adapter remain pending.
+
 The remaining work is to configure and verify the real provider and network path, review/promote the SQL proposals as new migrations, activate the limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
 
 No real payments, fulfilment, production configuration or existing theme is changed here.
