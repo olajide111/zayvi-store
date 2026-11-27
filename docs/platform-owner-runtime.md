@@ -1,5 +1,7 @@
 # Preview owner authentication runtime
 
+The [remote web runtime](owner-remote-web-runtime.md) now assembles the typed private interfaces into one tested flow. It is the intended split-network composition and remains unmounted; the direct runtime below is retained. Current live provider assurance and deployment activation are still pending.
+
 Status: composed and tested locally. The operator has provisioned the dedicated Preview Cognito resources and supplied a passing configuration preflight. No authentication routes are mounted and no database proposals are applied by this change.
 
 `lib/owner-auth-runtime.ts` connects the existing login, encrypted attempt repository, signed token-pair verifier, membership directory, transactional session writer, HTTP handlers and protected store-operation authoriser. It is shared platform infrastructure; Hammy can supply its separate navigation context and trusted tenant/store binding as the first pilot. The retained Store Templates baseline is unchanged.
