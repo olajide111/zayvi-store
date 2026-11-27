@@ -24,7 +24,9 @@ The existing private database Lambda has no NAT gateway/default outbound route. 
 
 The [typed private attempt boundary](owner-private-attempt-boundary.md) separates encrypted login-attempt persistence from web-side encryption. The [private session completion boundary](owner-private-session-completion.md) now verifies a short-lived signed web-side statement and keeps membership/store checks and session insertion in one database transaction. Both are tested locally and unmounted; the existing in-process runtime still needs the remaining remote lifecycle/operation adapters before activation.
 
-The remaining work is to configure and verify the real provider and network path, review/promote the three SQL proposals as new migrations, supply a durable limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
+The [durable limiter](owner-durable-limiter.md) now has a tested PostgreSQL proposal and typed private service boundary. It still needs trusted hosting identity, a dedicated private key, maintenance scheduling and real RDS/network verification before wiring into the runtime.
+
+The remaining work is to configure and verify the real provider and network path, review/promote the SQL proposals as new migrations, activate the limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
 
 No real payments, fulfilment, production configuration or existing theme is changed here.
 
