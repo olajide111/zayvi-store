@@ -26,6 +26,8 @@ The [typed private attempt boundary](owner-private-attempt-boundary.md) separate
 
 The [durable limiter](owner-durable-limiter.md) now has a tested PostgreSQL proposal and typed private service boundary. It still needs trusted hosting identity, a dedicated private key, maintenance scheduling and real RDS/network verification before wiring into the runtime.
 
+The [private session lifecycle](owner-private-session-lifecycle.md) now supplies tested hash-only lookup and revocation adapters. It remains unmounted. Session activity and current membership/role checks must still run within each private business-operation transaction; a remote lookup cannot replace them.
+
 The remaining work is to configure and verify the real provider and network path, review/promote the SQL proposals as new migrations, activate the limiter and provider assurance, mount the handlers/sign-in page, and migrate protected workspace/API guards. Review a saved Preview infrastructure plan before applying it. Preserve the webhook-secret and alarm-topic inputs. Browser/provider/RDS integration checks must pass before enabling the pilot.
 
 No real payments, fulfilment, production configuration or existing theme is changed here.
