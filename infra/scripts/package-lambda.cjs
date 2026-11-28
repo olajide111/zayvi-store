@@ -55,11 +55,12 @@ function archive(entries) {
 }
 
 function packageLambda(target) {
-  if (!['api', 'db-bootstrap'].includes(target)) throw new Error('Choose api or db-bootstrap');
+  if (!['api', 'db-bootstrap', 'merchant-registration'].includes(target)) throw new Error('Choose api, db-bootstrap or merchant-registration');
   const infra = path.resolve(__dirname, '..');
-  const root = path.join(infra, target === 'api' ? 'lambda' : 'db-bootstrap');
+  const root = path.join(infra, target === 'db-bootstrap' ? 'db-bootstrap' : 'lambda');
+  const bundle = target === 'merchant-registration' ? 'dist/merchant-registration.js' : 'dist/index.js';
   const entries = [
-    { name: 'index.js', bytes: fs.readFileSync(path.join(root, 'dist/index.js')) },
+    { name: 'index.js', bytes: fs.readFileSync(path.join(root, bundle)) },
     { name: 'global-bundle.pem', bytes: fs.readFileSync(path.join(root, 'global-bundle.pem')) },
   ];
   if (target === 'db-bootstrap') {
@@ -68,7 +69,7 @@ function packageLambda(target) {
     if (!names.length) throw new Error('No database migrations found');
     for (const name of names) entries.push({ name: 'migrations/' + name, bytes: fs.readFileSync(path.join(migrations, name)) });
   }
-  const destination = path.join(infra, 'terraform', target === 'api' ? 'zayvi-api-bootstrap.zip' : 'zayvi-db-bootstrap.zip');
+  const destination = path.join(infra, 'terraform', target === 'merchant-registration' ? 'zayvi-preview-merchant-registration.zip' : `zayvi-${target === 'api' ? 'api-bootstrap' : 'db-bootstrap'}.zip`);
   fs.writeFileSync(destination, archive(entries));
   console.log(`Packaged ${target}: ${entries.length} files`);
 }

@@ -16,6 +16,8 @@
   "scripts": {
     "build": "esbuild handler.js --bundle --platform=node --target=node22 --outfile=dist/index.js",
     "package": "npm run fetch:ca && npm run build && node ../scripts/package-lambda.cjs api",
-    "fetch:ca": "test -s global-bundle.pem || curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o global-bundle.pem"
+    "fetch:ca": "test -s global-bundle.pem || curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o global-bundle.pem",
+    "build:merchant-registration": "esbuild merchant-registration.js --bundle --platform=node --target=node22 --outfile=dist/merchant-registration.js",
+    "package:merchant-registration": "npm run fetch:ca && npm run build:merchant-registration && node ../scripts/package-lambda.cjs merchant-registration"
   }
 }

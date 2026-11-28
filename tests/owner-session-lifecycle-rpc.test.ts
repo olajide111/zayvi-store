@@ -103,14 +103,17 @@ test("merchant lifecycle resolves and revokes only exact registered store sessio
 
   try {
     await db.exec(readFileSync("database/migrations/0001_multi_tenant_foundation.sql", "utf8").replace("CREATE EXTENSION IF NOT EXISTS pgcrypto;", ""));
-    await db.exec("CREATE ROLE zayvi_app NOLOGIN NOSUPERUSER NOBYPASSRLS");
-    for (const file of ["identity-membership-directory.sql", "owner-login-attempts.sql", "owner-sessions.sql", "merchant-registration.sql", "merchant-sessions.sql"]) {
+    await db.exec("CREATE ROLE zayvi_app NOLOGIN NOSUPERUSER NOBYPASSRLS; CREATE ROLE rds_iam NOLOGIN");
+    for (const file of ["identity-membership-directory.sql", "owner-login-attempts.sql", "owner-sessions.sql", "merchant-registration.sql", "merchant-registration-iam.sql", "merchant-sessions.sql"]) {
       await db.exec(readFileSync("database/proposals/" + file, "utf8"));
     }
     async function register(issuer: string, subject: string) {
+      await db.exec("SET ROLE zayvi_merchant_registrar");
       const { rows: [binding] } = await db.query<{ tenant_id: string; store_id: string }>(
         "SELECT * FROM zayvi_registration.create_draft_store($1,$2,$3,$4)", [issuer, subject, "merchant@example.test", "Test Shop"],
       );
+      await assert.rejects(db.query("SELECT * FROM zayvi_registration.registrations"), /permission denied/);
+      await db.exec("RESET ROLE");
       const { rows: [identity] } = await db.query<{ membership_id: string }>(
         "SELECT membership_id FROM zayvi_identity.membership_directory WHERE issuer=$1 AND subject=$2", [issuer, subject],
       );
