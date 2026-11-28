@@ -91,7 +91,10 @@ function createOwnerTokenVerifier(config: OwnerIdentityConfig, trustedKeys?: JWT
           const expected=createHash('sha256').update(accessToken).digest().subarray(0,16).toString('base64url');
           if(typeof payload.at_hash!=='string'||payload.at_hash!==expected)throw denied();
         }
-        return payload.exp;
+        const email = typeof payload.email === 'string' && payload.email.length <= 254 &&
+          /^[^\s@]+@[^\s@]+$/.test(payload.email) && payload.email_verified === true
+          ? payload.email : null;
+        return {expiresAt:payload.exp,email};
       }catch{throw denied();}
     },
   };
@@ -116,21 +119,46 @@ export type VerifiedOwnerLogin = {
   providerSession:VerifiedOwnerSession;
   expiresAt:number;
 };
-/** Verifies a returned token pair before any session can be created. */
-export function createOwnerLoginIdentityVerifier(config:OwnerIdentityConfig,
-  verifySession:(session:VerifiedOwnerSession,tokens:Pick<OwnerLoginTokens,'accessToken'|'idToken'>)=>Promise<{active:boolean;mfaVerified:boolean}>,
-  trustedKeys?:JWTVerifyGetKey){
+type LoginAssuranceVerifier = (session:VerifiedOwnerSession,
+  tokens:Pick<OwnerLoginTokens,'accessToken'|'idToken'>)=>Promise<{active:boolean;mfaVerified:boolean}>;
+
+function createLoginTokenVerifier(config:OwnerIdentityConfig,verifySession:LoginAssuranceVerifier,trustedKeys?:JWTVerifyGetKey){
   if(typeof verifySession!=='function')throw new Error('Owner session verification is required.');
   const verifier=createOwnerTokenVerifier(config,trustedKeys);
-  return async(tokens:OwnerLoginTokens,nonce:string):Promise<VerifiedOwnerLogin>=>{
+  return async(tokens:OwnerLoginTokens,nonce:string,requireEmail:boolean)=>{
     try{
       const access=await verifier.verifyAccessTokenSession(tokens.accessToken);
-      const idExpiry=await verifier.verifyIdToken(tokens.idToken,nonce,tokens.accessToken,access.session);
-      const expiresAt=Math.min(access.expiresAt,idExpiry);
-      if(expiresAt<=Math.floor(Date.now()/1000))throw denied();
+      const id=await verifier.verifyIdToken(tokens.idToken,nonce,tokens.accessToken,access.session);
+      const expiresAt=Math.min(access.expiresAt,id.expiresAt);
+      if(expiresAt<=Math.floor(Date.now()/1000)||(requireEmail&&id.email===null))throw denied();
       const assurance=await verifySession({...access.session},{accessToken:tokens.accessToken,idToken:tokens.idToken});
       if(assurance.active!==true||assurance.mfaVerified!==true)throw denied();
-      return {identity:{issuer:access.session.issuer,subject:access.session.subject,authenticationTime:access.session.authenticationTime,mfaVerified:true},providerSession:access.session,expiresAt};
+      const login:VerifiedOwnerLogin={
+        identity:{issuer:access.session.issuer,subject:access.session.subject,authenticationTime:access.session.authenticationTime,mfaVerified:true},
+        providerSession:access.session,expiresAt,
+      };
+      return {login,email:id.email};
     }catch{throw denied();}
+  };
+}
+
+/** Verifies a returned token pair before any session can be created. */
+export function createOwnerLoginIdentityVerifier(config:OwnerIdentityConfig,verifySession:LoginAssuranceVerifier,
+  trustedKeys?:JWTVerifyGetKey){
+  const verify=createLoginTokenVerifier(config,verifySession,trustedKeys);
+  return async(tokens:OwnerLoginTokens,nonce:string):Promise<VerifiedOwnerLogin>=>{
+    const {login}=await verify(tokens,nonce,false);
+    return login;
+  };
+}
+
+/** Registration obtains a verified email from the same signed pair and checked session. */
+export function createMerchantRegistrationIdentityVerifier(config:OwnerIdentityConfig,verifySession:LoginAssuranceVerifier,
+  trustedKeys?:JWTVerifyGetKey){
+  const verify=createLoginTokenVerifier(config,verifySession,trustedKeys);
+  return async(tokens:OwnerLoginTokens,nonce:string):Promise<VerifiedOwnerLogin & {email:string}>=>{
+    const {login,email}=await verify(tokens,nonce,true);
+    if(email===null)throw denied();
+    return {...login,email};
   };
 }
