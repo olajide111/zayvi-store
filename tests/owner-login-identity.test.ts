@@ -191,18 +191,15 @@ test("Preview signup connects the hosted callback to a dedicated signed private 
         message = request;
         return register(request);
       }
+      if (request.operation === "merchant.session.lookup") {
+        if (!committed || request.sessionHash !== committed.sessionHash) return { version: 1, ok: true, session: null };
+        return { version: 1, ok: true, session: { tenantId, storeId, membershipId: tenantId, issuer, subject,
+          role: "owner", authenticationTime: 1, providerSessionId: committed.providerSessionId,
+          providerTokenId: committed.providerTokenId, expiresAt: committed.expiresAt } };
+      }
       return attemptsDispatcher(request);
     },
     async authorise() {},
-    sessions: {
-      async load(token) {
-        if (!committed || !token) return null;
-        assert.equal(createHash("sha256").update(token).digest("hex"), committed.sessionHash);
-        return { tenantId, storeId, membershipId: tenantId, issuer, subject, role: "owner", authenticationTime: 1,
-          providerSessionId: committed.providerSessionId, providerTokenId: committed.providerTokenId, expiresAt: committed.expiresAt };
-      },
-      async revoke() {},
-    },
     providerExchange: (async () => {
       const pair = await tokens({ ...verifiedEmail, nonce: authNonce });
       return Response.json({ access_token: pair.accessToken, id_token: pair.idToken, token_type: "Bearer", expires_in: 600 });

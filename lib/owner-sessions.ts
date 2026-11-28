@@ -11,11 +11,17 @@ const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
 export type OwnerSessionLifecycleStore={loadHash(sessionHash:string):Promise<StoredOwnerSession|null>;revokeHash(sessionHash:string):Promise<void>};
 /** Private database lifecycle primitive. It does not authorise store operations. */
 export function createPostgresOwnerSessionLifecycle(lookup:Client):OwnerSessionLifecycleStore{
+  return createPostgresSessionLifecycle(lookup,'zayvi_owner_auth.resolve_session($1)','zayvi_owner_auth.revoke_session($1)',[]);
+}
+export function createPostgresMerchantSessionLifecycle(lookup:Client,providerIssuer:string):OwnerSessionLifecycleStore{
+  return createPostgresSessionLifecycle(lookup,'zayvi_registration.resolve_session($1,$2)','zayvi_registration.revoke_session($1,$2)',[providerIssuer]);
+}
+function createPostgresSessionLifecycle(lookup:Client,resolve:string,revoke:string,parameters:unknown[]):OwnerSessionLifecycleStore{
   const validate=(value:string)=>{if(!/^[a-f0-9]{64}$/.test(value))throw new Error('Invalid owner session hash.');};
   return {
     async loadHash(sessionHash){
       validate(sessionHash);
-      const {rows}=await lookup.query('SELECT * FROM zayvi_owner_auth.resolve_session($1)',[sessionHash]);
+      const {rows}=await lookup.query('SELECT * FROM '+resolve,[sessionHash,...parameters]);
       if(!rows.length)return null;
       const r=rows[0],expiresAt=Math.floor(new Date(r.expires_at as string|Date).getTime()/1000),authenticationTime=Number(r.authentication_time);
       if(rows.length!==1||![r.tenant_id,r.store_id,r.membership_id].every(value=>typeof value==='string'&&uuid.test(value))||
@@ -27,7 +33,7 @@ export function createPostgresOwnerSessionLifecycle(lookup:Client):OwnerSessionL
     },
     async revokeHash(sessionHash){
       validate(sessionHash);
-      await lookup.query('SELECT zayvi_owner_auth.revoke_session($1)',[sessionHash]);
+      await lookup.query('SELECT '+revoke,[sessionHash,...parameters]);
     },
   };
 }

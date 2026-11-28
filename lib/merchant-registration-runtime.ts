@@ -9,9 +9,10 @@ import { createRemoteOwnerAttemptStore, type OwnerAttemptRequest } from "./owner
 import { createMerchantRegistrationFlow } from "./owner-login";
 import { createOwnerAuthLimiter } from "./owner-rate-limit";
 import { createRemoteOwnerLimitStore, type OwnerLimitRequest } from "./owner-rate-limit-rpc";
+import { createRemoteMerchantSessionLifecycle, type MerchantSessionRequest } from "./merchant-session-lifecycle-rpc";
 
-type PrivateRequest = MerchantRegistrationRequest | OwnerAttemptRequest | OwnerLimitRequest;
-type Dependencies = Pick<OwnerAuthHttpDependencies, "sessions" | "authorise"> & {
+type PrivateRequest = MerchantRegistrationRequest | OwnerAttemptRequest | OwnerLimitRequest | MerchantSessionRequest;
+type Dependencies = Pick<OwnerAuthHttpDependencies, "authorise"> & {
   keys: { attemptEncryption: Uint8Array; registrationProof: Uint8Array; limiterHash: Uint8Array };
   invoke(message: PrivateRequest): Promise<unknown>;
   identifyConnection(request: Request): Promise<string | null>;
@@ -20,9 +21,7 @@ type Dependencies = Pick<OwnerAuthHttpDependencies, "sessions" | "authorise"> & 
   providerExchange?: typeof fetch;
 };
 
-/** Compose signup on the web host without a database client. The caller must supply
- * private session lookup that resolves the new store by its session, not a pilot binding.
- */
+/** Compose signup and registered-merchant session lookup on the web host without a database client. */
 export function createPreviewMerchantRegistrationRuntime(input: Omit<OwnerRuntimeConfig, "binding">, dependencies?: Dependencies) {
   const context = { ...input.context, allowedPaths: [...input.context.allowedPaths] };
   const { origin } = input;
@@ -30,7 +29,7 @@ export function createPreviewMerchantRegistrationRuntime(input: Omit<OwnerRuntim
     return createMerchantRegistrationHandlers({ origin, context, enabled: false });
   }
   if (!dependencies || typeof dependencies.invoke !== "function" ||
-      typeof dependencies.identifyConnection !== "function" || typeof dependencies.sessions?.load !== "function") {
+      typeof dependencies.identifyConnection !== "function") {
     throw new Error("Complete Preview merchant registration adapters are required.");
   }
   const { attemptEncryption, registrationProof, limiterHash } = dependencies.keys;
@@ -55,5 +54,6 @@ export function createPreviewMerchantRegistrationRuntime(input: Omit<OwnerRuntim
   const limit = createOwnerAuthLimiter({
     key: limiterHash, identify: dependencies.identifyConnection, store: createRemoteOwnerLimitStore(invoke),
   });
-  return createMerchantRegistrationHandlers({ origin, context, enabled: true }, { ...dependencies, flow, limit });
+  const sessions = createRemoteMerchantSessionLifecycle({ deployment: input.deployment, providerIssuer }, invoke);
+  return createMerchantRegistrationHandlers({ origin, context, enabled: true }, { ...dependencies, flow, limit, sessions });
 }

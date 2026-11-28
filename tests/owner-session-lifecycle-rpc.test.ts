@@ -5,6 +5,7 @@ import {createHash,randomBytes} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {createPostgresOwnerSessionLifecycle,type StoredOwnerSession} from '../lib/owner-sessions';
 import {createOwnerSessionLifecycleDispatcher,createRemoteOwnerSessionLifecycle,OwnerSessionUnavailable,type OwnerLifecycleRequest} from '../lib/owner-session-lifecycle-rpc';
+import {createMerchantSessionDispatcher,createRemoteMerchantSessionLifecycle,type MerchantSessionRequest} from '../lib/merchant-session-lifecycle-rpc';
 const tenantId='11111111-1111-1111-1111-111111111111',storeId='22222222-2222-2222-2222-222222222222',member='33333333-3333-3333-3333-333333333333',subject='44444444-4444-4444-4444-444444444444';
 const otherStore='55555555-5555-5555-5555-555555555555';
 const providerIssuer='https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_Preview';
@@ -89,4 +90,77 @@ test('pinned configuration is copied and unavailable storage fails closed withou
  const token=randomBytes(32).toString('base64url'),remote=createRemoteOwnerSessionLifecycle(config,dispatch);assert.equal((await remote.load(token))?.storeId,storeId);
  const broken=createOwnerSessionLifecycleDispatcher(config,{async loadHash(){throw new Error('database credential');},async revokeHash(){}});
  await assert.rejects(broken({version:1,operation:'owner.session.lookup',sessionHash:hash(token)}),error=>error instanceof OwnerSessionUnavailable&&!error.message.includes('credential'));
+});
+
+test("merchant lifecycle resolves and revokes only exact registered store sessions in PostgreSQL", async () => {
+  const db = new PGlite();
+  await db.waitReady;
+  const browserTokens = Array.from({ length: 5 }, () => randomBytes(32).toString("base64url"));
+  const [merchantToken, independentToken, legacyToken, misboundToken, wrongIssuerToken] = browserTokens;
+  const merchantSubject = "12345678-2222-4000-8000-000000000001";
+  const secondSubject = "12345678-2222-4000-8000-000000000002";
+  const otherIssuer = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_Other";
+
+  try {
+    await db.exec(readFileSync("database/migrations/0001_multi_tenant_foundation.sql", "utf8").replace("CREATE EXTENSION IF NOT EXISTS pgcrypto;", ""));
+    await db.exec("CREATE ROLE zayvi_app NOLOGIN NOSUPERUSER NOBYPASSRLS");
+    for (const file of ["identity-membership-directory.sql", "owner-login-attempts.sql", "owner-sessions.sql", "merchant-registration.sql", "merchant-sessions.sql"]) {
+      await db.exec(readFileSync("database/proposals/" + file, "utf8"));
+    }
+    async function register(issuer: string, subject: string) {
+      const { rows: [binding] } = await db.query<{ tenant_id: string; store_id: string }>(
+        "SELECT * FROM zayvi_registration.create_draft_store($1,$2,$3,$4)", [issuer, subject, "merchant@example.test", "Test Shop"],
+      );
+      const { rows: [identity] } = await db.query<{ membership_id: string }>(
+        "SELECT membership_id FROM zayvi_identity.membership_directory WHERE issuer=$1 AND subject=$2", [issuer, subject],
+      );
+      return { ...binding, ...identity, issuer, subject };
+    }
+    const first = await register(providerIssuer, merchantSubject);
+    const second = await register(providerIssuer, secondSubject);
+    const otherProvider = await register(otherIssuer, merchantSubject);
+    await db.exec(`INSERT INTO tenants(id,name,slug,status) VALUES('${tenantId}','Pilot','pilot','active');
+      INSERT INTO tenant_memberships(id,tenant_id,identity_subject,email,role,status) VALUES('${member}','${tenantId}','legacy','owner@example.test','owner','active');
+      INSERT INTO stores(id,tenant_id,name,slug) VALUES('${storeId}','${tenantId}','Pilot','pilot');
+      INSERT INTO stores(id,tenant_id,name,slug) VALUES('${otherStore}','${first.tenant_id}','Another Store','another');
+      INSERT INTO zayvi_identity.membership_directory VALUES('${providerIssuer}','${subject}','${tenantId}','${member}');`);
+    async function seed(token: string, bound: typeof first) {
+      await db.query(`INSERT INTO zayvi_owner_auth.owner_sessions
+        (session_hash,tenant_id,store_id,membership_id,issuer,subject,role,authentication_time,provider_session_id,provider_token_id,expires_at)
+        VALUES($1,$2,$3,$4,$5,$6,'owner',$7,'provider-session','provider-token',clock_timestamp()+interval '10 minutes')`,
+      [hash(token), bound.tenant_id, bound.store_id, bound.membership_id, bound.issuer, bound.subject, Math.floor(Date.now()/1000)-10]);
+    }
+    await seed(merchantToken, first);
+    await seed(independentToken, second);
+    await seed(legacyToken, { tenant_id: tenantId, store_id: storeId, membership_id: member, issuer: providerIssuer, subject });
+    await seed(misboundToken, { ...first, store_id: otherStore });
+    await seed(wrongIssuerToken, otherProvider);
+    await db.exec("SET ROLE zayvi_app");
+
+    const lookup = { async query(sql: string, params?: unknown[]) { return { rows: (await db.query<Record<string, unknown>>(sql, params)).rows }; } };
+    const dispatch = createMerchantSessionDispatcher({ deployment: "preview", providerIssuer }, lookup);
+    const requests: MerchantSessionRequest[] = [];
+    const remote = createRemoteMerchantSessionLifecycle({ deployment: "preview", providerIssuer }, async request => {
+      requests.push(request);
+      return dispatch(request);
+    });
+    assert.equal((await remote.load(merchantToken))?.storeId, first.store_id);
+    assert.equal((await remote.load(independentToken))?.storeId, second.store_id);
+    assert.equal(requests[0].sessionHash, hash(merchantToken));
+    assert(!browserTokens.some(token => JSON.stringify(requests).includes(token)));
+    await assert.rejects(dispatch({ ...requests[0], storeId }), OwnerSessionUnavailable);
+
+    const generic = createPostgresOwnerSessionLifecycle(lookup);
+    for (const outsideToken of [legacyToken, misboundToken, wrongIssuerToken]) {
+      assert.equal(await remote.load(outsideToken), null);
+      await remote.revoke(outsideToken);
+      assert(await generic.loadHash(hash(outsideToken)));
+    }
+    await remote.revoke(merchantToken);
+    await remote.revoke(merchantToken);
+    assert.equal(await remote.load(merchantToken), null);
+    assert(await remote.load(independentToken));
+  } finally {
+    await db.close();
+  }
 });
