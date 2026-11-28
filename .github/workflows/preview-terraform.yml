@@ -23,7 +23,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import zipfile
-          for name in ['zayvi-api-bootstrap.zip', 'zayvi-db-bootstrap.zip']:
+          for name in ['zayvi-api-bootstrap.zip', 'zayvi-db-bootstrap.zip', 'zayvi-preview-merchant-registration.zip']:
               with zipfile.ZipFile(Path('infra/terraform') / name, 'w') as archive:
                   archive.writestr('index.js', '// Mock test fixture only; never deploy.\n')
           PY

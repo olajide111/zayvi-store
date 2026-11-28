@@ -7,6 +7,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1179.0",
     "@aws-sdk/rds-signer": "^3.0.0",
     "pg": "^8.16.3"
   },

@@ -5,8 +5,10 @@ umask 077
 review_scope=general
 if [ "$#" -eq 1 ] && [ "$1" = --owner-identity ]; then
   review_scope=owner-identity
+elif [ "$#" -eq 1 ] && [ "$1" = --merchant-registration ]; then
+  review_scope=merchant-registration
 elif [ "$#" -ne 0 ]; then
-  echo 'Usage: bash infra/scripts/preview-plan.sh [--owner-identity]' >&2
+  echo 'Usage: bash infra/scripts/preview-plan.sh [--owner-identity | --merchant-registration]' >&2
   exit 1
 fi
 for required_command in aws terraform node npm git; do
@@ -78,6 +80,8 @@ fi
 printf '[5/8] Installing and packaging commerce API (npm may take time)…\n'
 npm --prefix ../lambda ci
 npm --prefix ../lambda run package
+npm ci --prefix ../..
+npm --prefix ../lambda run package:merchant-registration
 # Build both real archives: validation evaluates file hashes even for disabled bootstrap.
 printf '[6/8] Installing and packaging database runner…\n'
 npm --prefix ../db-bootstrap ci
@@ -102,6 +106,8 @@ printf '\nSaved plan: %s\n' "$plan_path"
 # macOS ships Bash 3.2, where expanding an empty array under nounset fails.
 if [ "$review_scope" = owner-identity ]; then
   terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs --owner-identity
+elif [ "$review_scope" = merchant-registration ]; then
+  terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs --merchant-registration
 else
   terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs
 fi
