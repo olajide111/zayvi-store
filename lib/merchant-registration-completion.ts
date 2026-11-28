@@ -1,26 +1,28 @@
 import { createHash, randomBytes } from "node:crypto";
-import { createMerchantRegistrationIdentityVerifier } from "./owner-identity";
+import { createMerchantRegistrationIdentityVerifier, type VerifiedOwnerLogin } from "./owner-identity";
 import { OwnerLoginError, type OwnerLoginTokens } from "./owner-login";
-import { createVerifiedOwnerSessionWriter, type OwnerLoginCompletionDependencies } from "./owner-login-completion";
+import { createVerifiedOwnerSessionWriter, type OwnerLoginCompletionDependencies, type OwnerSessionRecord } from "./owner-login-completion";
 import type { StoreDatabasePool } from "./store-database";
 
 type MerchantStoreBinding = { tenantId: string; storeId: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function createMerchantRegistrationCompletion(
-  identity: Parameters<typeof createMerchantRegistrationIdentityVerifier>,
-  registrationPool: StoreDatabasePool,
-  sessionDependencies: Omit<OwnerLoginCompletionDependencies, "verifyLoginTokens">,
-) {
-  const verify = createMerchantRegistrationIdentityVerifier(...identity);
+type RegistrationSessionDependencies = Omit<OwnerLoginCompletionDependencies, "verifyLoginTokens">;
 
-  // The caller must consume a registration-specific, one-time OAuth attempt before
-  // providing tokens, nonce and store name. This function is a private callback step.
-  return async (tokens: OwnerLoginTokens, nonce: string, storeName: string) => {
+export function validateRegistrationStoreName(value: unknown) {
+  const name = typeof value === "string" ? value.trim() : "";
+  if (!name || name.length > 80 || /\p{Cc}/u.test(name)) throw new OwnerLoginError();
+  return name;
+}
+
+/** Call only with a verified identity from a trusted registration callback or private proof. */
+export function createVerifiedMerchantRegistrationWriter(
+  registrationPool: StoreDatabasePool,
+  sessionDependencies: RegistrationSessionDependencies,
+) {
+  return async (verified: VerifiedOwnerLogin & { email: string }, storeName: string, record: OwnerSessionRecord) => {
     try {
-      const name = storeName.trim();
-      if (!name || name.length > 80 || /\p{Cc}/u.test(name)) throw new OwnerLoginError();
-      const verified = await verify(tokens, nonce);
+      const name = validateRegistrationStoreName(storeName);
       const registration = await registrationPool.connect();
       let binding: MerchantStoreBinding;
       try {
@@ -36,9 +38,29 @@ export function createMerchantRegistrationCompletion(
         registration.release();
       }
 
-      const write = createVerifiedOwnerSessionWriter(binding, sessionDependencies);
+      await createVerifiedOwnerSessionWriter(binding, sessionDependencies)(verified, record);
+      return binding;
+    } catch {
+      throw new OwnerLoginError();
+    }
+  };
+}
+
+export function createMerchantRegistrationCompletion(
+  identity: Parameters<typeof createMerchantRegistrationIdentityVerifier>,
+  registrationPool: StoreDatabasePool,
+  sessionDependencies: RegistrationSessionDependencies,
+) {
+  const verify = createMerchantRegistrationIdentityVerifier(...identity);
+  const write = createVerifiedMerchantRegistrationWriter(registrationPool, sessionDependencies);
+
+  // The caller consumes a registration-specific, one-time OAuth attempt.
+  return async (tokens: OwnerLoginTokens, nonce: string, storeName: string) => {
+    try {
+      const name = validateRegistrationStoreName(storeName);
+      const verified = await verify(tokens, nonce);
       const sessionToken = randomBytes(32).toString("base64url");
-      await write(verified, {
+      const binding = await write(verified, name, {
         sessionHash: createHash("sha256").update(sessionToken).digest("hex"),
         providerSessionId: verified.providerSession.sessionId,
         providerTokenId: verified.providerSession.tokenId,
