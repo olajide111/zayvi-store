@@ -13,14 +13,14 @@ export default function MerchantEntry() {
     <div className={styles.innerPage}>
       <p className={styles.kicker}>Merchant app</p>
       <h1>Manage your Zayvi shop<span>.</span></h1>
-      <p className={styles.lead}>Use your existing merchant access to open the Zayvi dashboard. New stores join through the pilot.</p>
+      <p className={styles.lead}>New to Zayvi? Request access to the merchant pilot. Self-service account creation is pending.</p>
       <div className={styles.actions}>
-        <Link className={styles.primary} href="/admin">Merchant sign in <ArrowRight size={17} aria-hidden /></Link>
-        <a className={styles.textLink} href="mailto:hello@zayvi.store?subject=Zayvi%20merchant%20pilot">Join the pilot</a>
+        <a className={styles.primary} href="mailto:hello@zayvi.store?subject=Zayvi%20merchant%20pilot">Request pilot access <ArrowRight size={17} aria-hidden /></a>
+        <Link className={styles.textLink} href="/admin">Existing admin sign in</Link>
       </div>
       <section id="store-setup" className={styles.innerSection}>
         <h2>Set up your store</h2>
-        <p>Already have merchant access? Start with your business profile and continue to the launch checklist.</p>
+        <p>Existing admins can open the business profile and continue to the launch checklist.</p>
         <ol className={styles.steps}>
           <li><h3>Describe your business</h3><p>Enter your store name, what you sell and the style you want for your shop.</p></li>
           <li><h3>Prepare your storefront</h3><p>Review your theme, catalogue, selling markets and delivery options.</p></li>
