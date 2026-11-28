@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import styles from "../platform.module.css";
 
-export default function CatalogueExample() {
+export default function SandboxExample({ example }: { example: "catalogue" | "order-paid" }) {
+  const marketId = useId();
   const [market, setMarket] = useState("GB");
   const [response, setResponse] = useState<{ status: number; json: unknown } | null>(null);
   const [pending, setPending] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
-  const endpoint = "/api/sandbox/v1/catalogue/products?market=" + market;
+  const path = example === "catalogue" ? "catalogue/products" : "events/order-paid";
+  const endpoint = `/api/sandbox/v1/${path}?market=${market}`;
 
   async function runExample(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,8 +33,8 @@ export default function CatalogueExample() {
   return (
     <>
       <form className={styles.exampleForm} onSubmit={runExample}>
-        <label htmlFor="example-market">Market</label>
-        <select id="example-market" value={market} disabled={pending} onChange={(event) => {
+        <label htmlFor={marketId}>Market</label>
+        <select id={marketId} value={market} disabled={pending} onChange={(event) => {
           setMarket(event.currentTarget.value);
           setResponse(null);
           setUnavailable(false);
@@ -46,11 +48,11 @@ export default function CatalogueExample() {
       </form>
       <p className={styles.requestLine}><code>GET {endpoint}</code></p>
       <div aria-live="polite">
-        {unavailable && <p role="status">The sandbox did not return JSON. Try the request again.</p>}
+        {unavailable && <p>The sandbox did not return JSON. Try the request again.</p>}
         {response && (
           <>
             <p className={styles.requestLine}><code>HTTP {response.status}</code></p>
-            <pre className={styles.code} aria-label="Sandbox catalogue response">
+            <pre className={styles.code} aria-label="Sandbox JSON response">
               <code>{JSON.stringify(response.json, null, 2)}</code>
             </pre>
           </>

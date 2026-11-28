@@ -12,6 +12,7 @@ export default async function AdminPage({ searchParams }: {
 }) {
   const { next, order_id } = await searchParams;
   let destination = "/admin/dashboard";
+  if (next === "setup") destination = "/admin/get-started";
   if (next === "product-images") destination = "/admin/product-images";
   if (next === "payments") {
     const orderId = returnedKredalOrderId(order_id);

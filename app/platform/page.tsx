@@ -57,7 +57,7 @@ export default function PlatformHome() {
           <p className={styles.kicker}>Themes and industries</p>
           <h2>A storefront built around your products</h2>
           <p>Explore catalogue layouts for fashion, home and speciality retail. Pilot merchants can see how a theme works with their own products before publishing.</p>
-          <Link className={styles.textLink} href="/platform/app">Explore the merchant app <ArrowRight size={17} aria-hidden /></Link>
+          <Link className={styles.textLink} href="/platform/app#store-setup">See how to set up your store <ArrowRight size={17} aria-hidden /></Link>
         </div>
       </section>
 
