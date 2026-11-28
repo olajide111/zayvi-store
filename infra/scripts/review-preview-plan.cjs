@@ -19,8 +19,27 @@ const merchantResources = new Map([
   ['aws_iam_role_policy.merchant_invoke', 'aws_iam_role_policy'],
 ].map(([address, type]) => [address + '["preview"]', type]));
 
+const bootstrapResources = new Set([
+  'aws_security_group.db_bootstrap[0]', 'aws_security_group.secrets_endpoint[0]',
+  'aws_vpc_security_group_egress_rule.bootstrap_to_database[0]',
+  'aws_vpc_security_group_ingress_rule.database_from_bootstrap[0]',
+  'aws_vpc_security_group_egress_rule.bootstrap_to_secrets_endpoint[0]',
+  'aws_vpc_security_group_ingress_rule.secrets_endpoint_from_bootstrap[0]',
+  'aws_vpc_endpoint.secretsmanager[0]', 'aws_iam_role.db_bootstrap[0]',
+  'aws_cloudwatch_log_group.db_bootstrap[0]', 'aws_iam_role_policy.db_bootstrap_logs[0]',
+  'aws_iam_role_policy.db_bootstrap_vpc[0]', 'aws_iam_role_policy.db_bootstrap_secret[0]',
+  'aws_lambda_function.db_bootstrap[0]', 'aws_lambda_invocation.db_bootstrap[0]',
+]);
+const bootstrapInvocation = 'aws_lambda_invocation.db_bootstrap[0]';
+
+function merchantBootstrap(item) {
+  if (item.address !== bootstrapInvocation) return false;
+  try { return JSON.parse(item.change.after?.input).action === 'merchant-registration-bootstrap'; }
+  catch { return false; }
+}
+
 function review(plan,scope='general') {
-  if(!['general','owner-identity','merchant-registration'].includes(scope))throw new Error('Unknown plan scope');
+  if(!['general','owner-identity','merchant-registration','merchant-db-bootstrap'].includes(scope))throw new Error('Unknown plan scope');
   if (!plan || (!Array.isArray(plan.resource_changes) && !(plan.format_version && plan.planned_values))) throw new Error('Expected Terraform plan JSON with resource_changes');
   const resources = plan.resource_changes || [];
   const changes = resources.filter(item => item.mode !== 'data' && item.change.actions.some(action => !['no-op', 'read'].includes(action)));
@@ -28,6 +47,16 @@ function review(plan,scope='general') {
   if (plan.errored || plan.complete === false) blocked.push('Incomplete or errored plan; do not use a targeted or deferred plan for this deployment.');
   for (const item of changes) {
     const actions = item.change.actions;
+    if (scope === 'merchant-db-bootstrap') {
+      const permitted = item.address === bootstrapInvocation
+        ? merchantBootstrap(item) && (actions.join('/') === 'create' || actions.join('/') === 'delete/create')
+        : actions.join('/') === 'create' || (item.address === 'aws_lambda_function.db_bootstrap[0]' && actions.join('/') === 'update');
+      if (!bootstrapResources.has(item.address) || !permitted) {
+        blocked.push(`${item.address}: changes outside the temporary merchant database runner are not permitted`);
+      }
+      continue;
+    }
+    if (merchantBootstrap(item)) blocked.push(`${item.address}: use the separate merchant-db-bootstrap scope review`);
     if (scope === 'merchant-registration') {
       if (merchantResources.get(item.address) !== item.type || actions.length !== 1 || actions[0] !== 'create') {
         blocked.push(`${item.address}: initial merchant registration permits only dedicated Preview resource creation`);
@@ -55,13 +84,16 @@ function review(plan,scope='general') {
   if (scope === 'merchant-registration' && [...merchantResources.keys()].some(address => !changes.some(item => item.address === address))) {
     blocked.push('The initial merchant registration plan must include every dedicated Preview resource.');
   }
+  if (scope === 'merchant-db-bootstrap' && !changes.some(merchantBootstrap)) {
+    blocked.push('Expected the explicit merchant database bootstrap invocation.');
+  }
   return { changes: changes.map(item => ({ address: item.address, actions: item.change.actions })), blocked: [...new Set(blocked)], notes: [...new Set(notes)] };
 }
 module.exports = { review };
 if (require.main === module) {
   try {
     const option = process.argv[2];
-    const scope = option === '--owner-identity' ? 'owner-identity' : option === '--merchant-registration' ? 'merchant-registration' : 'general';
+    const scope = ['--owner-identity', '--merchant-registration', '--merchant-db-bootstrap'].includes(option) ? option.slice(2) : 'general';
     const result = review(JSON.parse(fs.readFileSync(process.argv[scope === 'general' ? 2 : 3] || 0, 'utf8')), scope);
     for (const change of result.changes) console.log(`${change.actions.join('/')} ${change.address}`);
     for (const note of result.notes) console.log('NOTE: ' + note);

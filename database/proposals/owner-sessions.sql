@@ -26,7 +26,9 @@ REVOKE ALL ON zayvi_owner_auth.owner_sessions FROM PUBLIC,zayvi_app;
 GRANT SELECT,INSERT,DELETE ON zayvi_owner_auth.owner_sessions TO zayvi_owner_session_executor;
 GRANT UPDATE(revoked_at) ON zayvi_owner_auth.owner_sessions TO zayvi_owner_session_executor;
 GRANT SELECT(id,tenant_id,status),UPDATE(id) ON public.stores TO zayvi_owner_session_executor;
+GRANT zayvi_identity_resolver TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
 GRANT EXECUTE ON FUNCTION zayvi_identity.membership_is_active(text,text,uuid,uuid,text,boolean) TO zayvi_owner_session_executor;
+REVOKE zayvi_identity_resolver FROM CURRENT_USER;
 
 CREATE FUNCTION zayvi_owner_auth.create_session(p_hash text,p_tenant uuid,p_store uuid,p_member uuid,p_issuer text,p_subject text,p_role text,p_auth bigint,p_provider_session text,p_provider_token text,p_expiry timestamptz)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
@@ -61,10 +63,14 @@ CREATE FUNCTION zayvi_owner_auth.revoke_session(p_hash text)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
   UPDATE zayvi_owner_auth.owner_sessions SET revoked_at=clock_timestamp() WHERE session_hash=p_hash AND revoked_at IS NULL
 $$;
+GRANT zayvi_owner_session_executor TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+GRANT CREATE ON SCHEMA zayvi_owner_auth TO zayvi_owner_session_executor;
 ALTER FUNCTION zayvi_owner_auth.create_session(text,uuid,uuid,uuid,text,text,text,bigint,text,text,timestamptz) OWNER TO zayvi_owner_session_executor;
 ALTER FUNCTION zayvi_owner_auth.resolve_session(text) OWNER TO zayvi_owner_session_executor;
 ALTER FUNCTION zayvi_owner_auth.session_is_active(text) OWNER TO zayvi_owner_session_executor;
 ALTER FUNCTION zayvi_owner_auth.revoke_session(text) OWNER TO zayvi_owner_session_executor;
 REVOKE ALL ON FUNCTION zayvi_owner_auth.create_session(text,uuid,uuid,uuid,text,text,text,bigint,text,text,timestamptz),zayvi_owner_auth.resolve_session(text),zayvi_owner_auth.session_is_active(text),zayvi_owner_auth.revoke_session(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_owner_auth.create_session(text,uuid,uuid,uuid,text,text,text,bigint,text,text,timestamptz),zayvi_owner_auth.resolve_session(text),zayvi_owner_auth.session_is_active(text),zayvi_owner_auth.revoke_session(text) TO zayvi_app;
+REVOKE CREATE ON SCHEMA zayvi_owner_auth FROM zayvi_owner_session_executor;
+REVOKE zayvi_owner_session_executor FROM CURRENT_USER;
 COMMIT;

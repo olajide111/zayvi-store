@@ -25,6 +25,8 @@ BEGIN
   VALUES(p_state,p_browser,p_payload,p_expiry);
 END
 $$;
+GRANT zayvi_owner_login_executor TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+GRANT CREATE ON SCHEMA zayvi_owner_auth TO zayvi_owner_login_executor;
 ALTER FUNCTION zayvi_owner_auth.create_attempt(text,text,text,timestamptz) OWNER TO zayvi_owner_login_executor;
 REVOKE ALL ON FUNCTION zayvi_owner_auth.create_attempt(text,text,text,timestamptz) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_owner_auth.create_attempt(text,text,text,timestamptz) TO zayvi_app;
@@ -37,4 +39,6 @@ $$;
 ALTER FUNCTION zayvi_owner_auth.consume_attempt(text,text) OWNER TO zayvi_owner_login_executor;
 REVOKE ALL ON FUNCTION zayvi_owner_auth.consume_attempt(text,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_owner_auth.consume_attempt(text,text) TO zayvi_app;
+REVOKE CREATE ON SCHEMA zayvi_owner_auth FROM zayvi_owner_login_executor;
+REVOKE zayvi_owner_login_executor FROM CURRENT_USER;
 COMMIT;

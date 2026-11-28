@@ -72,6 +72,10 @@ BEGIN
 END
 $$;
 
+GRANT zayvi_merchant_provisioner TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+GRANT CREATE ON SCHEMA zayvi_registration TO zayvi_merchant_provisioner;
 ALTER FUNCTION zayvi_registration.create_draft_store(text,text,text,text) OWNER TO zayvi_merchant_provisioner;
 REVOKE ALL ON FUNCTION zayvi_registration.create_draft_store(text,text,text,text) FROM PUBLIC;
+REVOKE CREATE ON SCHEMA zayvi_registration FROM zayvi_merchant_provisioner;
+REVOKE zayvi_merchant_provisioner FROM CURRENT_USER;
 COMMIT;

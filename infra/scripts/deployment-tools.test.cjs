@@ -146,3 +146,22 @@ test('merchant scope accepts complete dedicated creation and rejects unrelated c
     rmSync(fixture.root, { recursive: true, force: true });
   }
 });
+
+test('merchant database bootstrap requires an exact opt-in invocation without unrelated changes', () => {
+  const invocation = change('aws_lambda_invocation', ['delete', 'create'], 'aws_lambda_invocation.db_bootstrap[0]');
+  invocation.change.after.input = '{"action":"merchant-registration-bootstrap"}';
+  const updates = [change('aws_lambda_function', ['update'], 'aws_lambda_function.db_bootstrap[0]'), invocation];
+  assert.equal(review(plan(...updates), 'merchant-db-bootstrap').blocked.length, 0);
+  assert.ok(review(plan(...updates)).blocked.length);
+  assert.ok(review(plan(updates[0]), 'merchant-db-bootstrap').blocked.length);
+  assert.ok(review(plan(...updates, change('aws_db_instance', ['update'])), 'merchant-db-bootstrap').blocked.length);
+
+  const fixture = planFixture('001961766018', { args: ['--merchant-db-bootstrap'], plan: plan(...updates) });
+  try {
+    assert.equal(fixture.result.status, 0, fixture.result.stdout + fixture.result.stderr);
+    assert.ok(!fixture.trace.includes('terraform apply'));
+    assert.ok(!fixture.trace.includes('get-secret-value'));
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
