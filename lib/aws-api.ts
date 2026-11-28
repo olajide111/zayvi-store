@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import { NodeSha256 } from "./aws-signing";
 import https from "node:https";
 import { SignatureV4 } from "@smithy/signature-v4";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
@@ -14,45 +14,6 @@ type AwsApiOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
 };
-
-class NodeSha256 {
-  private readonly secret?: Buffer;
-  private chunks: Buffer[] = [];
-
-  constructor(secret?: any) {
-    if (secret !== undefined) {
-      this.secret =
-        typeof secret === "string"
-          ? Buffer.from(secret)
-          : secret instanceof ArrayBuffer
-            ? Buffer.from(new Uint8Array(secret))
-            : Buffer.from(secret);
-    }
-  }
-
-  update(data: any) {
-    this.chunks.push(
-      typeof data === "string"
-        ? Buffer.from(data)
-        : data instanceof ArrayBuffer
-          ? Buffer.from(new Uint8Array(data))
-          : Buffer.from(data)
-    );
-  }
-
-  copy() {
-    const cloned = new NodeSha256(this.secret);
-    cloned.chunks = this.chunks.map((chunk) => Buffer.from(chunk));
-    return cloned;
-  }
-
-  async digest(): Promise<Uint8Array> {
-    const body = Buffer.concat(this.chunks);
-    return this.secret
-      ? crypto.createHmac("sha256", this.secret).update(body).digest()
-      : crypto.createHash("sha256").update(body).digest();
-  }
-}
 
 function queryObject(url: URL) {
   const query: Record<string, string | string[]> = {};

@@ -10,11 +10,12 @@ import { createMerchantRegistrationFlow } from "./owner-login";
 import { createOwnerAuthLimiter } from "./owner-rate-limit";
 import { createRemoteOwnerLimitStore, type OwnerLimitRequest } from "./owner-rate-limit-rpc";
 import { createRemoteMerchantSessionLifecycle, type MerchantSessionRequest } from "./merchant-session-lifecycle-rpc";
+import { createMerchantLambdaTransport } from "./merchant-lambda-transport";
 
-type PrivateRequest = MerchantRegistrationRequest | OwnerAttemptRequest | OwnerLimitRequest | MerchantSessionRequest;
+export type MerchantPrivateRequest = MerchantRegistrationRequest | OwnerAttemptRequest | OwnerLimitRequest | MerchantSessionRequest;
 type Dependencies = Pick<OwnerAuthHttpDependencies, "authorise"> & {
   keys: { attemptEncryption: Uint8Array; registrationProof: Uint8Array; limiterHash: Uint8Array };
-  invoke(message: PrivateRequest): Promise<unknown>;
+  invoke(message: MerchantPrivateRequest): Promise<unknown>;
   identifyConnection(request: Request): Promise<string | null>;
   verifyLoginAssurance: Parameters<typeof createMerchantRegistrationIdentityVerifier>[1];
   identityKeys?: JWTVerifyGetKey;
@@ -56,4 +57,17 @@ export function createPreviewMerchantRegistrationRuntime(input: Omit<OwnerRuntim
   });
   const sessions = createRemoteMerchantSessionLifecycle({ deployment: input.deployment, providerIssuer }, invoke);
   return createMerchantRegistrationHandlers({ origin, context, enabled: true }, { ...dependencies, flow, limit, sessions });
+}
+
+/** Deployment composition. Verified provider and connection assurance remain mandatory. */
+export function createPreviewMerchantRegistrationLambdaRuntime(
+  input: Omit<OwnerRuntimeConfig, "binding">,
+  lambda: { roleArn: string; functionArn: string },
+  dependencies: Omit<Dependencies, "invoke">,
+) {
+  if (input.mode !== "preview" || input.deployment !== "preview") {
+    return createPreviewMerchantRegistrationRuntime(input);
+  }
+  const invoke = createMerchantLambdaTransport({ ...lambda, deployment: input.deployment });
+  return createPreviewMerchantRegistrationRuntime(input, { ...dependencies, invoke });
 }

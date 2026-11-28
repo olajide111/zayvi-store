@@ -49,6 +49,7 @@ next-env.d.ts
 *.tfvars
 !*.tfvars.example
 infra/terraform/zayvi-api-bootstrap.zip
+infra/terraform/zayvi-preview-merchant-registration.zip
 infra/terraform/zayvi-kredal-webhook.zip
 crash.log
 override.tf
