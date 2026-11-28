@@ -57,6 +57,8 @@ jobs:
         run: |
           npm --prefix infra/lambda ci
           npm --prefix infra/lambda run package
+          npm ci
+          npm --prefix infra/lambda run package:merchant-registration
           npm --prefix infra/db-bootstrap ci
           npm --prefix infra/db-bootstrap run package
 

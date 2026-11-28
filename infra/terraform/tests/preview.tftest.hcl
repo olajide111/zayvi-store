@@ -83,6 +83,10 @@ run "owner_identity_disabled_by_default" {
     condition     = length(aws_cognito_user_pool.preview_owners) == 0 && output.preview_owner_identity == null
     error_message = "Ordinary Preview plans must not create owner identity resources."
   }
+  assert {
+    condition     = length(aws_lambda_function.merchant_registration) == 0 && length(aws_vpc_endpoint.merchant_proof) == 0 && output.preview_merchant_registration == null
+    error_message = "Merchant registration infrastructure must be opt-in."
+  }
 }
 
 run "owner_identity_reviewed_preview_only" {
@@ -116,4 +120,45 @@ run "owner_identity_rejects_production_origin" {
     }
   }
   expect_failures = [var.preview_owner_identity]
+}
+
+run "merchant_registration_private_preview_only" {
+  command = plan
+  variables {
+    preview_owner_identity = {
+      origin        = "https://preview.zayvi.store"
+      domain_prefix = "zayvi-preview-owners-001961766018"
+    }
+    preview_merchant_registration = {
+      proof_secret_arn = "arn:aws:secretsmanager:eu-west-2:001961766018:secret:zayvi/preview/merchant-registration-proof-abc123"
+      vercel_team_slug = "merchant-team"
+    }
+  }
+  assert {
+    condition     = aws_lambda_function.merchant_registration["preview"].function_name == "zayvi-preview-merchant-registration" && aws_lambda_function.merchant_registration["preview"].publish && aws_lambda_alias.merchant_registration["preview"].name == "live"
+    error_message = "Publish and target the dedicated Preview Lambda alias."
+  }
+  assert {
+    condition     = !aws_vpc_endpoint.merchant_proof["preview"].private_dns_enabled && aws_vpc_security_group_egress_rule.merchant_to_proof_endpoint["preview"].from_port == 443 && aws_vpc_security_group_egress_rule.merchant_to_database["preview"].from_port == 5432
+    error_message = "Use scoped database and endpoint access without changing the VPC's shared Secrets Manager DNS."
+  }
+  assert {
+    condition     = aws_lambda_function.merchant_registration["preview"].environment[0].variables.ZAYVI_MERCHANT_PROOF_SECRET_ARN == var.preview_merchant_registration.proof_secret_arn && !contains(keys(aws_lambda_function.merchant_registration["preview"].environment[0].variables), "ZAYVI_MERCHANT_REGISTRATION_PROOF_KEY")
+    error_message = "Terraform and Lambda configuration carry the ARN, never the proof key value."
+  }
+  assert {
+    condition     = jsondecode(aws_iam_role.merchant_vercel["preview"].assume_role_policy).Statement[0].Condition.StringEquals["oidc.vercel.com/merchant-team:sub"] == "owner:merchant-team:project:zayvi-store:environment:preview" && aws_cognito_user_pool.preview_owners[0].admin_create_user_config[0].allow_admin_create_user_only
+    error_message = "Limit web invocation to the Preview project. Public signup remains disabled."
+  }
+}
+
+run "merchant_registration_rejects_unrelated_secret" {
+  command = plan
+  variables {
+    preview_merchant_registration = {
+      proof_secret_arn = "arn:aws:secretsmanager:eu-west-2:001961766018:secret:zayvi/preview/other-secret-abc123"
+      vercel_team_slug = "merchant-team"
+    }
+  }
+  expect_failures = [var.preview_merchant_registration]
 }

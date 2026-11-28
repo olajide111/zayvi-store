@@ -124,3 +124,25 @@ test('owner plan shell selects its strict scope and generic scope rejects identi
   finally{rmSync(fixture.root,{recursive:true,force:true});}
  }
 });
+
+test('merchant scope accepts complete dedicated creation and rejects unrelated changes or replacement', () => {
+  const source = readFileSync(path.join(__dirname, '../terraform/merchant-registration.tf'), 'utf8');
+  const resources = Array.from(source.matchAll(/^resource "([^"]+)" "([^"]+)"/gm), ([, type, name]) =>
+    change(type, ['create'], type + '.' + name + '["preview"]'));
+  assert.equal(resources.length, 15);
+  assert.equal(review(plan(...resources), 'merchant-registration').blocked.length, 0);
+  assert.ok(review(plan(...resources), 'general').blocked.length);
+  assert.ok(review(plan(...resources.slice(1)), 'merchant-registration').blocked.length);
+  assert.ok(review(plan(...resources, change('aws_cognito_user_pool', ['update'])), 'merchant-registration').blocked.length);
+  const replacement = { ...resources[0], change: { actions: ['delete', 'create'] } };
+  assert.ok(review(plan(replacement, ...resources.slice(1)), 'merchant-registration').blocked.length);
+
+  const fixture = planFixture('001961766018', { args: ['--merchant-registration'], plan: plan(...resources) });
+  try {
+    assert.equal(fixture.result.status, 0, fixture.result.stdout + fixture.result.stderr);
+    assert.ok(!fixture.trace.includes('terraform apply'));
+    assert.ok(!fixture.trace.includes('get-secret-value'));
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});

@@ -53,3 +53,15 @@ After review, apply only the saved plan printed by the helper. Additional alarms
 ## Operational boundaries
 
 A successful plan is not a backup restore test, an alert-delivery test, a security review or a production release. External seller authentication, tenant identity/RBAC, production payment handling, live credentials, production capacity/failover and recovery objectives need their own release evidence. Do not enable real charges or real fulfilment from this Preview stack.
+
+## Private merchant registration
+
+The optional `preview_merchant_registration` configuration provisions the private Lambda, its `live` alias, a Preview-only Vercel role and a dedicated Secrets Manager endpoint. It requires the existing London Preview owner identity configuration. Supply the existing proof secret ARN, Vercel team slug and the existing OIDC issuer mode (`team` or `global`) in private Preview inputs. The dedicated secret is named `zayvi/preview/merchant-registration-proof` and contains a randomly generated 32-byte key as 64 hexadecimal characters. Use the AWS-managed Secrets Manager key. Provision the matching value through protected web runtime settings when connecting the registration route.
+
+From the repository root, build and review the initial full Preview plan:
+
+```bash
+bash infra/scripts/preview-plan.sh --merchant-registration
+```
+
+The initial scope accepts only the new merchant resources. Confirm the existing Cognito, commerce, database and notification resources have no planned changes. This infrastructure does not apply the registration SQL proposals, change the Cognito signup policy or enable routes. If rotating the proof key later, coordinate the web configuration and Lambda version rollout because existing Lambda instances cache the key for their lifetime.
