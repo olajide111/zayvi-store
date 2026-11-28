@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {generateKeyPair,exportJWK,createLocalJWKSet,SignJWT,type JWTPayload} from 'jose';
-import {createOwnerLoginIdentityVerifier} from '../lib/owner-identity';
+import {createMerchantRegistrationIdentityVerifier,createOwnerLoginIdentityVerifier} from '../lib/owner-identity';
+import {createMerchantRegistrationCompletion} from '../lib/merchant-registration-completion';
+import type {OwnerSessionRecord} from '../lib/owner-login-completion';
 const config={userPoolId:'eu-west-2_TestPool',clientId:'client123',requiredScopes:['zayvi/store.access']};
 const issuer='https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_TestPool',subject='11111111-1111-1111-1111-111111111111',nonce='n'.repeat(43);
 const accessKeys=await generateKeyPair('RS256'),idKeys=await generateKeyPair('RS256'),foreignKeys=await generateKeyPair('RS256');
@@ -32,4 +34,101 @@ test('MFA-looking token claims cannot replace trusted active-session assurance',
  for(const assurance of [{active:false,mfaVerified:true},{active:true,mfaVerified:false}]){
   const verify=createOwnerLoginIdentityVerifier(config,async()=>assurance,resolver);await assert.rejects(verify(await tokens({amr:['mfa'],role:'owner'}),nonce));
  }
+});
+
+const verifiedEmail = { email: "merchant@example.test", email_verified: true };
+
+test("only a signed, verified email from the matched ID token can register", async () => {
+  let assuranceChecks = 0;
+  const verify = createMerchantRegistrationIdentityVerifier(config, async () => {
+    assuranceChecks++;
+    return { active: true, mfaVerified: true };
+  }, resolver);
+
+  for (const claims of [{}, { ...verifiedEmail, email_verified: false },
+    { ...verifiedEmail, email_verified: "true" }, { ...verifiedEmail, email: "invalid" }]) {
+    await assert.rejects(verify(await tokens(claims, verifiedEmail), nonce));
+  }
+  await assert.rejects(verify(await tokens(verifiedEmail, {}, true), nonce));
+  assert.equal(assuranceChecks, 0);
+
+  const identity = await verify(await tokens(verifiedEmail), nonce);
+  assert.equal(identity.email, verifiedEmail.email);
+  assert.equal(identity.identity.subject, subject);
+  assert.equal(assuranceChecks, 1);
+});
+
+test("registration binds the verified merchant to a draft before committing a session", async () => {
+  const tenantId = "11111111-2222-4000-8000-000000000001";
+  const storeId = "11111111-2222-4000-8000-000000000002";
+  const calls: string[] = [];
+  const records: OwnerSessionRecord[] = [];
+  let allowMfa = false;
+  let rejectCommit = false;
+
+  const finish = createMerchantRegistrationCompletion([
+    config,
+    async () => ({ active: true, mfaVerified: allowMfa }),
+    resolver,
+  ], {
+    async connect() {
+      calls.push("connect");
+      return {
+        async query(sql, parameters) {
+          calls.push("provision");
+          assert.match(sql, /zayvi_registration\.create_draft_store\(\$1,\$2,\$3,\$4\)/);
+          assert.deepEqual(parameters, [issuer, subject, verifiedEmail.email, "New Store"]);
+          return { rows: [{ tenant_id: tenantId, store_id: storeId }] };
+        },
+        release() { calls.push("release"); },
+      };
+    },
+  }, {
+    membershipDirectory: {
+      async findMemberships(identity) {
+        assert.equal(identity.subject, subject);
+        return [{ tenantId, tenantName: "New Store", tenantStatus: "active", membershipId: "membership", membershipStatus: "active", role: "owner" }];
+      },
+      async isMembershipActive() { return true; },
+    },
+    transactions: {
+      async withTenantTransaction(tenant, work) {
+        assert.equal(tenant, tenantId);
+        const result = await work();
+        if (rejectCommit) throw new Error("session transaction commit failed");
+        calls.push("commit");
+        return result;
+      },
+    },
+    stores: {
+      async findStore(tenant, store) {
+        assert.deepEqual([tenant, store], [tenantId, storeId]);
+        return { id: storeId, tenantId, status: "draft" };
+      },
+    },
+    async writeSession(context, record) {
+      calls.push("session");
+      assert.equal(context.store.id, storeId);
+      records.push(record);
+    },
+  });
+
+  const pair = await tokens(verifiedEmail);
+  await assert.rejects(finish(pair, nonce, "New Store"));
+  assert.deepEqual(calls, []);
+  allowMfa = true;
+  await assert.rejects(finish(pair, nonce, " "));
+  assert.deepEqual(calls, []);
+
+  rejectCommit = true;
+  await assert.rejects(finish(pair, nonce, "New Store"));
+  assert.deepEqual(calls, ["connect", "provision", "release", "session"]);
+  calls.length = 0;
+
+  rejectCommit = false;
+  const result = await finish(pair, nonce, " New Store ");
+  assert.deepEqual([result.tenantId, result.storeId], [tenantId, storeId]);
+  assert.deepEqual(calls, ["connect", "provision", "release", "session", "commit"]);
+  assert.equal(records.at(-1)?.sessionHash, createHash("sha256").update(result.sessionToken).digest("hex"));
+  assert.notEqual(records.at(-1)?.sessionHash, result.sessionToken);
 });
