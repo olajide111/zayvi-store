@@ -1,7 +1,9 @@
 import {HAMMY_OWNER_LOGIN_CONTEXT} from '../lib/hammy-owner-login-context';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createOwnerAuthHandlers,OWNER_BINDING_COOKIE,OWNER_SESSION_COOKIE,type OwnerAuthHttpDependencies} from '../lib/owner-auth-http';
+import {createMerchantRegistrationHandlers,createOwnerAuthHandlers,MERCHANT_REGISTRATION_COOKIE,MERCHANT_REGISTRATION_START,OWNER_BINDING_COOKIE,OWNER_SESSION_COOKIE,type OwnerAuthHttpDependencies} from '../lib/owner-auth-http';
+import {createMerchantRegistrationFlow,createOwnerLogin,MERCHANT_REGISTRATION_CALLBACK} from '../lib/owner-login';
+import {createEncryptedOwnerLoginAttempts} from '../lib/owner-login-attempts';
 const origin='https://preview.zayvi.store',binding='b'.repeat(43),session='s'.repeat(43);
 function fixture(){
  const calls:string[]=[];let revoked=false,denied=false,limited=false;
@@ -32,4 +34,95 @@ test('status requires current server authorisation and exposes no owner details'
 });
 test('logout requires same-origin POST, revokes first and clears both cookies',async()=>{
  const f=fixture();assert.equal((await f.handlers.logout(new Request(`${origin}/api/owner/auth/logout`))).status,405);assert(!f.calls.includes('revoke'));const response=await f.handlers.logout(post('/api/owner/auth/logout'));assert.equal(response.status,204);assert(f.calls.includes('revoke'));assert(response.headers.get('set-cookie')!.includes(`${OWNER_SESSION_COOKIE}=;`));assert(response.headers.get('set-cookie')!.includes(`${OWNER_BINDING_COOKIE}=;`));
+});
+
+test("merchant signup retains store name only in the encrypted, one-use attempt and issues a scoped session", async () => {
+  const rows = new Map<string, string>();
+  const attempts = createEncryptedOwnerLoginAttempts({
+    async create(state, browser, payload) { rows.set(state + browser, payload); },
+    async consume(state, browser) {
+      const key = state + browser, payload = rows.get(key) ?? null;
+      rows.delete(key);
+      return payload;
+    },
+  }, new Uint8Array(32).fill(7));
+  const context = { key: "merchant-registration", defaultPath: "/platform/app/onboarding", allowedPaths: ["/platform/app/onboarding"] };
+  const config = { context, appOrigin: origin, domainPrefix: "zayvi-preview", clientId: "test123", scopes: ["openid", "email", "zayvi/store.access"] };
+  const names: string[] = [];
+  let exchanges = 0;
+  const fetcher = (async (_url, init) => {
+    exchanges++;
+    assert.equal((init?.body as URLSearchParams).get("redirect_uri"), origin + MERCHANT_REGISTRATION_CALLBACK);
+    return Response.json({ access_token: "access", id_token: "identity", token_type: "Bearer", expires_in: 600 });
+  }) as typeof fetch;
+  const flow = createMerchantRegistrationFlow(config, {
+    attempts, fetcher,
+    async finishVerifiedRegistration(tokens, nonce, name) {
+      assert.equal(tokens.idToken, "identity");
+      assert.match(nonce, /^[A-Za-z0-9_-]{43}$/);
+      names.push(name);
+      return { sessionToken: session };
+    },
+  });
+  const disabled = createMerchantRegistrationHandlers({ origin, context });
+  const startRequest = (body: string, requestOrigin = origin) => new Request(origin + MERCHANT_REGISTRATION_START, {
+    method: "POST",
+    headers: { origin: requestOrigin, "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  assert.equal((await disabled.start(startRequest("storeName=My+Shop"))).status, 503);
+  const handlers = createMerchantRegistrationHandlers({ origin, context, enabled: true }, {
+    flow,
+    sessions: {
+      async load(token) {
+        assert.equal(token, session);
+        return { tenantId: "new-tenant", storeId: "new-store", membershipId: "new-member", issuer: "issuer", subject: "new-owner",
+          role: "owner", authenticationTime: 1, providerSessionId: "provider", providerTokenId: "token", expiresAt: Math.floor(Date.now()/1000)+300 };
+      },
+      async revoke() {},
+    },
+    async authorise() {},
+    async limit() { return true; },
+  });
+  assert.equal((await handlers.start(startRequest("storeName=My+Shop", "https://other.example"))).status, 403);
+  for (const invalid of ["storeName=", "storeName=one&storeName=two", "storeName=one&returnTo=%2Fadmin", "storeName=" + "x".repeat(1100)]) {
+    assert.equal((await handlers.start(startRequest(invalid))).status, 400);
+  }
+  assert.equal(rows.size, 0);
+
+  const started = await handlers.start(startRequest("storeName=+My+Shop+"));
+  assert.equal(started.status, 303);
+  const signup = new URL(started.headers.get("location")!);
+  assert.equal(signup.pathname, "/signup");
+  assert.equal(signup.searchParams.get("redirect_uri"), origin + MERCHANT_REGISTRATION_CALLBACK);
+  assert.equal(signup.searchParams.get("code_challenge_method"), "S256");
+  assert(!signup.toString().includes("Shop"));
+  assert.equal(rows.size, 1);
+  assert(![...rows.values()][0].includes("My Shop"));
+  const registrationCookie = started.headers.get("set-cookie")!.split(";")[0];
+  assert.match(registrationCookie, new RegExp("^" + MERCHANT_REGISTRATION_COOKIE + "="));
+  const callbackUrl = new URL(origin + MERCHANT_REGISTRATION_CALLBACK);
+  callbackUrl.search = new URLSearchParams({ code: "one-use-code", state: signup.searchParams.get("state")!, storeName: "Wrong Shop" }).toString();
+
+  const wrongBrowser = await handlers.callback(new Request(callbackUrl, { headers: { cookie: registrationCookie.replace(MERCHANT_REGISTRATION_COOKIE, OWNER_BINDING_COOKIE) } }));
+  assert.equal(exchanges, 0);
+  assert(!wrongBrowser.headers.get("set-cookie")!.includes(OWNER_SESSION_COOKIE));
+  assert.equal(rows.size, 1);
+
+  const callback = () => new Request(callbackUrl, { headers: { cookie: registrationCookie } });
+  const success = await handlers.callback(callback());
+  assert.equal(success.headers.get("location"), origin + context.defaultPath);
+  assert.match(success.headers.get("set-cookie")!, new RegExp(OWNER_SESSION_COOKIE + "=" + session));
+  assert.deepEqual(names, ["My Shop"]);
+
+  const replay = await handlers.callback(callback());
+  assert.equal(replay.headers.get("location"), origin + "/platform/app?error=registration_failed");
+  assert(!replay.headers.get("set-cookie")!.includes(OWNER_SESSION_COOKIE));
+  assert.equal(exchanges, 1);
+
+  // Even with matching context, a regular sign-in cannot complete a signup attempt.
+  const direct = await flow.begin("Another Shop");
+  const owner = createOwnerLogin(config, { attempts, fetcher, async finishVerifiedSignIn() { throw new Error("Unexpected sign-in"); } });
+  await assert.rejects(owner.complete(new URLSearchParams({ code: "code", state: new URL(direct.authorizationUrl).searchParams.get("state")! }), direct.browserBinding));
+  assert.equal(exchanges, 1);
 });
