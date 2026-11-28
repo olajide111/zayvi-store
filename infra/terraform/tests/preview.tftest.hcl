@@ -162,3 +162,34 @@ run "merchant_registration_rejects_unrelated_secret" {
   }
   expect_failures = [var.preview_merchant_registration]
 }
+
+run "merchant_db_bootstrap_requires_explicit_runner" {
+  command = plan
+  variables {
+    enable_db_bootstrap          = false
+    enable_merchant_db_bootstrap = true
+  }
+  expect_failures = [var.enable_merchant_db_bootstrap]
+}
+
+run "merchant_db_bootstrap_uses_dedicated_action" {
+  command = plan
+  variables {
+    enable_db_bootstrap          = true
+    enable_merchant_db_bootstrap = true
+  }
+  override_resource {
+    target = aws_db_instance.postgres
+    values = {
+      master_user_secret = [{ secret_arn = "arn:aws:secretsmanager:eu-west-2:001961766018:secret:test-master-abc123" }]
+    }
+  }
+  assert {
+    condition     = jsondecode(aws_lambda_invocation.db_bootstrap[0].input).action == "merchant-registration-bootstrap" && aws_lambda_function.db_bootstrap[0].environment[0].variables.ZAYVI_ENABLE_MERCHANT_DB_BOOTSTRAP == "true"
+    error_message = "The merchant batch requires the reviewed invocation action and explicit environment opt-in."
+  }
+  assert {
+    condition     = length(aws_lambda_function.merchant_registration) == 0 && length(aws_cognito_user_pool.preview_owners) == 0
+    error_message = "The merchant schema bootstrap must not create the signup Lambda or change Cognito."
+  }
+}

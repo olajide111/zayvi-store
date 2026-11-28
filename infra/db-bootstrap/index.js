@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { Client } = require("pg");
+const { applyMerchantMigrations } = require("./merchant-migrations");
 const {
   SecretsManagerClient,
   GetSecretValueCommand
@@ -202,7 +203,16 @@ async function applyMigrations(client) {
   return applied;
 }
 
-exports.handler = async () => {
+exports.handler = async (event = {}) => {
+  const action = event.action ?? "bootstrap";
+  if (action !== "bootstrap" && action !== "merchant-registration-bootstrap") {
+    throw new Error("Unsupported database bootstrap action.");
+  }
+  if (action === "merchant-registration-bootstrap" && (
+    process.env.ZAYVI_ENABLE_MERCHANT_DB_BOOTSTRAP !== "true" ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME !== "zayvi-preview-db-bootstrap" ||
+    process.env.AWS_REGION !== "eu-west-2" || process.env.APP_DB_USER !== "zayvi_app"
+  )) throw new Error("Merchant database bootstrap requires explicit London Preview activation.");
   requireEnvironment();
 
   const secret = await readMasterSecret();
@@ -232,8 +242,10 @@ exports.handler = async () => {
     await ensureApplicationRole(client);
     await ensureMigrationLedger(client);
 
-    const appliedMigrations =
-      await applyMigrations(client);
+    const appliedMigrations = await applyMigrations(client);
+    if (action === "merchant-registration-bootstrap") {
+      appliedMigrations.push(...await applyMerchantMigrations(client, path.join(__dirname, "merchant-migrations")));
+    }
 
     const appRole = await client.query(
       `

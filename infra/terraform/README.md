@@ -65,3 +65,9 @@ bash infra/scripts/preview-plan.sh --merchant-registration
 ```
 
 The initial scope accepts only the new merchant resources. Confirm the existing Cognito, commerce, database and notification resources have no planned changes. This infrastructure does not apply the registration SQL proposals, change the Cognito signup policy or enable routes. If rotating the proof key later, coordinate the web configuration and Lambda version rollout because existing Lambda instances cache the key for their lifetime.
+
+### Apply the merchant schema separately
+
+Generate a scoped Preview plan with `bash infra/scripts/preview-plan.sh --merchant-db-bootstrap`. It enables the temporary database runner and selects the merchant database invocation. Review and apply the saved plan only from the authenticated London Preview environment. The invocation checksums and applies the reviewed merchant SQL as one batch. Re-running the same batch is a no-op. A partial checksum ledger or manually applied conflicting schema needs investigation before retrying.
+
+After verifying the merchant schema entries in the bootstrap result, turn off the merchant bootstrap and remove the temporary runner with a reviewed plan. Schema setup does not enable Cognito self-service signup or connect the web routes.

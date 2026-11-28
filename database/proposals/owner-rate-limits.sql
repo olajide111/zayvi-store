@@ -43,6 +43,8 @@ BEGIN
  RETURN consumed<=subject_budget;
 END
 $$;
+GRANT zayvi_owner_limit_executor TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+GRANT CREATE ON SCHEMA zayvi_owner_auth TO zayvi_owner_limit_executor;
 ALTER FUNCTION zayvi_owner_auth.consume_limit(text,text) OWNER TO zayvi_owner_limit_executor;
 REVOKE ALL ON FUNCTION zayvi_owner_auth.consume_limit(text,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_owner_auth.consume_limit(text,text) TO zayvi_app;
@@ -64,4 +66,6 @@ $$;
 ALTER FUNCTION zayvi_owner_auth.purge_limits() OWNER TO zayvi_owner_limit_executor;
 REVOKE ALL ON FUNCTION zayvi_owner_auth.purge_limits() FROM PUBLIC;
 -- No application grant: a reviewed maintenance role must receive it at activation.
+REVOKE CREATE ON SCHEMA zayvi_owner_auth FROM zayvi_owner_limit_executor;
+REVOKE zayvi_owner_limit_executor FROM CURRENT_USER;
 COMMIT;

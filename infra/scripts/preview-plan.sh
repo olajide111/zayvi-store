@@ -7,8 +7,10 @@ if [ "$#" -eq 1 ] && [ "$1" = --owner-identity ]; then
   review_scope=owner-identity
 elif [ "$#" -eq 1 ] && [ "$1" = --merchant-registration ]; then
   review_scope=merchant-registration
+elif [ "$#" -eq 1 ] && [ "$1" = --merchant-db-bootstrap ]; then
+  review_scope=merchant-db-bootstrap
 elif [ "$#" -ne 0 ]; then
-  echo 'Usage: bash infra/scripts/preview-plan.sh [--owner-identity | --merchant-registration]' >&2
+  echo 'Usage: bash infra/scripts/preview-plan.sh [--owner-identity | --merchant-registration | --merchant-db-bootstrap]' >&2
   exit 1
 fi
 for required_command in aws terraform node npm git; do
@@ -44,7 +46,9 @@ for expected_resource in aws_lambda_function.api aws_db_instance.postgres aws_ap
     exit 1
   fi
 done
-if printf '%s\n' "$state_resources" | grep -Fxq 'aws_lambda_function.db_bootstrap[0]'; then
+if [ "$review_scope" = merchant-db-bootstrap ]; then
+  export TF_VAR_enable_db_bootstrap=true TF_VAR_enable_merchant_db_bootstrap=true
+elif printf '%s\n' "$state_resources" | grep -Fxq 'aws_lambda_function.db_bootstrap[0]'; then
   export TF_VAR_enable_db_bootstrap=true
 else
   export TF_VAR_enable_db_bootstrap=false
@@ -106,8 +110,8 @@ printf '\nSaved plan: %s\n' "$plan_path"
 # macOS ships Bash 3.2, where expanding an empty array under nounset fails.
 if [ "$review_scope" = owner-identity ]; then
   terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs --owner-identity
-elif [ "$review_scope" = merchant-registration ]; then
-  terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs --merchant-registration
+elif [ "$review_scope" = merchant-registration ] || [ "$review_scope" = merchant-db-bootstrap ]; then
+  terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs "--$review_scope"
 else
   terraform show -json "$plan_path" | node ../scripts/review-preview-plan.cjs
 fi

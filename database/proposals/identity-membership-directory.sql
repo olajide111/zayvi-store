@@ -38,6 +38,8 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
     AND length(p_issuer) BETWEEN 1 AND 2048 AND length(p_subject) BETWEEN 1 AND 256
   ORDER BY t.id
 $$;
+GRANT zayvi_identity_resolver TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+GRANT CREATE ON SCHEMA zayvi_identity TO zayvi_identity_resolver;
 ALTER FUNCTION zayvi_identity.resolve_memberships(text,text) OWNER TO zayvi_identity_resolver;
 REVOKE ALL ON FUNCTION zayvi_identity.resolve_memberships(text,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_identity.resolve_memberships(text,text) TO zayvi_app;
@@ -65,4 +67,6 @@ $$;
 ALTER FUNCTION zayvi_identity.membership_is_active(text,text,uuid,uuid,text,boolean) OWNER TO zayvi_identity_resolver;
 REVOKE ALL ON FUNCTION zayvi_identity.membership_is_active(text,text,uuid,uuid,text,boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_identity.membership_is_active(text,text,uuid,uuid,text,boolean) TO zayvi_app;
+REVOKE CREATE ON SCHEMA zayvi_identity FROM zayvi_identity_resolver;
+REVOKE zayvi_identity_resolver FROM CURRENT_USER;
 COMMIT;

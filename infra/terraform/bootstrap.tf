@@ -1,3 +1,14 @@
+variable "enable_merchant_db_bootstrap" {
+  description = "Temporarily apply the reviewed merchant registration schema batch with the Preview database runner."
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = !var.enable_merchant_db_bootstrap || var.enable_db_bootstrap
+    error_message = "Enable the temporary Preview database runner before attempting merchant schema activation."
+  }
+}
+
 variable "enable_db_bootstrap" {
   description = "Temporarily enable the private database bootstrap Lambda and migration invocation."
   type        = bool
@@ -216,11 +227,12 @@ resource "aws_lambda_function" "db_bootstrap" {
 
   environment {
     variables = {
-      DB_HOST           = aws_db_instance.postgres.address
-      DB_PORT           = tostring(aws_db_instance.postgres.port)
-      DB_NAME           = "zayvi"
-      APP_DB_USER       = local.database_username
-      MASTER_SECRET_ARN = aws_db_instance.postgres.master_user_secret[0].secret_arn
+      DB_HOST                            = aws_db_instance.postgres.address
+      DB_PORT                            = tostring(aws_db_instance.postgres.port)
+      DB_NAME                            = "zayvi"
+      APP_DB_USER                        = local.database_username
+      MASTER_SECRET_ARN                  = aws_db_instance.postgres.master_user_secret[0].secret_arn
+      ZAYVI_ENABLE_MERCHANT_DB_BOOTSTRAP = tostring(var.enable_merchant_db_bootstrap)
     }
   }
 
@@ -248,12 +260,13 @@ resource "aws_lambda_invocation" "db_bootstrap" {
   function_name = aws_lambda_function.db_bootstrap[0].function_name
 
   input = jsonencode({
-    action = "bootstrap"
+    action = var.enable_merchant_db_bootstrap ? "merchant-registration-bootstrap" : "bootstrap"
   })
 
   triggers = {
-    package_sha256 = filebase64sha256("${path.module}/zayvi-db-bootstrap.zip")
-    database_id    = aws_db_instance.postgres.resource_id
+    package_sha256     = filebase64sha256("${path.module}/zayvi-db-bootstrap.zip")
+    database_id        = aws_db_instance.postgres.resource_id
+    merchant_bootstrap = tostring(var.enable_merchant_db_bootstrap)
   }
 
   depends_on = [

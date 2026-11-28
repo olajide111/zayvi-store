@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { deflateRawSync } = require('node:zlib');
+const { merchantFiles } = require('../db-bootstrap/merchant-migrations');
 
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -68,6 +69,8 @@ function packageLambda(target) {
     const names = fs.readdirSync(migrations).filter(name => /^[0-9]{4}_.+\.sql$/.test(name));
     if (!names.length) throw new Error('No database migrations found');
     for (const name of names) entries.push({ name: 'migrations/' + name, bytes: fs.readFileSync(path.join(migrations, name)) });
+    const proposals = path.join(infra, '../database/proposals');
+    for (const name of merchantFiles) entries.push({ name: 'merchant-migrations/' + name, bytes: fs.readFileSync(path.join(proposals, name)) });
   }
   const destination = path.join(infra, 'terraform', target === 'merchant-registration' ? 'zayvi-preview-merchant-registration.zip' : `zayvi-${target === 'api' ? 'api-bootstrap' : 'db-bootstrap'}.zip`);
   fs.writeFileSync(destination, archive(entries));

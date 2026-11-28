@@ -27,8 +27,12 @@ RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS
     AND s.session_hash=p_hash AND s.issuer=p_issuer AND s.role='owner' AND s.revoked_at IS NULL
 $$;
 
+GRANT zayvi_owner_session_executor TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
+GRANT CREATE ON SCHEMA zayvi_registration TO zayvi_owner_session_executor;
 ALTER FUNCTION zayvi_registration.resolve_session(text,text) OWNER TO zayvi_owner_session_executor;
 ALTER FUNCTION zayvi_registration.revoke_session(text,text) OWNER TO zayvi_owner_session_executor;
 REVOKE ALL ON FUNCTION zayvi_registration.resolve_session(text,text),zayvi_registration.revoke_session(text,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION zayvi_registration.resolve_session(text,text),zayvi_registration.revoke_session(text,text) TO zayvi_app;
+REVOKE CREATE ON SCHEMA zayvi_registration FROM zayvi_owner_session_executor;
+REVOKE zayvi_owner_session_executor FROM CURRENT_USER;
 COMMIT;
