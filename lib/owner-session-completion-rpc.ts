@@ -17,7 +17,7 @@ function settings(config:OwnerCompletionConfig,secret:Uint8Array){
     !uuid.test(config.tenantId)||!uuid.test(config.storeId)||secret.byteLength!==32)throw new Error('Pinned Preview completion configuration and dedicated 32-byte proof key required.');
   return {config:{...config},key:Buffer.from(secret)};
 }
-function verified(value:VerifiedOwnerLogin,issuer:string){
+export function assertVerifiedOwnerLogin(value:VerifiedOwnerLogin,issuer:string){
   const now=Math.floor(Date.now()/1000),identity=value.identity,session=value.providerSession;
   if(identity.issuer!==issuer||!uuid.test(identity.subject)||identity.mfaVerified!==true||
     !Number.isSafeInteger(identity.authenticationTime)||identity.authenticationTime<=0||identity.authenticationTime>now||
@@ -37,7 +37,7 @@ export function createRemoteOwnerLoginCompletion(input:OwnerCompletionConfig,sec
   const {config,key}=settings(input,secret);
   return async(tokens:OwnerLoginTokens,nonce:string):Promise<{sessionToken:string}>=>{
     try{
-      const login=await dependencies.verifyLoginTokens(tokens,nonce);verified(login,config.providerIssuer);
+      const login=await dependencies.verifyLoginTokens(tokens,nonce);assertVerifiedOwnerLogin(login,config.providerIssuer);
       const sessionToken=randomBytes(32).toString('base64url'),sessionHash=createHash('sha256').update(sessionToken).digest('hex');
       const now=Math.floor(Date.now()/1000);
       const proof=await new SignJWT({provider_issuer:login.identity.issuer,auth_time:login.identity.authenticationTime,mfa:true,
@@ -72,7 +72,7 @@ export function createPrivateOwnerSessionCompletion(input:OwnerCompletionConfig,
         typeof payload.session_exp!=='number'||payload.exp>payload.session_exp)throw new OwnerLoginError();
       const identity={issuer:config.providerIssuer,subject:payload.sub,authenticationTime:payload.auth_time,mfaVerified:true as const};
       const login:VerifiedOwnerLogin={identity,providerSession:{...identity,sessionId:payload.provider_session,tokenId:payload.provider_token},expiresAt:payload.session_exp};
-      verified(login,config.providerIssuer);
+      assertVerifiedOwnerLogin(login,config.providerIssuer);
       // The proof jti is the session hash, so a replay hits the database primary key.
       // A caller cannot reuse one proof to mint a different session or select a role.
       await write(login,{sessionHash:payload.jti,providerSessionId:payload.provider_session,providerTokenId:payload.provider_token,expiresAt:login.expiresAt});
